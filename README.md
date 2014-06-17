@@ -1,4 +1,1 @@
-MJ
-==
-
 MJ Analysis
