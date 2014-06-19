@@ -40,23 +40,31 @@
 #include "TMath.h"
 #include "TSystem.h"
 #include "TH2F.h"
+#include "TEllipse.h"
 #include "TCanvas.h"
 #include "TDirectory.h"
 #include "TBranch.h"
+#include "TString.h"
 
 using namespace std;
 
 const bool DEBUG = false;
+//double Rparam = 1.2;        // Distance parameter for jet clustering
 
-void makeJetP4() { 
+void makeJetP4(TString InRootFile, double Rparam=0.5) { 
+    
+    cout << " ... Processing file = " << InRootFile << endl;
+    cout << " ... Rparam = " << Rparam << endl;
+    cout << " ................................................................." << endl; 
     
     // 
     // Get tree from a cfA ntuple 
     // 
-    //TFile *f = TFile::Open("cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_Test.root", "UPDATE");
-    //TFile *f = TFile::Open("cfA/cfA_JetHT_Run2012D-PromptReco-v1_AOD_UCSB2030_v71_f1_1_fip_Test.root", "UPDATE");
-    TFile *f = TFile::Open("cfA/NopT10Cut/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2048_v71_f1_1_DGh_Test.root", "UPDATE");
-    //TFile *f = TFile::Open("cfA/NopT10Cut/cfA_JetHT_Run2012D-PromptReco-v1_AOD_UCSB2049_v71_f1000_1_473_Test.root", "UPDATE");
+    //TFile *f = TFile::Open("../cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_Test.root", "UPDATE");
+    //TFile *f = TFile::Open("../cfA/cfA_JetHT_Run2012D-PromptReco-v1_AOD_UCSB2030_v71_f1_1_fip_Test.root", "UPDATE");
+    //TFile *f = TFile::Open("../cfA/NopT10Cut/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2048_v71_f1_1_DGh_Test.root", "UPDATE");
+    //TFile *f = TFile::Open("../cfA/NopT10Cut/cfA_JetHT_Run2012D-PromptReco-v1_AOD_UCSB2049_v71_f1000_1_473_Test.root", "UPDATE");
+    TFile *f = TFile::Open("../cfA/"+InRootFile, "UPDATE");
     TDirectory* dir = f->GetDirectory("configurableAnalysis");
     dir->cd();
     TTree *eventB = (TTree*)dir->Get("eventB");
@@ -82,6 +90,8 @@ void makeJetP4() {
     eventB->SetBranchAddress("pfcand_phi", &pfcand_phi_);
     vector<float>   *pfcand_eta_ = 0;
     eventB->SetBranchAddress("pfcand_eta", &pfcand_eta_);
+    vector<float>   *pfcand_pt_ = 0;
+    eventB->SetBranchAddress("pfcand_pt", &pfcand_pt_);
     
     // 
     // Define new variables to write 
@@ -142,28 +152,12 @@ void makeJetP4() {
             fout.width(15); fout << pfcand_pz_->at(ipfcand) << "\t";
             fout.width(15); fout << pfcand_energy_->at(ipfcand) << endl;
             
-            h2->Fill( pfcand_eta_->at(ipfcand), pfcand_phi_->at(ipfcand), 
-                      pfcand_energy_->at(ipfcand));
+            h2->Fill( pfcand_eta_->at(ipfcand), 
+                      pfcand_phi_->at(ipfcand), 
+                      pfcand_pt_->at(ipfcand));
         }
         fout.close();
 
-        // 
-        // Draw a lego plot (eta, phi) 
-        //
-        if(DEBUG) {
-            TCanvas *c = new TCanvas();
-            c->cd(1);
-            h2->Draw("colz");
-            h2->SetTitle(Form("run= %i  lumi= %i event= %i", run_, lumiblock_, event_));
-            h2->SetMaximum(50); 
-            h2->SetStats(0); 
-            h2->SetXTitle("#eta"); 
-            h2->SetYTitle("#phi"); 
-            c->SaveAs(Form("EtaPhiViewPFCand_Run%i_Lumi%i_Event%i.pdf", 
-                        run_, lumiblock_, event_));
-            h2->Reset(); 
-
-        } 
 
 
 
@@ -178,7 +172,7 @@ void makeJetP4() {
         // It takes OneEvent_PFCands_tmp_%i.dat as an input 
         // and writes p4 of reconstructed jets in  OneEvent_PFJets_tmp_%i.dat. 
         // For the details about the code, take a look at fastjet_example.cc.
-        gSystem->Exec(Form("./fastjet_example < OneEvent_PFCands_tmp_%i.dat > OneEvent_PFJets_tmp_%i.dat", ib, ib));
+        gSystem->Exec(Form("../fastjet_example %f < OneEvent_PFCands_tmp_%i.dat > OneEvent_PFJets_tmp_%i.dat", Rparam, ib, ib));
 
         // ---------------------------------------
         //          Block 3 
@@ -202,7 +196,7 @@ void makeJetP4() {
                
                 // store only when pT > 3 GeV 
                 // (same as CMS jet reconstruction cut)
-                if(TMath::Sqrt(px*px+py*py)>3) {
+                if(TMath::Sqrt(px*px+py*py)>(DEBUG?30:3)) {
                     fastjets_AK5PF_px->push_back(px);
                     fastjets_AK5PF_py->push_back(py);
                     fastjets_AK5PF_pz->push_back(pz);
@@ -228,6 +222,35 @@ void makeJetP4() {
         energyb->Fill();
         phib->Fill();
         etab->Fill();
+        
+        // 
+        // Draw a lego plot (eta, phi) 
+        //
+        if(DEBUG) {
+            TCanvas *c = new TCanvas();
+            c->cd(1);
+            h2->Draw("colz");
+            h2->SetTitle(Form("run=%i lumi=%i event=%i R=%.1f", run_, lumiblock_, event_, Rparam));
+            h2->SetMaximum(50); 
+            h2->SetStats(0); 
+            h2->SetXTitle("#eta"); 
+            h2->SetYTitle("#phi"); 
+
+            //Draw circles around jets
+            TEllipse *cone[fastjets_AK5PF_eta->size()]; 
+            for(int ijets=0; ijets<(int)fastjets_AK5PF_eta->size(); ijets++){
+                cone[ijets] = new TEllipse(fastjets_AK5PF_eta->at(ijets), fastjets_AK5PF_phi->at(ijets), Rparam, Rparam);
+                cone[ijets]->SetFillStyle(3003);
+                cone[ijets]->SetFillColor(kYellow);
+                cone[ijets]->Draw();
+            }
+
+            c->SaveAs(Form("EtaPhiViewPFCand_Run%i_Lumi%i_Event%i_R%.1f.pdf", 
+                        run_, lumiblock_, event_, Rparam));
+            h2->Reset(); 
+            for(int ijets=0; ijets<(int)fastjets_AK5PF_eta->size(); ijets++) delete cone[ijets];
+
+        } 
    
         // Clear vectors for the next event 
         fastjets_AK5PF_px->clear();
