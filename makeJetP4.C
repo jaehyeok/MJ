@@ -48,9 +48,9 @@
 
 using namespace std;
 
-const bool DEBUG = true;
+const bool DEBUG = false;
 
-void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) { 
+void makeJetP4(TString InRootFile, double Rparam=0.5) { 
     
     cout << " ... Processing file = " << InRootFile << endl;
     cout << " ... Rparam = " << Rparam << endl;
@@ -73,18 +73,18 @@ void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) {
     eventB->SetBranchAddress("run", &run_);
     UInt_t   lumiblock_ = 0;
     eventB->SetBranchAddress("lumiblock", &lumiblock_);
-    vector<float>   *fastjets_AK5PF_px_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_px", &fastjets_AK5PF_px_);
-    vector<float>   *fastjets_AK5PF_py_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_py", &fastjets_AK5PF_py_);
-    vector<float>   *fastjets_AK5PF_pz_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_pz", &fastjets_AK5PF_pz_);
-    vector<float>   *fastjets_AK5PF_energy_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_energy", &fastjets_AK5PF_energy_);
-    vector<float>   *fastjets_AK5PF_phi_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_phi", &fastjets_AK5PF_phi_);
-    vector<float>   *fastjets_AK5PF_eta_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_eta", &fastjets_AK5PF_eta_);
+    vector<float>   *jets_AK5PF_px_ = 0;
+    eventB->SetBranchAddress("jets_AK5PF_px", &jets_AK5PF_px_);
+    vector<float>   *jets_AK5PF_py_ = 0;
+    eventB->SetBranchAddress("jets_AK5PF_py", &jets_AK5PF_py_);
+    vector<float>   *jets_AK5PF_pz_ = 0;
+    eventB->SetBranchAddress("jets_AK5PF_pz", &jets_AK5PF_pz_);
+    vector<float>   *jets_AK5PF_energy_ = 0;
+    eventB->SetBranchAddress("jets_AK5PF_energy", &jets_AK5PF_energy_);
+    vector<float>   *jets_AK5PF_phi_ = 0;
+    eventB->SetBranchAddress("jets_AK5PF_phi", &jets_AK5PF_phi_);
+    vector<float>   *jets_AK5PF_eta_ = 0;
+    eventB->SetBranchAddress("jets_AK5PF_eta", &jets_AK5PF_eta_);
     
     // 
     // Define new variables to write 
@@ -94,18 +94,18 @@ void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) {
     // just include this line 
     // [ref] http://root.cern.ch/phpBB3/viewtopic.php?t=8467
     gROOT->ProcessLine("#include <vector>"); 
-    vector<float>   *fastjets_AK5PF_R1p2_px = 0;
-    TBranch *pxb =  eventB->Branch("fastjets_AK5PF_R1p2_px", &fastjets_AK5PF_R1p2_px);
-    vector<float>   *fastjets_AK5PF_R1p2_py = 0;
-    TBranch *pyb = eventB->Branch("fastjets_AK5PF_R1p2_py", &fastjets_AK5PF_R1p2_py);
-    vector<float>   *fastjets_AK5PF_R1p2_pz = 0;
-    TBranch *pzb = eventB->Branch("fastjets_AK5PF_R1p2_pz", &fastjets_AK5PF_R1p2_pz);
-    vector<float>   *fastjets_AK5PF_R1p2_energy = 0;
-    TBranch *energyb = eventB->Branch("fastjets_AK5PF_R1p2_energy", &fastjets_AK5PF_R1p2_energy);
-    vector<float>   *fastjets_AK5PF_R1p2_phi = 0;
-    TBranch *phib = eventB->Branch("fastjets_AK5PF_R1p2_phi", &fastjets_AK5PF_R1p2_phi);
-    vector<float>   *fastjets_AK5PF_R1p2_eta = 0;
-    TBranch *etab = eventB->Branch("fastjets_AK5PF_R1p2_eta", &fastjets_AK5PF_R1p2_eta);
+    vector<float>   *jets_AK5PF_R1p2_px = 0;
+    TBranch *pxb =  eventB->Branch("jets_AK5PF_R1p2_px", &jets_AK5PF_R1p2_px);
+    vector<float>   *jets_AK5PF_R1p2_py = 0;
+    TBranch *pyb = eventB->Branch("jets_AK5PF_R1p2_py", &jets_AK5PF_R1p2_py);
+    vector<float>   *jets_AK5PF_R1p2_pz = 0;
+    TBranch *pzb = eventB->Branch("jets_AK5PF_R1p2_pz", &jets_AK5PF_R1p2_pz);
+    vector<float>   *jets_AK5PF_R1p2_energy = 0;
+    TBranch *energyb = eventB->Branch("jets_AK5PF_R1p2_energy", &jets_AK5PF_R1p2_energy);
+    vector<float>   *jets_AK5PF_R1p2_phi = 0;
+    TBranch *phib = eventB->Branch("jets_AK5PF_R1p2_phi", &jets_AK5PF_R1p2_phi);
+    vector<float>   *jets_AK5PF_R1p2_eta = 0;
+    TBranch *etab = eventB->Branch("jets_AK5PF_R1p2_eta", &jets_AK5PF_R1p2_eta);
 
     // 
     // Histgrom : to draw eta-phi plot of energy deposit 
@@ -139,15 +139,15 @@ void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) {
         fout.open(Form("OneEvent_FastjetsR0p5_tmp_%i.dat", ib));
         
         // loop over Fastjets with R=0.5
-        for(int ifastjets = 0; ifastjets < (int)fastjets_AK5PF_px_->size(); ifastjets++) {
-            fout.width(15); fout << fastjets_AK5PF_px_->at(ifastjets) << "\t";
-            fout.width(15); fout << fastjets_AK5PF_py_->at(ifastjets) << "\t";
-            fout.width(15); fout << fastjets_AK5PF_pz_->at(ifastjets) << "\t";
-            fout.width(15); fout << fastjets_AK5PF_energy_->at(ifastjets) << endl;
+        for(int ifastjets = 0; ifastjets < (int)jets_AK5PF_px_->size(); ifastjets++) {
+            fout.width(15); fout << jets_AK5PF_px_->at(ifastjets) << "\t";
+            fout.width(15); fout << jets_AK5PF_py_->at(ifastjets) << "\t";
+            fout.width(15); fout << jets_AK5PF_pz_->at(ifastjets) << "\t";
+            fout.width(15); fout << jets_AK5PF_energy_->at(ifastjets) << endl;
            
-            float pt = TMath::Sqrt(fastjets_AK5PF_px_->at(ifastjets)*fastjets_AK5PF_px_->at(ifastjets) 
-                                  +fastjets_AK5PF_py_->at(ifastjets)*fastjets_AK5PF_py_->at(ifastjets));
-            h2->Fill( fastjets_AK5PF_eta_->at(ifastjets), fastjets_AK5PF_phi_->at(ifastjets), pt);
+            float pt = TMath::Sqrt(jets_AK5PF_px_->at(ifastjets)*jets_AK5PF_px_->at(ifastjets) 
+                                  +jets_AK5PF_py_->at(ifastjets)*jets_AK5PF_py_->at(ifastjets));
+            h2->Fill( jets_AK5PF_eta_->at(ifastjets), jets_AK5PF_phi_->at(ifastjets), pt);
         }
         fout.close();
 
@@ -190,12 +190,12 @@ void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) {
                 // store only when pT > 3 GeV 
                 // (same as CMS jet reconstruction cut)
                 if(TMath::Sqrt(px*px+py*py)>(DEBUG?30:3)) {
-                    fastjets_AK5PF_R1p2_px->push_back(px);
-                    fastjets_AK5PF_R1p2_py->push_back(py);
-                    fastjets_AK5PF_R1p2_pz->push_back(pz);
-                    fastjets_AK5PF_R1p2_energy->push_back(energy);
-                    fastjets_AK5PF_R1p2_eta->push_back(eta);
-                    fastjets_AK5PF_R1p2_phi->push_back(phi); 
+                    jets_AK5PF_R1p2_px->push_back(px);
+                    jets_AK5PF_R1p2_py->push_back(py);
+                    jets_AK5PF_R1p2_pz->push_back(pz);
+                    jets_AK5PF_R1p2_energy->push_back(energy);
+                    jets_AK5PF_R1p2_eta->push_back(eta);
+                    jets_AK5PF_R1p2_phi->push_back(phi); 
 
                     if(DEBUG) {
                         cout << event_ << " " 
@@ -230,9 +230,9 @@ void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) {
             h2->SetYTitle("#phi"); 
 
             //Draw circles around jets
-            TEllipse *cone[fastjets_AK5PF_R1p2_eta->size()]; 
-            for(int ijets=0; ijets<(int)fastjets_AK5PF_R1p2_eta->size(); ijets++){
-                cone[ijets] = new TEllipse(fastjets_AK5PF_R1p2_eta->at(ijets), fastjets_AK5PF_R1p2_phi->at(ijets), Rparam, Rparam);
+            TEllipse *cone[jets_AK5PF_R1p2_eta->size()]; 
+            for(int ijets=0; ijets<(int)jets_AK5PF_R1p2_eta->size(); ijets++){
+                cone[ijets] = new TEllipse(jets_AK5PF_R1p2_eta->at(ijets), jets_AK5PF_R1p2_phi->at(ijets), Rparam, Rparam);
                 cone[ijets]->SetFillStyle(3003);
                 cone[ijets]->SetFillColor(kYellow);
                 cone[ijets]->Draw();
@@ -241,17 +241,17 @@ void makeJetP4_usingR0p5(TString InRootFile, double Rparam=0.5) {
             c->SaveAs(Form("EtaPhiViewPFCand_Run%i_Lumi%i_Event%i_R%.1f_usingR0p5.pdf", 
                         run_, lumiblock_, event_, Rparam));
             h2->Reset(); 
-            for(int ijets=0; ijets<(int)fastjets_AK5PF_R1p2_eta->size(); ijets++) delete cone[ijets];
+            for(int ijets=0; ijets<(int)jets_AK5PF_R1p2_eta->size(); ijets++) delete cone[ijets];
 
         } 
    
         // Clear vectors for the next event 
-        fastjets_AK5PF_R1p2_px->clear();
-        fastjets_AK5PF_R1p2_py->clear();
-        fastjets_AK5PF_R1p2_pz->clear();
-        fastjets_AK5PF_R1p2_energy->clear();
-        fastjets_AK5PF_R1p2_eta->clear();
-        fastjets_AK5PF_R1p2_phi->clear();
+        jets_AK5PF_R1p2_px->clear();
+        jets_AK5PF_R1p2_py->clear();
+        jets_AK5PF_R1p2_pz->clear();
+        jets_AK5PF_R1p2_energy->clear();
+        jets_AK5PF_R1p2_eta->clear();
+        jets_AK5PF_R1p2_phi->clear();
         
         // remove text files
         if(!DEBUG) gSystem->Exec("'rm' OneEvent_Fastjets*.dat");
