@@ -59,10 +59,9 @@ void DoAnalysis() {
     // Get tree 
     // 
     TChain * chainB_QCD_R1p2                    = new TChain("/configurableAnalysis/eventB");   
-    TChain * chainB_QCD_R1p2usingR0p5fastjets   = new TChain("/configurableAnalysis/eventB");   
-    chainB_QCD_R1p2->Add("../cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_TestR1p2.root");
-    //chainB_QCD_R1p2usingR0p5fastjets->Add("../cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_TestR1p2usingR0p5fastjets.root");
-    chainB_QCD_R1p2usingR0p5fastjets->Add("../cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_TestR1p2usingR0p5fastjetswithout3GeVcut.root");
+    TChain * chainB_QCD_R1p2usingR0p5   = new TChain("/configurableAnalysis/eventB");   
+    chainB_QCD_R1p2->Add("../cfA/NopT10Cut/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2048_v71_*_TestR1p2.root");
+    chainB_QCD_R1p2usingR0p5->Add("../cfA/NopT10Cut/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2048_v71_*_TestR1p2usingR0p5jetsAK5PF.root");
 
     // 
     // set address of variables to read 
@@ -96,34 +95,34 @@ void DoAnalysis() {
     chainB_QCD_R1p2->SetBranchAddress("fastjets_AK5PF_eta", &fastjets_AK5PF_R1p2_eta_);
     
     // 
-    // chainB_QCD_R1p2usingR0p5fastjets
+    // chainB_QCD_R1p2usingR0p5
     // 
-    vector<float>   *fastjets_AK5PF_R1p2usingR0p5_px_ = 0;
-    chainB_QCD_R1p2usingR0p5fastjets->SetBranchAddress("fastjets_AK5PF_R1p2_px", &fastjets_AK5PF_R1p2usingR0p5_px_);
-    vector<float>   *fastjets_AK5PF_R1p2usingR0p5_py_ = 0;
-    chainB_QCD_R1p2usingR0p5fastjets->SetBranchAddress("fastjets_AK5PF_R1p2_py", &fastjets_AK5PF_R1p2usingR0p5_py_);
-    vector<float>   *fastjets_AK5PF_R1p2usingR0p5_pz_ = 0;
-    chainB_QCD_R1p2usingR0p5fastjets->SetBranchAddress("fastjets_AK5PF_R1p2_pz", &fastjets_AK5PF_R1p2usingR0p5_pz_);
-    vector<float>   *fastjets_AK5PF_R1p2usingR0p5_energy_ = 0;
-    chainB_QCD_R1p2usingR0p5fastjets->SetBranchAddress("fastjets_AK5PF_R1p2_energy", &fastjets_AK5PF_R1p2usingR0p5_energy_);
-    vector<float>   *fastjets_AK5PF_R1p2usingR0p5_phi_ = 0;
-    chainB_QCD_R1p2usingR0p5fastjets->SetBranchAddress("fastjets_AK5PF_R1p2_phi", &fastjets_AK5PF_R1p2usingR0p5_phi_);
-    vector<float>   *fastjets_AK5PF_R1p2usingR0p5_eta_ = 0;
-    chainB_QCD_R1p2usingR0p5fastjets->SetBranchAddress("fastjets_AK5PF_R1p2_eta", &fastjets_AK5PF_R1p2usingR0p5_eta_);
+    vector<float>   *jets_AK5PF_R1p2_px_ = 0;
+    chainB_QCD_R1p2usingR0p5->SetBranchAddress("jets_AK5PF_R1p2_px", &jets_AK5PF_R1p2_px_);
+    vector<float>   *jets_AK5PF_R1p2_py_ = 0;
+    chainB_QCD_R1p2usingR0p5->SetBranchAddress("jets_AK5PF_R1p2_py", &jets_AK5PF_R1p2_py_);
+    vector<float>   *jets_AK5PF_R1p2_pz_ = 0;
+    chainB_QCD_R1p2usingR0p5->SetBranchAddress("jets_AK5PF_R1p2_pz", &jets_AK5PF_R1p2_pz_);
+    vector<float>   *jets_AK5PF_R1p2_energy_ = 0;
+    chainB_QCD_R1p2usingR0p5->SetBranchAddress("jets_AK5PF_R1p2_energy", &jets_AK5PF_R1p2_energy_);
+    vector<float>   *jets_AK5PF_R1p2_phi_ = 0;
+    chainB_QCD_R1p2usingR0p5->SetBranchAddress("jets_AK5PF_R1p2_phi", &jets_AK5PF_R1p2_phi_);
+    vector<float>   *jets_AK5PF_R1p2_eta_ = 0;
+    chainB_QCD_R1p2usingR0p5->SetBranchAddress("jets_AK5PF_R1p2_eta", &jets_AK5PF_R1p2_eta_);
 
     // 
     // histograms
     // 
     TH1F *h1_pt_fastjets_R1p2               = new TH1F("h1_pt_fastjets_R1p2","h1_pt_fastjets_R1p2",                             100, 0, 1000);
     TH1F *h1_pt_fastjets_R1p2usingR0p5      = new TH1F("h1_pt_fastjets_R1p2usingR0p5","h1_pt_fastjets_R1p2usingR0p5",           100, 0, 1000);
-    TH1F *h1_eta_fastjets_R1p2              = new TH1F("h1_eta_fastjets_R1p2","h1_eta_fastjets_R1p2",                           50, -5, 5);
-    TH1F *h1_eta_fastjets_R1p2usingR0p5     = new TH1F("h1_eta_fastjets_R1p2usingR0p5","h1_eta_fastjets_R1p2usingR0p5",         50, -5, 5);
-    TH1F *h1_phi_fastjets_R1p2              = new TH1F("h1_phi_fastjets_R1p2","h1_phi_fastjets_R1p2",                           50, -3.141592, 3.141592);
-    TH1F *h1_phi_fastjets_R1p2usingR0p5     = new TH1F("h1_phi_fastjets_R1p2usingR0p5","h1_phi_fastjets_R1p2usingR0p5",         50, -3.141592, 3.141592);
-    TH1F *h1_mj_fastjets_R1p2               = new TH1F("h1_mj_fastjets_R1p2","h1_mj_fastjets_R1p2",                             50, 0, 1500);
-    TH1F *h1_mj_fastjets_R1p2usingR0p5      = new TH1F("h1_mj_fastjets_R1p2usingR0p5","h1_mj_fastjets_R1p2usingR0p5",           50, 0, 1500);
-    TH1F *h1_MJ_fastjets_R1p2               = new TH1F("h1_MJ_fastjets_R1p2","h1_MJ_fastjets_R1p2",                             50, 0, 3000);
-    TH1F *h1_MJ_fastjets_R1p2usingR0p5      = new TH1F("h1_MJ_fastjets_R1p2usingR0p5","h1_MJ_fastjets_R1p2usingR0p5",           50, 0, 3000);
+    TH1F *h1_eta_fastjets_R1p2              = new TH1F("h1_eta_fastjets_R1p2","h1_eta_fastjets_R1p2",                           25, -5, 5);
+    TH1F *h1_eta_fastjets_R1p2usingR0p5     = new TH1F("h1_eta_fastjets_R1p2usingR0p5","h1_eta_fastjets_R1p2usingR0p5",         25, -5, 5);
+    TH1F *h1_phi_fastjets_R1p2              = new TH1F("h1_phi_fastjets_R1p2","h1_phi_fastjets_R1p2",                           25, -3.141592, 3.141592);
+    TH1F *h1_phi_fastjets_R1p2usingR0p5     = new TH1F("h1_phi_fastjets_R1p2usingR0p5","h1_phi_fastjets_R1p2usingR0p5",         25, -3.141592, 3.141592);
+    TH1F *h1_mj_fastjets_R1p2               = new TH1F("h1_mj_fastjets_R1p2","h1_mj_fastjets_R1p2",                             25, 0, 1500);
+    TH1F *h1_mj_fastjets_R1p2usingR0p5      = new TH1F("h1_mj_fastjets_R1p2usingR0p5","h1_mj_fastjets_R1p2usingR0p5",           25, 0, 1500);
+    TH1F *h1_MJ_fastjets_R1p2               = new TH1F("h1_MJ_fastjets_R1p2","h1_MJ_fastjets_R1p2",                             25, 0, 3000);
+    TH1F *h1_MJ_fastjets_R1p2usingR0p5      = new TH1F("h1_MJ_fastjets_R1p2usingR0p5","h1_MJ_fastjets_R1p2usingR0p5",           25, 0, 3000);
     TH1F *h1_njets_fastjets_R1p2            = new TH1F("h1_njets_fastjets_R1p2","h1_njets_fastjets_R1p2",                   30, -0.5, 29.5);
     TH1F *h1_njets_fastjets_R1p2usingR0p5   = new TH1F("h1_njets_fastjets_R1p2usingR0p5","h1_njets_fastjets_R1p2usingR0p5", 30, -0.5, 29.5);
 
@@ -145,7 +144,7 @@ void DoAnalysis() {
 
         // get entry of an event 
         chainB_QCD_R1p2->GetEntry(ib);
-        chainB_QCD_R1p2usingR0p5fastjets->GetEntry(ib); 
+        chainB_QCD_R1p2usingR0p5->GetEntry(ib); 
         
         //
         // Loop over jets and fill the histograms
@@ -170,19 +169,20 @@ void DoAnalysis() {
             Vector_mj.push_back(temp_mj); 
     
         }
-        for(int ifastjet=0; ifastjet<(int)fastjets_AK5PF_R1p2usingR0p5_px_->size(); ifastjet++) {
-            float pTusingR0p5 = TMath::Sqrt( fastjets_AK5PF_R1p2usingR0p5_px_->at(ifastjet)
-                                            *fastjets_AK5PF_R1p2usingR0p5_px_->at(ifastjet)
-                                            +fastjets_AK5PF_R1p2usingR0p5_py_->at(ifastjet)
-                                            *fastjets_AK5PF_R1p2usingR0p5_py_->at(ifastjet));
+
+        for(int ifastjet=0; ifastjet<(int)jets_AK5PF_R1p2_px_->size(); ifastjet++) {
+            float pTusingR0p5 = TMath::Sqrt( jets_AK5PF_R1p2_px_->at(ifastjet)
+                                            *jets_AK5PF_R1p2_px_->at(ifastjet)
+                                            +jets_AK5PF_R1p2_py_->at(ifastjet)
+                                            *jets_AK5PF_R1p2_py_->at(ifastjet));
             if(pTusingR0p5<JetpTthres) continue;  // pT cut for jets to calculate mj with
             Nfastjets_usingR0p5++;
             h1_pt_fastjets_R1p2usingR0p5->Fill(pTusingR0p5);
-            h1_eta_fastjets_R1p2usingR0p5->Fill(fastjets_AK5PF_R1p2usingR0p5_eta_->at(ifastjet));
-            h1_phi_fastjets_R1p2usingR0p5->Fill(fastjets_AK5PF_R1p2usingR0p5_phi_->at(ifastjet));
+            h1_eta_fastjets_R1p2usingR0p5->Fill(jets_AK5PF_R1p2_eta_->at(ifastjet));
+            h1_phi_fastjets_R1p2usingR0p5->Fill(jets_AK5PF_R1p2_phi_->at(ifastjet));
             
-            float temp_mj = Getmj(fastjets_AK5PF_R1p2usingR0p5_px_->at(ifastjet), fastjets_AK5PF_R1p2usingR0p5_py_->at(ifastjet),
-                                  fastjets_AK5PF_R1p2usingR0p5_pz_->at(ifastjet), fastjets_AK5PF_R1p2usingR0p5_energy_->at(ifastjet));
+            float temp_mj = Getmj(jets_AK5PF_R1p2_px_->at(ifastjet), jets_AK5PF_R1p2_py_->at(ifastjet),
+                                  jets_AK5PF_R1p2_pz_->at(ifastjet), jets_AK5PF_R1p2_energy_->at(ifastjet));
             h1_mj_fastjets_R1p2usingR0p5->Fill(temp_mj);
             Vector_mj_usingR0p5.push_back(temp_mj); 
         }
@@ -257,7 +257,7 @@ void DoAnalysis() {
     h1_njets_fastjets_R1p2->SetMaximum(h1_njets_fastjets_R1p2->GetMaximum()*2);
     h1_njets_fastjets_R1p2->Draw("HIST");
     h1_njets_fastjets_R1p2usingR0p5->Draw("HIST SAME");
-    c->SaveAs(Form("QCDMC_pt_eta_phi_mj_MJ_Njet_pT%i.pdf", (int)JetpTthres)); 
+    c->SaveAs(Form("QCDMC_pt_eta_phi_mj_MJ_Njet_PFcandsVsAK5PF.pdf", (int)JetpTthres)); 
 
     // cleanup
     //delete f;
