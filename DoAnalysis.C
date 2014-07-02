@@ -12,6 +12,7 @@
 #include "TLegend.h"
 
 using namespace std;
+const int JetpTcut=30;
 
 void h1cosmetic(TH1F* &h1, char* title, int linecolor=kRed, int linewidth=1, int fillcolor=0, TString var=""){
 
@@ -38,231 +39,186 @@ float Getmj(double px, double py, double pz, double E){
 // Get MJ 
 //
 float GetMJ(vector<float> Vectormj){
-
+    
     if(Vectormj.size()==0) {
-
+   
         return -999.;
-
+    
     } else {
 
         float MJ = 0.;
         for(int imj=0; imj<(int)Vectormj.size(); imj++) MJ = MJ + Vectormj.at(imj);
         return MJ;
-
+    
     }
 }
 
 
 void DoAnalysis() { 
-
+    
     // 
     // Get tree 
     // 
-    TChain * chainB_QCD_R1p2usingR0p5AK5PF        = new TChain("/configurableAnalysis/eventB");   
-    TChain * chainB_QCD_R1p2usingR0p5AK5PFclean   = new TChain("/configurableAnalysis/eventB");   
-    chainB_QCD_R1p2usingR0p5AK5PF->Add("../cfA/NopT10Cut/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2048_v71_*_TestR1p2usingR0p5jetsAK5PF.root");
-    chainB_QCD_R1p2usingR0p5AK5PFclean->Add("../cfA/NopT10Cut/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2048_v71_*_TestR1p2usingR0p5jetsAK5PFclean.root");
-
+    TChain * chainB_QCD = new TChain("/configurableAnalysis/eventB");   
+    //chainB_QCD->Add("../cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_TestR1p2usingR0p5fastjetsWithpT.root");
+    chainB_QCD->Add("../cfA/cfA_QCD_HT-1000ToInf_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2029_v71_f1_1_YWH_TestR1p2usingR0p5AK5PFWithpT.root");
+    
     // 
     // set address of variables to read 
     // 
-    
-    // 
-    // chainB_QCD 
-    // 
+
     // event info
     UInt_t   event_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("event", &event_);
+    chainB_QCD->SetBranchAddress("event", &event_);
     UInt_t   run_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("run", &run_);
+    chainB_QCD->SetBranchAddress("run", &run_);
     UInt_t   lumiblock_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("lumiblock", &lumiblock_);
+    chainB_QCD->SetBranchAddress("lumiblock", &lumiblock_);
     Int_t   Npv_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("Npv", &Npv_);
+    chainB_QCD->SetBranchAddress("Npv", &Npv_);
 
+    // fastjets
+    vector<float>   *fastjets_AK5PF_px_ = 0;
+    chainB_QCD->SetBranchAddress(Form("fastjets_AK5PF_R1p2_pT%i_px",JetpTcut), &fastjets_AK5PF_px_);
+    vector<float>   *fastjets_AK5PF_py_ = 0;
+    chainB_QCD->SetBranchAddress(Form("fastjets_AK5PF_R1p2_pT%i_py",JetpTcut), &fastjets_AK5PF_py_);
+    vector<float>   *fastjets_AK5PF_pz_ = 0;
+    chainB_QCD->SetBranchAddress(Form("fastjets_AK5PF_R1p2_pT%i_pz",JetpTcut), &fastjets_AK5PF_pz_);
+    vector<float>   *fastjets_AK5PF_energy_ = 0;
+    chainB_QCD->SetBranchAddress(Form("fastjets_AK5PF_R1p2_pT%i_energy",JetpTcut), &fastjets_AK5PF_energy_);
+    vector<float>   *fastjets_AK5PF_phi_ = 0;
+    chainB_QCD->SetBranchAddress(Form("fastjets_AK5PF_R1p2_pT%i_phi",JetpTcut), &fastjets_AK5PF_phi_);
+    vector<float>   *fastjets_AK5PF_eta_ = 0;
+    chainB_QCD->SetBranchAddress(Form("fastjets_AK5PF_R1p2_pT%i_eta",JetpTcut), &fastjets_AK5PF_eta_);
+    
     // 
-    // chainB_QCD_R1p2usingR0p5AK5PF
+    // histograms
     // 
-    vector<float>   *jets_AK5PF_R1p2_px_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PF->SetBranchAddress("jets_AK5PF_R1p2_px", &jets_AK5PF_R1p2_px_);
-    vector<float>   *jets_AK5PF_R1p2_py_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PF->SetBranchAddress("jets_AK5PF_R1p2_py", &jets_AK5PF_R1p2_py_);
-    vector<float>   *jets_AK5PF_R1p2_pz_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PF->SetBranchAddress("jets_AK5PF_R1p2_pz", &jets_AK5PF_R1p2_pz_);
-    vector<float>   *jets_AK5PF_R1p2_energy_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PF->SetBranchAddress("jets_AK5PF_R1p2_energy", &jets_AK5PF_R1p2_energy_);
-    vector<float>   *jets_AK5PF_R1p2_phi_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PF->SetBranchAddress("jets_AK5PF_R1p2_phi", &jets_AK5PF_R1p2_phi_);
-    vector<float>   *jets_AK5PF_R1p2_eta_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PF->SetBranchAddress("jets_AK5PF_R1p2_eta", &jets_AK5PF_R1p2_eta_);
-
-    // 
-    // chainB_QCD_R1p2usingR0p5AK5PFclean
-    // 
-    vector<float>   *jets_AK5PFclean_R1p2_px_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("jets_AK5PF_R1p2_px", &jets_AK5PFclean_R1p2_px_);
-    vector<float>   *jets_AK5PFclean_R1p2_py_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("jets_AK5PF_R1p2_py", &jets_AK5PFclean_R1p2_py_);
-    vector<float>   *jets_AK5PFclean_R1p2_pz_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("jets_AK5PF_R1p2_pz", &jets_AK5PFclean_R1p2_pz_);
-    vector<float>   *jets_AK5PFclean_R1p2_energy_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("jets_AK5PF_R1p2_energy", &jets_AK5PFclean_R1p2_energy_);
-    vector<float>   *jets_AK5PFclean_R1p2_phi_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("jets_AK5PF_R1p2_phi", &jets_AK5PFclean_R1p2_phi_);
-    vector<float>   *jets_AK5PFclean_R1p2_eta_ = 0;
-    chainB_QCD_R1p2usingR0p5AK5PFclean->SetBranchAddress("jets_AK5PF_R1p2_eta", &jets_AK5PFclean_R1p2_eta_);
-
-    // 
-    //  Histograms
-    //  A : AK5PF
-    //  B : AK5PFclean
-    // 
-    TH1F *h1_pt_jets_A      = new TH1F("h1_pt_jets_A","h1_pt_jets_A",           100, 0, 1000);
-    TH1F *h1_pt_jets_B      = new TH1F("h1_pt_jets_B","h1_pt_jets_B",           100, 0, 1000);
-    TH1F *h1_eta_jets_A     = new TH1F("h1_eta_jets_A","h1_eta_jets_A",         50, -5, 5);
-    TH1F *h1_eta_jets_B     = new TH1F("h1_eta_jets_B","h1_eta_jets_B",         50, -5, 5);
-    TH1F *h1_phi_jets_A     = new TH1F("h1_phi_jets_A","h1_phi_jets_A",         50, -3.141592, 3.141592);
-    TH1F *h1_phi_jets_B     = new TH1F("h1_phi_jets_B","h1_phi_jets_B",         50, -3.141592, 3.141592);
-    TH1F *h1_mj_jets_A      = new TH1F("h1_mj_jets_A","h1_mj_jets_A",           50, 0, 1500);
-    TH1F *h1_mj_jets_B      = new TH1F("h1_mj_jets_B","h1_mj_jets_B",           50, 0, 1500);
-    TH1F *h1_MJ_jets_A      = new TH1F("h1_MJ_jets_A","h1_MJ_jets_A",           50, 0, 3000);
-    TH1F *h1_MJ_jets_B      = new TH1F("h1_MJ_jets_B","h1_MJ_jets_B",           50, 0, 3000);
-    TH1F *h1_njets_jets_A   = new TH1F("h1_njets_jets_A","h1_njets_jets_A",     30, -0.5, 29.5);
-    TH1F *h1_njets_jets_B   = new TH1F("h1_njets_jets_B","h1_njets_jets_B",     30, -0.5, 29.5);
-
+    TH1F *h1_mj_fastjets_Npv0to15       = new TH1F("h1_mj_fastjets_Npv0to15","h1_mj_fastjets_Npv0to15", 50, 0, 1500);
+    TH1F *h1_MJ_fastjets_Npv0to15       = new TH1F("h1_MJ_fastjets_Npv0to15","h1_MJ_fastjets_Npv0to15", 50, 0, 3000);
+    TH1F *h1_mj_fastjets_Npv16to25      = new TH1F("h1_mj_fastjets_Npv16to25","h1_mj_fastjets_Npv16to25", 50, 0, 1500);
+    TH1F *h1_MJ_fastjets_Npv16to25      = new TH1F("h1_MJ_fastjets_Npv16to25","h1_MJ_fastjets_Npv16to25", 50, 0, 3000);
+    TH1F *h1_mj_fastjets_Npv26toInf     = new TH1F("h1_mj_fastjets_Npv26toInf","h1_mj_fastjets_Npv26toInf", 50, 0, 1500);
+    TH1F *h1_MJ_fastjets_Npv26toInf     = new TH1F("h1_MJ_fastjets_Npv26toInf","h1_MJ_fastjets_Npv26toInf", 50, 0, 3000);
+    TH1F *h1_njets_fastjets_Npv0to15    = new TH1F("h1_njets_fastjets_Npv0to15","h1_njets_fastjets_Npv0to15", 30, -0.5, 29.5);
+    TH1F *h1_njets_fastjets_Npv16to25   = new TH1F("h1_njets_fastjets_Npv16to25","h1_njets_fastjets_Npv16to25", 30, -0.5, 29.5);
+    TH1F *h1_njets_fastjets_Npv26toInf  = new TH1F("h1_njets_fastjets_Npv26toInf","h1_njets_fastjets_Npv26toInf", 30, -0.5, 29.5);
+    
     //
     // pT threshold for Njets counting
     //
-    const float JetpTthres=50;
+    const float JetpTthres_mj=50;
 
     //
     // main event loop
     //
-    Int_t nentries = (Int_t)chainB_QCD_R1p2usingR0p5AK5PF->GetEntries();
+    Int_t nentries = (Int_t)chainB_QCD->GetEntries();
     cout<<"The number of entries is: "<<nentries<<endl;
-
+    
     for(int ib = 0; ib<nentries; ib++) {
-        //for(int ib = 0; ib<10; ib++) { // DEBUG
-
+    //for(int ib = 0; ib<10; ib++) { // DEBUG
+       
         if(ib%500==0) cout << "Entry : " << ib << endl; 
 
         // get entry of an event 
-        chainB_QCD_R1p2usingR0p5AK5PF->GetEntry(ib);
-        chainB_QCD_R1p2usingR0p5AK5PFclean->GetEntry(ib); 
+        chainB_QCD->GetEntry(ib);
         
-        //
-        // Loop over jets and fill the histograms
-        //
-        vector<float> Vector_mj_A, Vector_mj_B;   // mj
-        float MJ_A=0, MJ_B=0;
-        int Njets_A=0, Njets_B=0;
-        for(int ijet=0; ijet<(int)jets_AK5PF_R1p2_px_->size(); ijet++) {
-            float pT_A = TMath::Sqrt( jets_AK5PF_R1p2_px_->at(ijet)
-                                   *jets_AK5PF_R1p2_px_->at(ijet)
-                                   +jets_AK5PF_R1p2_py_->at(ijet)
-                                   *jets_AK5PF_R1p2_py_->at(ijet));
-            if(pT_A<JetpTthres) continue;  // pT cut for jets to calculate mj with
-            Njets_A++; 
-            h1_pt_jets_A->Fill(pT_A);
-            h1_eta_jets_A->Fill(jets_AK5PF_R1p2_eta_->at(ijet));
-            h1_phi_jets_A->Fill(jets_AK5PF_R1p2_phi_->at(ijet));
-            
-            float temp_mj = Getmj(jets_AK5PF_R1p2_px_->at(ijet), jets_AK5PF_R1p2_py_->at(ijet),
-                                  jets_AK5PF_R1p2_pz_->at(ijet), jets_AK5PF_R1p2_energy_->at(ijet));
-            h1_mj_jets_A->Fill(temp_mj);
-            Vector_mj_A.push_back(temp_mj); 
+        // variables 
+        vector<float> Vector_mj;   // mj
+        float MJ=0;
+        int Nfastjets=0;
+        for(int ifastjet=0; ifastjet<(int)fastjets_AK5PF_px_->size(); ifastjet++) {
+            // Number of jets 
+            float pT = TMath::Sqrt( fastjets_AK5PF_px_->at(ifastjet)*fastjets_AK5PF_px_->at(ifastjet)
+                                   +fastjets_AK5PF_py_->at(ifastjet)*fastjets_AK5PF_py_->at(ifastjet));
+
+            // Get mj
+            if(pT<JetpTthres_mj) continue;  // pT cut for jets to calculate mj with
+
+            float temp_mj = Getmj(fastjets_AK5PF_px_->at(ifastjet), fastjets_AK5PF_py_->at(ifastjet),
+                                  fastjets_AK5PF_pz_->at(ifastjet), fastjets_AK5PF_energy_->at(ifastjet));
+
+            Vector_mj.push_back(temp_mj); 
+            if(Npv_ > 25) {
+                h1_mj_fastjets_Npv26toInf->Fill(temp_mj);
+            } else if(Npv_>15) {
+                h1_mj_fastjets_Npv16to25->Fill(temp_mj);
+            } else {
+                h1_mj_fastjets_Npv0to15->Fill(temp_mj);
+            }
+            Nfastjets++;
+        }
+
+        // Get MJ        
+        MJ = GetMJ(Vector_mj);
+
+        // fill histogram for MJ and Njets
+        if(Npv_ > 25) {
+            h1_njets_fastjets_Npv26toInf->Fill( TMath::Min((Float_t)Nfastjets,(Float_t)29.499) );
+            h1_MJ_fastjets_Npv26toInf->Fill(MJ);
+        } else if(Npv_>15) {
+            h1_njets_fastjets_Npv16to25->Fill( TMath::Min((Float_t)Nfastjets,(Float_t)29.499) );
+            h1_MJ_fastjets_Npv16to25->Fill(MJ);
+        } else {
+            h1_njets_fastjets_Npv0to15->Fill( TMath::Min((Float_t)Nfastjets,(Float_t)29.499) );
+            h1_MJ_fastjets_Npv0to15->Fill(MJ);
+        }
+
     
-        }
-
-        for(int ijet=0; ijet<(int)jets_AK5PFclean_R1p2_px_->size(); ijet++) {
-            float pT_B = TMath::Sqrt( jets_AK5PFclean_R1p2_px_->at(ijet)
-                                            *jets_AK5PFclean_R1p2_px_->at(ijet)
-                                            +jets_AK5PFclean_R1p2_py_->at(ijet)
-                                            *jets_AK5PFclean_R1p2_py_->at(ijet));
-            if(pT_B<JetpTthres) continue;  // pT cut for jets to calculate mj with
-            Njets_B++;
-            h1_pt_jets_B->Fill(pT_B);
-            h1_eta_jets_B->Fill(jets_AK5PFclean_R1p2_eta_->at(ijet));
-            h1_phi_jets_B->Fill(jets_AK5PFclean_R1p2_phi_->at(ijet));
-            
-            float temp_mj = Getmj(jets_AK5PFclean_R1p2_px_->at(ijet), jets_AK5PFclean_R1p2_py_->at(ijet),
-                                  jets_AK5PFclean_R1p2_pz_->at(ijet), jets_AK5PFclean_R1p2_energy_->at(ijet));
-            h1_mj_jets_B->Fill(temp_mj);
-            Vector_mj_B.push_back(temp_mj); 
-        }
-
-        // Get MJ
-        MJ_A = GetMJ(Vector_mj_A);
-        MJ_B = GetMJ(Vector_mj_B);
-        
-        // Njets
-        h1_njets_jets_A->Fill( TMath::Min((Float_t)Njets_A,(Float_t)29.499) );
-        h1_MJ_jets_A->Fill(MJ_A);
-        h1_njets_jets_B->Fill( TMath::Min((Float_t)Njets_B,(Float_t)29.499) );
-        h1_MJ_jets_B->Fill(MJ_B);
-
     } // event loop
-
+   
     //
     // cosmetics for histograms
     //
     //void h1cosmetic(TH1F* &h1, char* title, int linecolor=kRed, int linewidth=1, int fillcolor=0, TString var=""){
-    h1cosmetic(h1_pt_jets_A,     Form("pT >%i GeV",(int)JetpTthres), kBlack, 2, 0, "p_{T} [GeV]");
-    h1cosmetic(h1_pt_jets_B,     Form("pT >%i GeV",(int)JetpTthres), kBlue, 2, 0, "p_{T} [GeV]");
-    h1cosmetic(h1_eta_jets_A,    "Eta", kBlack, 2, 0, "#eta");
-    h1cosmetic(h1_eta_jets_B,    "Eta", kBlue, 2, 0, "#eta");
-    h1cosmetic(h1_phi_jets_A,    "Phi", kBlack, 2, 0, "#phi");
-    h1cosmetic(h1_phi_jets_B,    "Phi", kBlue, 2, 0, "#phi");
-    h1cosmetic(h1_mj_jets_A,     "mj", kBlack, 2, 0, "mj");
-    h1cosmetic(h1_mj_jets_B,     "mj", kBlue, 2, 0, "#mj");
-    h1cosmetic(h1_MJ_jets_A,     "MJ", kBlack, 2, 0, "MJ");
-    h1cosmetic(h1_MJ_jets_B,     "MJ", kBlue, 2, 0, "#Mj");
-    h1cosmetic(h1_njets_jets_A,  "Njets", kBlack, 2, 0, "Njets");
-    h1cosmetic(h1_njets_jets_B,  "Njets", kBlue, 2, 0, "Njets");
-
-
+    // mj 
+    h1cosmetic(h1_mj_fastjets_Npv0to15, Form("mj (pT>%i GeV)", (int)JetpTthres_mj), kBlack, 2, 0, "m_{j} [GeV]");
+    h1cosmetic(h1_mj_fastjets_Npv16to25, Form("mj (pT>%i GeV)", (int)JetpTthres_mj), kRed, 2, 0, "m_{j} [GeV]");
+    h1cosmetic(h1_mj_fastjets_Npv26toInf, Form("mj (pT>%i GeV)", (int)JetpTthres_mj), kBlue, 2, 0, "m_{j} [GeV]");
+    // MJ 
+    h1cosmetic(h1_MJ_fastjets_Npv0to15, Form("MJ (pT>%i GeV)", (int)JetpTthres_mj), kBlack, 2, 0, "M_{J} [GeV]");
+    h1cosmetic(h1_MJ_fastjets_Npv16to25, Form("MJ (pT>%i GeV)", (int)JetpTthres_mj), kRed, 2, 0, "M_{J} [GeV]");
+    h1cosmetic(h1_MJ_fastjets_Npv26toInf, Form("MJ (pT>%i GeV)", (int)JetpTthres_mj), kBlue, 2, 0, "M_{J} [GeV]");
+    // Njets 
+    h1cosmetic(h1_njets_fastjets_Npv0to15, Form("Njets (pT>%i GeV)", (int)JetpTthres_mj), kBlack, 2, 0, "Njets");
+    h1cosmetic(h1_njets_fastjets_Npv16to25, Form("Njets (pT>%i GeV)", (int)JetpTthres_mj), kRed, 2, 0, "Njets");
+    h1cosmetic(h1_njets_fastjets_Npv26toInf, Form("Njets (pT>%i GeV)", (int)JetpTthres_mj), kBlue, 2, 0, "Njets");
+    
     // 
     // Legend 
     // 
-    TLegend *l1 = new TLegend(0.15, 0.60, 0.85, 0.85);
+    TLegend *l1 = new TLegend(0.5, 0.60, 0.85, 0.85);
     l1->SetFillColor(kWhite);
     l1->SetLineColor(kWhite);
     l1->SetShadowColor(kWhite);
-    l1->AddEntry(h1_njets_jets_A,   "Using R=0.5 AK5PF branch",          "l");
-    l1->AddEntry(h1_njets_jets_B,   "Using R=0.5 AK5PFclean branch",     "l");
-
+    l1->AddEntry(h1_mj_fastjets_Npv0to15,        "Npv = 0 - 15 ",   "l");
+    l1->AddEntry(h1_mj_fastjets_Npv16to25,       "Npv = 16 - 25 ",  "l");
+    l1->AddEntry(h1_mj_fastjets_Npv26toInf,      "Npv = 26 -  ",    "l");
+    
     // 
     // Canvas
     // 
-    TCanvas *c = new TCanvas("c","c",1200,800);
-    c->Divide(3,2);
+    TCanvas *c = new TCanvas("c","c",1200,400);
+    c->Divide(3,1);
     c->cd(1);
-    h1_pt_jets_A->SetMaximum(h1_pt_jets_A->GetMaximum()*2);
-    h1_pt_jets_A->Draw("HIST");
-    h1_pt_jets_B->Draw("HIST SAME");
+    c->cd(1)->SetLogy(1);
+    h1_mj_fastjets_Npv0to15->SetMaximum(h1_mj_fastjets_Npv0to15->GetMaximum()*2);
+    h1_mj_fastjets_Npv0to15->DrawNormalized("HIST");
+    h1_mj_fastjets_Npv16to25->DrawNormalized("HIST SAME");
+    h1_mj_fastjets_Npv26toInf->DrawNormalized("HIST SAME");
     l1->Draw();
     c->cd(2);
-    h1_eta_jets_A->SetMaximum(h1_eta_jets_A->GetMaximum()*2);
-    h1_eta_jets_A->Draw("HIST");
-    h1_eta_jets_B->Draw("HIST SAME");
+    c->cd(2)->SetLogy(1);
+    h1_MJ_fastjets_Npv0to15->SetMaximum(h1_MJ_fastjets_Npv0to15->GetMaximum()*2);
+    h1_MJ_fastjets_Npv0to15->DrawNormalized("HIST");
+    h1_MJ_fastjets_Npv16to25->DrawNormalized("HIST SAME");
+    h1_MJ_fastjets_Npv26toInf->DrawNormalized("HIST SAME");
     c->cd(3);
-    h1_phi_jets_A->SetMaximum(h1_phi_jets_A->GetMaximum()*2);
-    h1_phi_jets_A->Draw("HIST");
-    h1_phi_jets_B->Draw("HIST SAME");
-    c->cd(4)->SetLogy(1);
-    h1_mj_jets_A->SetMaximum(h1_mj_jets_A->GetMaximum()*2);
-    h1_mj_jets_A->Draw("HIST");
-    h1_mj_jets_B->Draw("HIST SAME");
-    c->cd(5)->SetLogy(1);
-    h1_MJ_jets_A->SetMaximum(h1_MJ_jets_A->GetMaximum()*2);
-    h1_MJ_jets_A->Draw("HIST");
-    h1_MJ_jets_B->Draw("HIST SAME");
-    c->cd(6);
-    h1_njets_jets_A->SetMaximum(h1_njets_jets_A->GetMaximum()*2);
-    h1_njets_jets_A->Draw("HIST");
-    h1_njets_jets_B->Draw("HIST SAME");
-    c->SaveAs(Form("QCDMC_pt_eta_phi_mj_MJ_Njet_AK5PFVsAK5PFclean.pdf", (int)JetpTthres)); 
-
+    h1_njets_fastjets_Npv0to15->SetMaximum(h1_njets_fastjets_Npv0to15->GetMaximum()*2);
+    h1_njets_fastjets_Npv0to15->DrawNormalized("HIST");
+    h1_njets_fastjets_Npv16to25->DrawNormalized("HIST SAME");
+    h1_njets_fastjets_Npv26toInf->DrawNormalized("HIST SAME");
+    c->SaveAs(Form("QCDMC_mj_MJ_Njet_pT%i_R0p5AK5PFpT%i.pdf", (int)JetpTthres_mj, JetpTcut)); 
     // cleanup
     //delete f;
 }
