@@ -75,17 +75,17 @@ void makeJetP4(TString InRootFile, double Rparam=0.5) {
     UInt_t   lumiblock_ = 0;
     eventB->SetBranchAddress("lumiblock", &lumiblock_);
     vector<float>   *fastjets_AK5PF_px_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_px", &fastjets_AK5PF_px_);
+    eventB->SetBranchAddress("jets_AK5PF_px", &fastjets_AK5PF_px_);
     vector<float>   *fastjets_AK5PF_py_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_py", &fastjets_AK5PF_py_);
+    eventB->SetBranchAddress("jets_AK5PF_py", &fastjets_AK5PF_py_);
     vector<float>   *fastjets_AK5PF_pz_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_pz", &fastjets_AK5PF_pz_);
+    eventB->SetBranchAddress("jets_AK5PF_pz", &fastjets_AK5PF_pz_);
     vector<float>   *fastjets_AK5PF_energy_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_energy", &fastjets_AK5PF_energy_);
+    eventB->SetBranchAddress("jets_AK5PF_energy", &fastjets_AK5PF_energy_);
     vector<float>   *fastjets_AK5PF_phi_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_phi", &fastjets_AK5PF_phi_);
+    eventB->SetBranchAddress("jets_AK5PF_phi", &fastjets_AK5PF_phi_);
     vector<float>   *fastjets_AK5PF_eta_ = 0;
-    eventB->SetBranchAddress("fastjets_AK5PF_eta", &fastjets_AK5PF_eta_);
+    eventB->SetBranchAddress("jets_AK5PF_eta", &fastjets_AK5PF_eta_);
     
     // 
     // Define new variables to write 
