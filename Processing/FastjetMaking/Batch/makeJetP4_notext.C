@@ -23,9 +23,14 @@
 //     prints out only information of PF candidates, i.e., 
 //     no table header, ... 
 // 
-// * To run this code, do
+// * Before running this code, make sure you have included path for fastjet
+//   Quick and dirty way is to make a sym link : 
 //   
-//      $root -b -q makeJetP4_notext.C++\(\"cfA_QCD_HT-250To500_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2047_v71_f6_1_OWX_Test.root\",1.2,10\)
+//      ln -sf ../../../fastjet-install/include/fastjet
+//      
+// * Finally, to run this code, do
+//   
+//      $root -b -q makeJetP4_notext.C++\(\"cfA_QCD_HT-250To500_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2047_v71_f6_1_OWX_Test.root\",1.2,10,"AK5PFclean"\)
 // 
 #include <iostream>
 #include <fstream>
