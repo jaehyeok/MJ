@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INPUTDIR=/net/cms2/cms2r0/cfA
+INPUTDIR=/net/cms26/cms26r0/jaehyeok
 OUTPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet
 DATASET=$1
 

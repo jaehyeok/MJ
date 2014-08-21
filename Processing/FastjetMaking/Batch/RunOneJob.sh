@@ -26,17 +26,11 @@ cp $INPUTDIR/$FILE .
 
 echo "[DEBUG] Run macro "
 
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,10,\"AK5PFclean\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,15,\"AK5PFclean\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,20,\"AK5PFclean\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,25,\"AK5PFclean\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,30,\"AK5PFclean\"\)  
-
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,10,\"AK5PF\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,15,\"AK5PF\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,20,\"AK5PF\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,25,\"AK5PF\"\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,30,\"AK5PF\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,10,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,15,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,20,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,25,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,30,\"AK4\"\)  
 
 echo "[DEBUG] Copy output file"
 cp $FILE $OUTPUTDIR
