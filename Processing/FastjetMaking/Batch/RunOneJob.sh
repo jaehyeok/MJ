@@ -7,20 +7,30 @@ tmpdir=/data2/jaehyeok/$$
 
 echo "[DEBUG] Set up working directory"
 mkdir $tmpdir
-cp -r /homes/jaehyeok/Analysis/MJ/fastjet-3.0.6/ $tmpdir
-cp -r /homes/jaehyeok/Analysis/MJ/fastjet-install/ $tmpdir
-cd $tmpdir/fastjet-3.0.6/example/MJ 
+#if [ ! $(($status)) -eq 0 ] 
+#then 
+#exit 1
+#fi 
+
+echo "[DEBUG] Untar files and set up working directory"
+cp /data2/jaehyeok/fastjet-3.0.6_Batch.tar $tmpdir
+cp /data2/jaehyeok/fastjet-install.tar $tmpdir 
+cd $tmpdir
+tar xvf fastjet-3.0.6_Batch.tar
+tar xvf fastjet-install.tar
+cd $tmpdir/fastjet-3.0.6_Batch/example/MJ 
 ln -sf ../../../fastjet-install/include/fastjet
 
 echo "[DEBUG] Copy input file"
 cp $INPUTDIR/$FILE . 
 
 echo "[DEBUG] Run macro "
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,10\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,15\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,20\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,25\)  
-$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,30\)  
+
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,10,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,15,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,20,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,25,\"AK4\"\)  
+$ROOTSYS/bin/root -b -q makeJetP4_notext.C++\(\"$FILE\",1.2,30,\"AK4\"\)  
 
 echo "[DEBUG] Copy output file"
 cp $FILE $OUTPUTDIR

@@ -23,9 +23,14 @@
 //     prints out only information of PF candidates, i.e., 
 //     no table header, ... 
 // 
-// * To run this code, do
+// * Before running this code, make sure you have included path for fastjet
+//   Quick and dirty way is to make a sym link : 
 //   
-//      $root -b -q makeJetP4_notext.C++\(\"cfA_QCD_HT-250To500_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2047_v71_f6_1_OWX_Test.root\",1.2,10\)
+//      ln -sf ../../../fastjet-install/include/fastjet
+//      
+// * Finally, to run this code, do
+//   
+//      $root -b -q makeJetP4_notext.C++\(\"cfA_QCD_HT-250To500_TuneZ2star_8TeV-madgraph-pythia6_Summer12_DR53X-PU_S10_START53_V7A-v1_AODSIM_UCSB2047_v71_f6_1_OWX_Test.root\",1.2,10,"AK5PFclean"\)
 // 
 #include <iostream>
 #include <fstream>
@@ -64,7 +69,7 @@ using namespace std;
 
 const bool DEBUG = false; 
 
-void makeJetP4_notext(TString InRootFile, double Rparam=1.2, int R0p5JetpTcut=30) { 
+void makeJetP4_notext(TString InRootFile, double Rparam=1.2, int R0p5JetpTcut=30, TString jets="AK5PFclean") { 
     
     cout << " ................................................................." << endl; 
     cout << " ... Processing file = " << InRootFile << endl;
@@ -90,17 +95,17 @@ void makeJetP4_notext(TString InRootFile, double Rparam=1.2, int R0p5JetpTcut=30
     UInt_t   lumiblock_ = 0;
     eventB->SetBranchAddress("lumiblock", &lumiblock_);
     vector<float>   *FatjetConstituent_px_ = 0;
-    eventB->SetBranchAddress("jets_AK5PFclean_px", &FatjetConstituent_px_);
+    eventB->SetBranchAddress(Form("jets_%s_px",jets.Data()), &FatjetConstituent_px_);
     vector<float>   *FatjetConstituent_py_ = 0;
-    eventB->SetBranchAddress("jets_AK5PFclean_py", &FatjetConstituent_py_);
+    eventB->SetBranchAddress(Form("jets_%s_py",jets.Data()), &FatjetConstituent_py_);
     vector<float>   *FatjetConstituent_pz_ = 0;
-    eventB->SetBranchAddress("jets_AK5PFclean_pz", &FatjetConstituent_pz_);
+    eventB->SetBranchAddress(Form("jets_%s_pz",jets.Data()), &FatjetConstituent_pz_);
     vector<float>   *FatjetConstituent_energy_ = 0;
-    eventB->SetBranchAddress("jets_AK5PFclean_energy", &FatjetConstituent_energy_);
+    eventB->SetBranchAddress(Form("jets_%s_energy",jets.Data()), &FatjetConstituent_energy_);
     vector<float>   *FatjetConstituent_phi_ = 0;
-    eventB->SetBranchAddress("jets_AK5PFclean_phi", &FatjetConstituent_phi_);
+    eventB->SetBranchAddress(Form("jets_%s_phi",jets.Data()), &FatjetConstituent_phi_);
     vector<float>   *FatjetConstituent_eta_ = 0;
-    eventB->SetBranchAddress("jets_AK5PFclean_eta", &FatjetConstituent_eta_);
+    eventB->SetBranchAddress(Form("jets_%s_eta",jets.Data()), &FatjetConstituent_eta_);
     
     // 
     // Define new variables to write 
@@ -111,21 +116,21 @@ void makeJetP4_notext(TString InRootFile, double Rparam=1.2, int R0p5JetpTcut=30
     // [ref] http://root.cern.ch/phpBB3/viewtopic.php?t=8467
     gROOT->ProcessLine("#include <vector>"); 
     vector<float>   *Fatjet_px = 0;
-    TBranch *pxb =  eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_px",R0p5JetpTcut), &Fatjet_px);
+    TBranch *pxb =  eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_px",jets.Data(),R0p5JetpTcut), &Fatjet_px);
     vector<float>   *Fatjet_py = 0;
-    TBranch *pyb = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_py",R0p5JetpTcut), &Fatjet_py);
+    TBranch *pyb = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_py",jets.Data(),R0p5JetpTcut), &Fatjet_py);
     vector<float>   *Fatjet_pz = 0;
-    TBranch *pzb = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_pz",R0p5JetpTcut), &Fatjet_pz);
+    TBranch *pzb = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_pz",jets.Data(),R0p5JetpTcut), &Fatjet_pz);
     vector<float>   *Fatjet_energy = 0;
-    TBranch *energyb = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_energy",R0p5JetpTcut), &Fatjet_energy);
+    TBranch *energyb = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_energy",jets.Data(),R0p5JetpTcut), &Fatjet_energy);
     vector<float>   *Fatjet_phi = 0;
-    TBranch *phib = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_phi",R0p5JetpTcut), &Fatjet_phi);
+    TBranch *phib = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_phi",jets.Data(),R0p5JetpTcut), &Fatjet_phi);
     vector<float>   *Fatjet_eta = 0;
-    TBranch *etab = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_eta",R0p5JetpTcut), &Fatjet_eta);
+    TBranch *etab = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_eta",jets.Data(),R0p5JetpTcut), &Fatjet_eta);
     vector<vector<int> >   *Fatjet_ConstituentIndex = 0;
-    TBranch *indexb = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_index",R0p5JetpTcut), &Fatjet_ConstituentIndex);
+    TBranch *indexb = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_index",jets.Data(),R0p5JetpTcut), &Fatjet_ConstituentIndex);
     vector<int>   *Fatjet_NConstituents = 0;
-    TBranch *nconstituentsb = eventB->Branch(Form("fastjets_AK5PFclean_R1p2_R0p5pT%i_nconstituents",R0p5JetpTcut), &Fatjet_NConstituents);
+    TBranch *nconstituentsb = eventB->Branch(Form("fastjets_%s_R1p2_R0p5pT%i_nconstituents",jets.Data(),R0p5JetpTcut), &Fatjet_NConstituents);
 
     // 
     // Histgrom : to draw eta-phi plot of energy deposit 
