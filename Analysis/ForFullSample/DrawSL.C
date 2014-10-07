@@ -4,6 +4,7 @@
 #include "TChain.h"
 #include "TString.h"
 #include "TH1F.h"
+#include "TH2F.h"
 #include "THStack.h"
 #include "TSystem.h"
 #include "TFile.h"
@@ -17,7 +18,7 @@
 
 using namespace std;
 bool DoLog          = 0;
-bool OnlyDraw       = 0;
+bool OnlyDraw       = 1;
 bool RemoveMuon     = 0;
 bool Do3FatjetScale = 0;
 int pTR0p5thres     = 30;
@@ -30,6 +31,14 @@ TH1F* InitTH1F(char* Name, char* Title, int Nbins, double XMin, double XMax){
     TH1F *h1 = new TH1F(Name, Title, Nbins, XMin, XMax);
     h1->Sumw2();
     return h1;
+}
+//
+//TH2F initialization
+//
+TH2F* InitTH2F(char* Name, char* Title, int NXbins, double XMin, double XMax, int NYbins, double YMin, double YMax){
+    TH2F *h2 = new TH2F(Name, Title, NXbins, XMin, XMax, NYbins, YMin, YMax);
+    h2->Sumw2();
+    return h2;
 }
 
 //
@@ -45,6 +54,19 @@ void h1cosmetic(TH1F* &h1, char* title, int linecolor=kBlack, int linewidth=1, i
     h1->SetStats(0);
     h1->SetMinimum(0.1);
 }
+
+//
+// h2 cosmetics
+//
+void h2cosmetic(TH2F* &h2, char* title, TString Xvar="", TString Yvar="", TString Zvar="")
+{
+    h2->SetTitle(title);
+    h2->SetXTitle(Xvar);
+    h2->SetYTitle(Yvar);
+    h2->SetZTitle(Yvar);
+    h2->SetStats(0);
+}
+
 
 //
 // loading PU reweigting histogram
@@ -155,6 +177,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     vector<float>   *JetEta;
     vector<float>   *JetPhi;
     vector<float>   *JetCSV;
+    vector<float>   *RA4MusVetoPt;
+    vector<float>   *RA4ElsVetoPt;
 
     TBranch         *b_EventWeight;   //!
     TBranch         *b_Npu;   //!
@@ -177,6 +201,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     TBranch         *b_JetEta;   //!
     TBranch         *b_JetPhi;   //!
     TBranch         *b_JetCSV;   //!
+    TBranch         *b_RA4MusVetoPt;   //!
+    TBranch         *b_RA4ElsVetoPt;   //!
     mj        = 0;
     FatjetPt  = 0;
     FatjetEta = 0;
@@ -188,6 +214,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     JetEta = 0;
     JetPhi = 0;
     JetCSV = 0;
+    RA4MusVetoPt  = 0;
+    RA4ElsVetoPt  = 0;
 
     ch->SetBranchAddress("EventWeight", &EventWeight, &b_EventWeight);
     ch->SetBranchAddress("Npu", &Npu, &b_Npu);
@@ -210,6 +238,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     ch->SetBranchAddress("JetPhi", &JetPhi, &b_JetPhi);
     ch->SetBranchAddress("JetEta", &JetEta, &b_JetEta);
     ch->SetBranchAddress("JetCSV", &JetCSV, &b_JetCSV);
+    ch->SetBranchAddress("RA4MusVetoPt", &RA4MusVetoPt, &b_RA4MusVetoPt);
+    ch->SetBranchAddress("RA4ElsVetoPt", &RA4ElsVetoPt, &b_RA4ElsVetoPt);
     
     TString ChainName = ch->GetTitle();
     cout << "[MJ Analysis] " << ChainName << endl;  
@@ -250,6 +280,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
          *h1_mj_metmatch[6], *h1_FatjetPt_metmatch[6], *h1_mj_notmetmatch[6], *h1_FatjetPt_notmetmatch[6], 
          *h1_HT[6], *h1_MET[6], *h1_METPhi[6], *h1_DPhi[6], *h1_Nfatjet[6], *h1_WpT[6], *h1_dRmin[6],
          *h1_genpTttbar[6];
+    TH2F *h2_mjvsFatjetPt[6];
+    TH2F *h2_mjvsmj_2fatjet;
 
     for(int i=0; i<6; i++) 
     {
@@ -343,7 +375,13 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                              Form("h1_%s_WpT_%ifatjet", ch->GetTitle(), i), 
                              //20, 0, 500);
                              20, 0, 1000);
+        h2_mjvsFatjetPt[i]    =   InitTH2F(Form("h2_%s_mjvsFatjetPt_%ifatjet", ch->GetTitle(), i),
+                                           Form("h2_%s_mjvsFatjetPt_%ifatjet", ch->GetTitle(), i), 
+                                           20, 0, 500, 20, 0, 800);
     }
+    h2_mjvsmj_2fatjet = InitTH2F(Form("h2_%s_mjvsmj_%ifatjet", ch->GetTitle(), 2),
+                                 Form("h2_%s_mjvsmj_%ifatjet", ch->GetTitle(), 2),
+                                 20, 0, 500, 20, 0, 500);;
     // Pile up reweighting hist
     //TFile *fPUFile = TFile::Open("aux/puWeights_Summer12_53x_True_1p317ipb.root");
     TFile *fPUFile = TFile::Open("aux/puWeights_Summer12_53x_True_19p5ifb.root");
@@ -425,19 +463,21 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         // f1400_1000 : 126811 events 
         if(ChainName.Contains("f1400_25")) 
         {
-            EventWeight = EventWeight*19500*0.000871201/137498*1000;                      
+            EventWeight = EventWeight*19600*0.000871201/137498*1000;                      
         }
         if(ChainName.Contains("f1400_1000")) 
         {
-            EventWeight = EventWeight*19500*0.000871201/126811*1000;                      
+            EventWeight = EventWeight*19600*0.000871201/126811*1000;                      
         }
 
         //
         // cuts applied  
         //
 
-        // select only di-muon events
+        // select only single-muon events
         if( RA4MusPt->size()!=1 ) continue;
+        if( RA4MusVetoPt->size()>0 ) continue;
+        if( RA4ElsVetoPt->size()>0 ) continue;
 
         // single lepton trigger efficienc from HWW 
         if(!ChainName.Contains("DATA")) EventWeight = EventWeight * GetMuonEff(RA4MusPt->at(0), RA4MusEta->at(0));
@@ -505,13 +545,13 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                 h1_MET[4]->Fill(MET, EventWeight);
                 h1_METPhi[4]->Fill(METPhi, EventWeight);
                 h1_DPhi[4]->Fill(RA4MusPhi->at(0)-METPhi, EventWeight);
-
                 for(int i=0; i<(int)mj->size(); i++) 
                 { 
                     if(FatjetPt->at(i)<FatjetpTthres) continue;
 
                     h1_mj[4]->Fill(mj->at(i), EventWeight);
                     h1_FatjetPt[4]->Fill(FatjetPt->at(i), EventWeight);
+                    h2_mjvsFatjetPt[4]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
                     // met matching 
                     if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                     { 
@@ -577,6 +617,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
                     h1_mj[3]->Fill(mj->at(i), EventWeight);
                     h1_FatjetPt[3]->Fill(FatjetPt->at(i), EventWeight);
+                    h2_mjvsFatjetPt[3]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
                     // met matching 
                     if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                     { 
@@ -635,12 +676,14 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                 h1_MET[2]->Fill(MET, EventWeight);
                 h1_METPhi[2]->Fill(METPhi, EventWeight);
                 h1_DPhi[2]->Fill(RA4MusPhi->at(0)-METPhi, EventWeight);
+                h2_mjvsmj_2fatjet->Fill(mj->at(0), mj->at(1), EventWeight);
                 for(int i=0; i<(int)mj->size(); i++) 
                 { 
                     if(FatjetPt->at(i)<FatjetpTthres) continue;
 
                     h1_mj[2]->Fill(mj->at(i), EventWeight);
                     h1_FatjetPt[2]->Fill(FatjetPt->at(i), EventWeight);
+                    h2_mjvsFatjetPt[2]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
                     // met matching 
                     if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                     { 
@@ -706,6 +749,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
                     h1_mj[1]->Fill(mj->at(i), EventWeight);
                     h1_FatjetPt[1]->Fill(FatjetPt->at(i), EventWeight);
+                    h2_mjvsFatjetPt[1]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
                     // met matching 
                     if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                     { 
@@ -770,6 +814,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
                     h1_mj[0]->Fill(mj->at(i), EventWeight);
                     h1_FatjetPt[0]->Fill(FatjetPt->at(i), EventWeight);
+                    h2_mjvsFatjetPt[0]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
                     // met matching 
                     if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                     { 
@@ -833,6 +878,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
                 h1_mj[5]->Fill(mj->at(i), EventWeight);
                 h1_FatjetPt[5]->Fill(FatjetPt->at(i), EventWeight);
+                h2_mjvsFatjetPt[5]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
                 // met matching 
                 if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                 { 
@@ -915,13 +961,15 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_musPhi[i]->SetDirectory(0);                      h1_musPhi[i]->Write();
         h1_Nfatjet[i]->SetDirectory(0);                     h1_Nfatjet[i]->Write();
         h1_Nskinnyjet[i]->SetDirectory(0);                  h1_Nskinnyjet[i]->Write();
+        h2_mjvsFatjetPt[i]->SetDirectory(0);                h2_mjvsFatjetPt[i]->Write();
     }
+    h2_mjvsmj_2fatjet->SetDirectory(0);                h2_mjvsmj_2fatjet->Write();
     HistFile->Close();
 
 }
 
 //
-//
+// Stacks
 //
 void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1) 
 { 
@@ -998,16 +1046,16 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1_TT[i] = (TH1F*)h1_TT_ll[i]->Clone();
         h1_TT[i]->Add(h1_TT_sl[i]);
 
-        h1cosmetic(h1_DATA[i],          Form("DATA %ifatjet", i),   kBlack, 1, 0,       var);
-        h1cosmetic(h1_TT[i],            Form("TT %ifatjet", i),     kBlack, 1, kYellow, var);
-        h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),  kBlack, 1, kYellow, var);
-        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i), kBlack, 1, kYellow-1, var);
-        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),   kBlack, 1, kYellow+1, var);
-        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),  kBlack, 1, kGreen+2,  var);
-        h1cosmetic(h1_Ratio[i],         Form(" "),                  kBlack, 1, kBlack,  var);
-        h1cosmetic(h1_One[i],           Form(" "),                  kBlue,  1, 0,       var); 
-        h1cosmetic(h1_f1400_25[i],      Form("T1tttt(1400,25) %ifatjet", i),     kRed, 1, 0,   var);
-        h1cosmetic(h1_f1400_1000[i],    Form("T1tttt(1400,1000) %ifatjet", i),     kBlue, 1, 0,   var);
+        h1cosmetic(h1_DATA[i],          Form("DATA %ifatjet", i),               kBlack, 1, 0,           var);
+        h1cosmetic(h1_TT[i],            Form("TT %ifatjet", i),                 kBlack, 1, kYellow,     var);
+        h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),              kBlack, 1, kYellow,     var);
+        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 1, kYellow-1,   var);
+        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 1, kYellow+1,   var);
+        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 1, kGreen+2,    var);
+        h1cosmetic(h1_Ratio[i],         Form(" "),                              kBlack, 1, kBlack,      var);
+        h1cosmetic(h1_One[i],           Form(" "),                              kBlue,  1, 0,           var); 
+        h1cosmetic(h1_f1400_25[i],      Form("T1tttt(1400,25) %ifatjet", i),    kRed,   1, 0,           var);
+        h1cosmetic(h1_f1400_1000[i],    Form("T1tttt(1400,1000) %ifatjet", i),  kBlue,  1, 0,           var);
 
         c->cd(i-1);
 
@@ -1028,7 +1076,7 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
 //         st[i]->Add(h1_TT[i]);
          st[i]->Add(h1_TT_ll[i]);
          st[i]->Add(h1_TT_sl[i]);
-        st[i]->SetMaximum(h1_DATA[i]->GetMaximum()*(DoLog?50:1.5));
+        st[i]->SetMaximum(h1_DATA[i]->GetMaximum()*(DoLog?50:1.6));
         st[i]->SetMinimum(0.1);
         st[i]->Draw("HIST"); 
 
@@ -1039,8 +1087,8 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1_DATA[i]->SetStats(0);
         h1_DATA[i]->Draw("E SAME");
 
-        TLegend *l1 = new TLegend(0.15, 0.7, 0.85, 0.85);
-        l1->SetNColumns(3);
+        TLegend *l1 = new TLegend(0.15, 0.65, 0.85, 0.85);
+        l1->SetNColumns(2);
         l1->SetBorderSize(0);
         l1->SetFillColor(0);
         l1->SetFillStyle(0);
@@ -1052,13 +1100,14 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         l1->SetShadowColor(kWhite);
         l1->AddEntry(h1_DATA[i],        " Data",  "lp");
 //        l1->AddEntry(h1_TT[i],          " TT",    "f");
+        l1->AddEntry(h1_TT_sl[i],        " ",    "");
         l1->AddEntry(h1_TT_sl[i],        " TT(l)",    "f");
         l1->AddEntry(h1_TT_ll[i],        " TT(ll)",    "f");
         l1->AddEntry(h1_T[i],           " t+tW",  "f");
         l1->AddEntry(h1_WJets[i],       " WJets", "f");
 //        l1->AddEntry(h1_DY[i],        " DY",    "f");
-        l1->AddEntry(h1_f1400_25[i],    "T1tttt(1400_25)",    "l");
-        l1->AddEntry(h1_f1400_1000[i],  "T1tttt(1400_1000)",    "l");
+        l1->AddEntry(h1_f1400_25[i],    "T1tttt[1400,25]x1000",     "l");
+        l1->AddEntry(h1_f1400_1000[i],  "T1tttt[1400,1000]x1000",   "l");
         l1->Draw();
         
         h1_f1400_25[i]->Draw("SAME HIST");
@@ -1100,12 +1149,84 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
 }
 
 //
+// 2D histograms 
+//
+void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1) 
+{ 
+    TFile* HistFile = TFile::Open(Form("HistFiles/Hist_pT%i.root",pTR0p5));
+   
+    char *Xvar, *Yvar, *Zvar; 
+    if(HistName=="mjvsmj")
+    {   
+        Xvar=(char*)"mj [GeV]";
+        Yvar=(char*)"mj [GeV]";
+        Zvar=(char*)"Events/bin";
+    }
+    if(HistName=="mjvsFatjetPt")
+    {   
+        Xvar=(char*)"mj [GeV]";
+        Yvar=(char*)"pT(fatjet) [GeV]";
+        Zvar=(char*)"Events/bin";
+    }
+
+
+    TH2F *h2_DATA[6], *h2_T[6], *h2_TT_sl[6], *h2_TT_ll[6], *h2_TT[6], *h2_WJets[6], *h2_DY[6]; 
+    TH2F *h2_f1400_25[6], *h2_f1400_1000[6];
+    TCanvas *c_TT_sl = new TCanvas("c_TT_sl","c_TT_sl",1600,360);  
+    TCanvas *c_TT_ll = new TCanvas("c_TT_ll","c_TT_ll",1600,360);  
+    c_TT_sl->Divide(4,1);
+    c_TT_ll->Divide(4,1);
+    for(int i=2; i<6; i++) 
+    {
+        if(HistName=="mjvsmj" && i!=2) continue;
+
+        h2_DATA[i]          = (TH2F*)HistFile->Get(Form("h2_DATA_%s_%ifatjet", HistName.Data(), i)); 
+        h2_T[i]             = (TH2F*)HistFile->Get(Form("h2_T_%s_%ifatjet", HistName.Data(), i));
+        h2_TT_sl[i]         = (TH2F*)HistFile->Get(Form("h2_TT_sl_%s_%ifatjet", HistName.Data(), i));
+        h2_TT_ll[i]         = (TH2F*)HistFile->Get(Form("h2_TT_ll_%s_%ifatjet", HistName.Data(), i));
+        h2_WJets[i]         = (TH2F*)HistFile->Get(Form("h2_WJets_%s_%ifatjet", HistName.Data(), i));
+//        h2_DY[i]          = (TH2F*)HistFile->Get(Form("h2_DY_%s_%ifatjet", HistName.Data(), i)); 
+        h2_f1400_25[i]      = (TH2F*)HistFile->Get(Form("h2_T1tttt_f1400_25_%s_%ifatjet", HistName.Data(), i)); 
+        h2_f1400_1000[i]    = (TH2F*)HistFile->Get(Form("h2_T1tttt_f1400_1000_%s_%ifatjet", HistName.Data(), i)); 
+
+        h2cosmetic(h2_DATA[i],          Form("DATA %ifatjet", i),               Xvar,   Yvar,   Zvar);
+        h2cosmetic(h2_TT_sl[i],         Form("TT(sl) %ifatjet", i),             Xvar,   Yvar,   Zvar);
+        h2cosmetic(h2_TT_ll[i],         Form("TT(ll) %ifatjet", i),             Xvar,   Yvar,   Zvar);
+        h2cosmetic(h2_T[i],             Form("T %ifatjet", i),                  Xvar,   Yvar,   Zvar);
+        h2cosmetic(h2_WJets[i],         Form("WJets %ifatjet", i),              Xvar,   Yvar,   Zvar);
+        h2cosmetic(h2_f1400_25[i],      Form("T1tttt(1400,25) %ifatjet", i),    Xvar,   Yvar,   Zvar);
+        h2cosmetic(h2_f1400_1000[i],    Form("T1tttt(1400,1000) %ifatjet", i),  Xvar,   Yvar,   Zvar);
+    }
+
+    // Drawing
+    for(int i=2; i<6; i++) 
+    {
+        if(HistName=="mjvsmj" && i!=2) continue;
+        c_TT_sl->cd(i-1);
+        h2_TT_sl[i]->Draw("colz");
+        c_TT_ll->cd(i-1);
+        h2_TT_ll[i]->Draw("colz");
+    }
+   
+    c_TT_sl->Print( Form("figures_FatjetpT%i/2D_TT_sl_%s_pT%i%s%s.pdf", FatjetpTthres,
+                HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+    c_TT_ll->Print( Form("figures_FatjetpT%i/2D_TT_ll_%s_pT%i%s%s.pdf", FatjetpTthres,
+                HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+    
+    // 
+    HistFile->Close();
+    delete c_TT_sl;
+    delete c_TT_ll;
+}
+
+
+//
 // main 
 //
 void DrawSL() 
 {
 
-    gROOT->ProcessLine(".L /Users/jaehyeok/macros/JaeStyle.C");
+    gROOT->ProcessLine(".L /Users/jaehyeok/macros/rootlogon.C");
     
     // ----------------------------------------
     //  Define chains  
@@ -1119,7 +1240,7 @@ void DrawSL()
     TChain *ch_f1400_25     = new TChain("tree", "T1tttt_f1400_25");
     TChain *ch_f1400_1000   = new TChain("tree", "T1tttt_f1400_1000");
    
-    TString BabyDir = "../../../babies/HT500/";  
+    TString BabyDir = "../../../babies/HT500MET100/";  
     // Data
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012A-13Jul2012-v1_f*.root");  // 808 pb if fully processed : 808 * 646/650 = 803 pb 
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012B-13Jul2012-v1_f*.root");  // 5237-808=4429 pb if fully processed : 4429 * 4247/4294 = 4380 pb  
@@ -1206,6 +1327,7 @@ void DrawSL()
     DrawStack("FatjetPt_notmetmatch");
     DrawStack("WpT"                 );
     //DrawStack("genpTttbar"          );
-
+    Draw2D("mjvsmj"                 );
+    Draw2D("mjvsFatjetPt"           );
 }
 
