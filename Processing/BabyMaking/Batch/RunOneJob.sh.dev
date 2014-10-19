@@ -21,14 +21,20 @@ cp -r /homes/jaehyeok/Analysis/MJ/fastjet-3.0.6/example/MJGit/MJ/Processing/Baby
 cd $tmpdir 
 pwd
 
-echo "[DEBUG] Run from the file $BEGINFILE for $NFILEPERJOB files"
-echo "[DEBUG] Run the macro "
+echo "[BabyMaker] Copy input cfA files to this directory"
+for index in `seq $BEGINFILE $ENDFILE`; do 
+    #cp $DIR/configurableAnalysis_${index}_* .
+    cp $DIR/*_${index}_* .
+done 
+
+echo "[BabyMaker] Run from the file $BEGINFILE for $NFILEPERJOB files"
+echo "[BabyMaker] Run the macro "
 
 $ROOTSYS/bin/root -b -q DoOneProcess.C++\(\"$DIR\",\"$RECOGNIZER\",$BEGINFILE,$ENDFILE,$ISDATA,$LUMI\) 
 
-echo "[DEBUG] Copy baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root to /net/cms26/cms26r0/jaehyeok/baby/Fatjet"
+echo "[BabyMaker] Copy baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root to /net/cms26/cms26r0/jaehyeok/baby/Fatjet"
 cp baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root /net/cms26/cms26r0/jaehyeok/baby/Fatjet 
 
-echo "[DEBUG] Clean up"
+echo "[BabyMaker] Clean up"
 cd -
 rm -rf $tmpdir
