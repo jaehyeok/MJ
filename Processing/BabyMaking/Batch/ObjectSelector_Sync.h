@@ -574,6 +574,75 @@ vector<int> GetJets(vector<int> RA4Muon, vector<int> RA4Elec,
         }
     }
 
+    return Jets;
+}
+
+vector<int> GetJetsCHS(vector<int> RA4Muon, vector<int> RA4Elec,
+                       vector<int> RA4MuonVeto, vector<int> RA4ElecVeto,
+                       double& HT, vector<int>& LooseBJet, vector<int>& MediumBJet,
+                       double etaMax=2.4, double ptMin=40, double minDeltaR=0.3){
+
+    HT=0.0;
+
+    vector<int> Jets; RA4MuonVeto=RA4MuonVeto; RA4ElecVeto=RA4ElecVeto;
+    for(unsigned int i=0;i<jets_AK5PF_pt->size();i++){
+        double rawRatio =(jets_AK5PF_rawPt->at(i)/jets_AK5PF_pt->at(i)); 
+        if(jets_AK5PF_pt->at(i) >= ptMin
+                && fabs(jets_AK5PF_eta->at(i)) <= etaMax
+                && jets_AK5PF_neutralEmE->at(i)/jets_AK5PF_energy->at(i)/rawRatio < 0.99
+                && jets_AK5PF_chgEmE->at(i)/jets_AK5PF_energy->at(i)/rawRatio < 0.99
+                && jets_AK5PF_neutralHadE->at(i)/jets_AK5PF_energy->at(i)/rawRatio < 0.99
+                && jets_AK5PF_chgHadE->at(i)/jets_AK5PF_energy->at(i)/rawRatio > 0
+                && jets_AK5PF_chg_Mult->at(i) > 0
+                && jets_AK5PF_chg_Mult->at(i)
+                +jets_AK5PF_neutral_Mult->at(i)
+                +jets_AK5PF_mu_Mult->at(i) > 1){
+            // Elec XCleaning
+            float DeltaR=0;
+            float MinElecDeltaR=9.99;
+            for(int iElec=0;iElec<int(RA4Elec.size());iElec++){
+                DeltaR= sqrt( pow( GetDeltaPhi(jets_AK5PF_phi->at(i),els_phi->at(RA4Elec[iElec])),2)
+                        +pow(jets_AK5PF_eta->at(i)-els_eta->at(RA4Elec[iElec]),2));
+                if(DeltaR < MinElecDeltaR) MinElecDeltaR = DeltaR;
+            }
+            float MinElecVetoDeltaR=9.99;
+            for(int iElecVeto=0;iElecVeto<int(RA4ElecVeto.size());iElecVeto++){
+                DeltaR= sqrt( pow( GetDeltaPhi(jets_AK5PF_phi->at(i),els_phi->at(RA4ElecVeto[iElecVeto])),2)
+                        +pow(jets_AK5PF_eta->at(i)-els_eta->at(RA4ElecVeto[iElecVeto]),2));
+                if(DeltaR < MinElecVetoDeltaR) MinElecVetoDeltaR = DeltaR;
+            }
+
+            // Muon XCleaning
+            DeltaR=0;
+            float MinMuonDeltaR=9.99;
+            for(int iMuon=0;iMuon<int(RA4Muon.size());iMuon++){
+                DeltaR = sqrt(pow( GetDeltaPhi(jets_AK5PF_phi->at(i),mus_phi->at(RA4Muon[iMuon])),2)
+                        +pow(jets_AK5PF_eta->at(i)-mus_eta->at(RA4Muon[iMuon]),2));
+                if(DeltaR < MinMuonDeltaR) MinMuonDeltaR = DeltaR;
+            }
+            float MinMuonVetoDeltaR=9.99;
+            for(int iMuonVeto=0;iMuonVeto<int(RA4MuonVeto.size());iMuonVeto++){
+                DeltaR = sqrt(pow( GetDeltaPhi(jets_AK5PF_phi->at(i),mus_phi->at(RA4MuonVeto[iMuonVeto])),2)
+                        +pow(jets_AK5PF_eta->at(i)-mus_eta->at(RA4MuonVeto[iMuonVeto]),2));
+                if(DeltaR < MinMuonVetoDeltaR) MinMuonVetoDeltaR = DeltaR;
+            }
+            if(MinElecDeltaR >= minDeltaR && MinMuonDeltaR >= minDeltaR && MinElecVetoDeltaR >= minDeltaR && MinMuonVetoDeltaR >= minDeltaR){ 		  
+                //	if(event==556) {
+                //	  std::cout << i << " " << HT << " " << jets_AK5PF_pt->at(i) << std::endl; 
+                HT=HT+jets_AK5PF_pt->at(i);
+                Jets.push_back(i);
+                //	  std::cout << i << " " << HT << " " << jets_AK5PF_pt->at(i) << std::endl; 
+                //	}
+                // Combined Secondary Vertex Loose=0.244, Medium = 0.679, Tight=0.898
+                if(jets_AK5PF_btag_secVertexCombined->at(i) > 0.244){
+                    LooseBJet.push_back(i);
+                }
+                if(jets_AK5PF_btag_secVertexCombined->at(i) > 0.679){
+                    MediumBJet.push_back(i);
+                }
+            }
+        }
+    }
 
     return Jets;
 }

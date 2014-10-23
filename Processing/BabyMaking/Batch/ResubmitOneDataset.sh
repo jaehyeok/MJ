@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INPUTDIR=/net/cms26/cms26r0/jaehyeok
+INPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet
 DATASET=$1
 RECOGNIZER=$2
 ISDATA=$3
@@ -19,8 +19,9 @@ rm filenumber_resubmit.txt filenumbersorted_resubmit.txt
 
 #####
 for NONSLIMFILEPATH in `ls $INPUTDIR/$DATASET/*root`; do
-     NONSLIMFILE="$( cut -d '/' -f 7 <<< "$NONSLIMFILEPATH" )" 
+     NONSLIMFILE="$( cut -d '/' -f 8 <<< "$NONSLIMFILEPATH" )" 
      NONSLIMFILE=`echo $NONSLIMFILE | sed 's/_f/#/g' `
+#     NONSLIMFILE=`echo $NONSLIMFILE | sed 's/s_/s#/g' ` # for non-published cfA sample
      NONSLIMINDEX="$( cut -d '#' -f 2 <<< "$NONSLIMFILE" )" 
      NONSLIMINDEX=`echo $NONSLIMINDEX | cut -d "_" -f 1 `
      echo $NONSLIMINDEX >> filenumber_resubmit.txt
@@ -30,7 +31,7 @@ done
 sort -g filenumber_resubmit.txt > filenumbersorted_resubmit.txt
 NUMLINE=`wc -l filenumbersorted_resubmit.txt | awk '{print $1}'`
 LASTFILENUM=`tail -n +$NUMLINE filenumbersorted_resubmit.txt`  
-echo $LASTFILENUM
+echo "The Last file number : $LASTFILENUM"
 
 ####
 COUNTER=1
@@ -41,7 +42,7 @@ while [ $COUNTER -lt $(($LASTFILENUM)) ]; do
     then 
         BEGINFILE=$COUNTER
         ENDFILE=$(($LASTFILENUM))
-        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
+        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
         then
             echo "JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI"
             JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI
@@ -49,7 +50,7 @@ while [ $COUNTER -lt $(($LASTFILENUM)) ]; do
     else  
         BEGINFILE=$COUNTER
         ENDFILE=$(($COUNTER+$NFILEPERJOB-1))
-        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
+        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
         then
             echo "JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI" 
             JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI 
@@ -59,7 +60,7 @@ while [ $COUNTER -lt $(($LASTFILENUM)) ]; do
     let COUNTER=COUNTER+$NFILEPERJOB
 done
 
-NUMEXISTOUTPUTFILES=`ls /net/cms26/cms26r0/jaehyeok/baby/baby_${RECOGNIZER}_f*To*.root | wc -l`
+NUMEXISTOUTPUTFILES=`ls /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f*To*.root | wc -l`
 echo "Number of target output files : $NUMOUTPUTFILES"
 echo "Number of existing output files : $NUMEXISTOUTPUTFILES"
 
@@ -70,6 +71,6 @@ if [ $(($NUMEXISTOUTPUTFILES)) -eq $(($NUMOUTPUTFILES)) ]
 then 
     echo "Babyies for $DATASET are complete" 
     echo "No need for resubmission."
-#    echo "hadd /net/cms26/cms26r0/jaehyeok/baby/baby_${RECOGNIZER}.root /net/cms26/cms26r0/jaehyeok/baby/baby_${RECOGNIZER}_f*To*.root"
+#    echo "hadd /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}.root /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f*To*.root"
 fi
 

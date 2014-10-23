@@ -56,14 +56,14 @@ float GetMJ(vector<float> Vectormj)
 //
 // main function
 //
-void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, bool isData, float Lumi) 
+void DoOneSignal(TString InputName, TString ProcessName, int mg, int mlsp) 
 {
     //
     cout << "[MJ Analysis] ------------------------------------------------------------------------------------"<<endl; 
     cout << "[MJ Analysis] Processing : " << ProcessName << endl;
     cout << "[MJ Analysis] Input dir  : " << InputName << endl;
 
-    TFile *babyFile_ = new TFile(Form("baby_%s_f%iTo%i.root", ProcessName.Data(), ibegin, iend), "RECREATE");
+    TFile *babyFile_ = new TFile(Form("baby_%s_f%i_%i.root", ProcessName.Data(), mg, mlsp), "RECREATE");
     babyFile_->cd();
     TTree *babyTree_ = new TTree("tree", "A Baby Ntuple");
     
@@ -73,15 +73,10 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     TChain * chainA = new TChain("/configurableAnalysis/eventA");   
     TChain * chainB = new TChain("/configurableAnalysis/eventB");  
     
-    for(int i=ibegin; i<=iend; i++)  
-    {
-        gSystem->Exec(Form("ls %s/*f%i_*.root", InputName.Data(), i));
-        chainA->Add(Form("%s/*f%i_*.root", InputName.Data(), i));
-        chainB->Add(Form("%s/*f%i_*.root", InputName.Data(), i));
-        //gSystem->Exec(Form("ls %s/configurableAnalysis_%i_*.root", InputName.Data(), i)); // for non-published cfA samples 
-        //chainA->Add(Form("%s/configurableAnalysis_%i_*.root", InputName.Data(), i));
-        //chainB->Add(Form("%s/configurableAnalysis_%i_*.root", InputName.Data(), i));
-    } 
+    gSystem->Exec(Form("ls %s/*_f%i_%i_*.root", InputName.Data(), mg, mlsp));
+    chainA->Add(Form("%s/*_f%i_%i_*.root", InputName.Data(), mg, mlsp));
+    chainB->Add(Form("%s/*_f%i_%i_*.root", InputName.Data(), mg, mlsp));
+    
     TList *l = (TList*)chainA->GetListOfFiles();
     l->Print();
 
@@ -91,13 +86,6 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     // Get total number of events of a sample 
     int TotalNEntries=1;
     
-    if(!isData)
-    { 
-        TChain * chainATotal = new TChain("/configurableAnalysis/eventA");  
-        chainATotal->Add(Form("%s/*.root", InputName.Data()));
-        TotalNEntries = (int)chainATotal->GetEntries();
-    }
-
     //
     // Baby variables 
     //
@@ -109,36 +97,28 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     bool TrigSingleMuon_;  
     bool TrigHTMuon_;  
     int Nfatjet_pT30_; 
-    int NfatjetCHS_pT30_; 
+//    int NfatjetCHS_pT30_; 
     int Nskinnyjet_; 
     int NBtagCSVM_; 
-    int NskinnyjetCHS_; 
-    int NBtagCHSCSVM_; 
+//    int NskinnyjetCHS_; 
+//    int NBtagCHSCSVM_; 
     int Npv_; 
     float Npu_; 
     float EventWeight_; 
     float MJ_pT30_; 
-    float MJCHS_pT30_; 
+//    float MJCHS_pT30_; 
     float MET_;  
     float METPhi_;  
     float HT_;  
-    float HTCHS_;  
-    float top1pT_;  
-    float top1Eta_;  
-    float top1Phi_;  
-    float top2pT_;  
-    float top2Eta_;  
-    float top2Phi_;  
+//    float HTCHS_;  
     vector<float> mj_pT30_;
-    vector<float> mjCHS_pT30_;
+//    vector<float> mjCHS_pT30_;
     vector<float> FatjetPt_pT30_;
     vector<float> FatjetEta_pT30_;
     vector<float> FatjetPhi_pT30_;
-    vector<float> FatjetN_pT30_;
-    vector<float> FatjetCHSPt_pT30_;
-    vector<float> FatjetCHSEta_pT30_;
-    vector<float> FatjetCHSPhi_pT30_;
-    vector<float> FatjetCHSN_pT30_;
+//    vector<float> FatjetCHSPt_pT30_;
+//    vector<float> FatjetCHSEta_pT30_;
+//    vector<float> FatjetCHSPhi_pT30_;
     vector<float> RA4ElsPt_;
     vector<float> RA4ElsEta_;
     vector<float> RA4ElsPhi_;
@@ -170,35 +150,27 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("TrigSingleMuon",    	&TrigMuon_);     
     babyTree_->Branch("TrigHTMuon",       	&TrigHTMuon_);     
     babyTree_->Branch("Nfatjet_pT30",   	&Nfatjet_pT30_);   
-    babyTree_->Branch("NatjetCHS_pT30", 	&NfatjetCHS_pT30_);   
+//    babyTree_->Branch("NatjetCHS_pT30", 	&NfatjetCHS_pT30_);   
     babyTree_->Branch("Nskinnyjet",     	&Nskinnyjet_);
     babyTree_->Branch("NBtagCSVM",     	    &NBtagCSVM_);
-    babyTree_->Branch("NskinnyjetCHS",  	&NskinnyjetCHS_);
-    babyTree_->Branch("NBtagCHSCSVM",     	&NBtagCHSCSVM_);
+//    babyTree_->Branch("NskinnyjetCHS",  	&NskinnyjetCHS_);
+//    babyTree_->Branch("NBtagCHSCSVM",     	&NBtagCHSCSVM_);
     babyTree_->Branch("Npv",            	&Npv_);       
     babyTree_->Branch("Npu",            	&Npu_);       
     babyTree_->Branch("EventWeight",    	&EventWeight_);
     babyTree_->Branch("MJ_pT30",        	&MJ_pT30_);        
-    babyTree_->Branch("MJCHS_pT30",        	&MJCHS_pT30_);        
+//    babyTree_->Branch("MJCHS_pT30",        	&MJCHS_pT30_);        
     babyTree_->Branch("MET",            	&MET_);        
     babyTree_->Branch("METPhi",            	&METPhi_);        
     babyTree_->Branch("HT",             	&HT_);        
-    babyTree_->Branch("top1pT",          	&top1pT_);        
-    babyTree_->Branch("top1Eta",          	&top1Eta_);        
-    babyTree_->Branch("top1Phi",          	&top1Phi_);        
-    babyTree_->Branch("top2pT",          	&top2pT_);        
-    babyTree_->Branch("top2Eta",          	&top2Eta_);        
-    babyTree_->Branch("top2Phi",          	&top2Phi_);        
     babyTree_->Branch("mj_pT30",        	&mj_pT30_);     
-    babyTree_->Branch("mjCHS_pT30",        	&mjCHS_pT30_);     
+//    babyTree_->Branch("mjCHS_pT30",        	&mjCHS_pT30_);     
     babyTree_->Branch("FatjetPt_pT30",  	&FatjetPt_pT30_); 
     babyTree_->Branch("FatjetEta_pT30", 	&FatjetEta_pT30_);
     babyTree_->Branch("FatjetPhi_pT30",     &FatjetPhi_pT30_);
-    babyTree_->Branch("FatjetN_pT30",       &FatjetN_pT30_);
-    babyTree_->Branch("FatjetCHSPt_pT30",   &FatjetCHSPt_pT30_); 
-    babyTree_->Branch("FatjetCHSEta_pT30",  &FatjetCHSEta_pT30_);
-    babyTree_->Branch("FatjetCHSPhi_pT30",  &FatjetCHSPhi_pT30_);
-    babyTree_->Branch("FatjetCHSN_pT30",    &FatjetCHSN_pT30_);
+//    babyTree_->Branch("FatjetCHSPt_pT30",   &FatjetCHSPt_pT30_); 
+//    babyTree_->Branch("FatjetCHSEta_pT30",  &FatjetCHSEta_pT30_);
+//    babyTree_->Branch("FatjetCHSPhi_pT30",  &FatjetCHSPhi_pT30_);
     babyTree_->Branch("RA4ElsPt",           &RA4ElsPt_);
     babyTree_->Branch("RA4ElsEta",          &RA4ElsEta_);
     babyTree_->Branch("RA4ElsPhi",          &RA4ElsPhi_);
@@ -228,48 +200,6 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     // PU for MC
     TFile *fPUFile = TFile::Open("aux/puWeights_Summer12_53x_True_19p5ifb.root"); 
     TH1F *h1PU = (TH1F*)(fPUFile->Get("puWeights"));
-    
-    // Get cross section for MC 
-    float Xsec=1; 
-    if(!isData) Xsec=GetXsec(ProcessName);
-
-    // json for DATA 
-    std::vector< std::vector<int> > VRunLumi; VRunLumi.clear();
-    if(isData) 
-    {
-        if(ProcessName.Contains("PromptReco")) 
-        { 
-            VRunLumi = MakeVRunLumi("json/Cert_190456-208686_8TeV_PromptReco_Collisions12_JSON.txt"); 
-            cout << "[MJ Analysis] Running with JSON : " << "Cert_190456-208686_8TeV_PromptReco_Collisions12_JSON.txt" << endl;       
-        } else if(ProcessName.Contains("13Jul2012")) 
-        { 
-            VRunLumi = MakeVRunLumi("json/Cert_190456-196531_8TeV_13Jul2012ReReco_Collisions12_JSON_v2.txt"); 
-            cout << "[MJ Analysis] Running with JSON : " << "Cert_190456-196531_8TeV_13Jul2012ReReco_Collisions12_JSON_v2.txt"<< endl;       
-        } else if(ProcessName.Contains("06Aug2012")) 
-        { 
-            VRunLumi = MakeVRunLumi("json/Cert_190782-190949_8TeV_06Aug2012ReReco_Collisions12_JSON.txt"); 
-            cout << "[MJ Analysis] Running with JSON : " << "Cert_190782-190949_8TeV_06Aug2012ReReco_Collisions12_JSON.txt" << endl;       
-        } else if(ProcessName.Contains("24Aug2012")) 
-        { 
-            VRunLumi = MakeVRunLumi("json/Cert_198022-198523_8TeV_24Aug2012ReReco_Collisions12_JSON.txt"); 
-            cout << "[MJ Analysis] Running with JSON : " << "Cert_198022-198523_8TeV_24Aug2012ReReco_Collisions12_JSON.txt" << endl;       
-        } else if(ProcessName.Contains("11Dec2012")) 
-        { 
-            VRunLumi = MakeVRunLumi("json/Cert_201191-201191_8TeV_11Dec2012ReReco-recover_Collisions12_JSON.txt"); 
-            cout << "[MJ Analysis] Running with JSON : " << "Cert_201191-201191_8TeV_11Dec2012ReReco-recover_Collisions12_JSON.txt" << endl;       
-        } else if(ProcessName.Contains("22Jan2013")) 
-        { 
-            VRunLumi = MakeVRunLumi("json/Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt"); 
-            cout << "[MJ Analysis] Running with JSON : " << "Cert_190456-208686_8TeV_22Jan2013ReReco_Collisions12_JSON.txt" << endl;       
-        } else 
-        {
-            cout << "[Error] No proper choice of JSON files!!" << endl;
-            return ;
-        }
-    } else 
-    {
-        cout << "[MJ Analysis] No JSON files applied because it is MC" << endl;
-    }
 
     //
     // main event loop
@@ -324,37 +254,29 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         TrigSingleMuon_     =   1;
         TrigHTMuon_         =   1;
         Nfatjet_pT30_       =   -1;
-        NfatjetCHS_pT30_    =   -1;
+//        NfatjetCHS_pT30_    =   -1;
         Nskinnyjet_         =   -1;
         NBtagCSVM_          =   -1;
-        NskinnyjetCHS_      =   -1;
-        NBtagCHSCSVM_       =   -1;
+//        NskinnyjetCHS_      =   -1;
+//        NBtagCHSCSVM_       =   -1;
         Npv_                =   -1;
         Npu_                =   -1;
         EventWeight_        =   1.;
         MJ_pT30_            =-999.;
-        MJCHS_pT30_         =-999.;
+//        MJCHS_pT30_         =-999.;
         MET_                =-999.;
         METPhi_             =-999.;
         HT_                 =-999.;
-        HTCHS_              =-999.;
-        top1pT_             =-999.;
-        top1Phi_            =-999.;
-        top1Eta_            =-999.;
-        top2pT_             =-999.;
-        top2Phi_            =-999.;
-        top2Eta_            =-999.;
+//        HTCHS_              =-999.;
         filter_.clear(); 
         mj_pT30_.clear();
-        mjCHS_pT30_.clear();
+//        mjCHS_pT30_.clear();
         FatjetPt_pT30_.clear();
         FatjetEta_pT30_.clear();
         FatjetPhi_pT30_.clear();
-        FatjetN_pT30_.clear();
-        FatjetCHSPt_pT30_.clear();
-        FatjetCHSEta_pT30_.clear();
-        FatjetCHSPhi_pT30_.clear();
-        FatjetCHSN_pT30_.clear();
+//        FatjetCHSPt_pT30_.clear();
+//        FatjetCHSEta_pT30_.clear();
+//        FatjetCHSPhi_pT30_.clear();
         RA4ElsPt_.clear();
         RA4ElsEta_.clear();
         RA4ElsPhi_.clear();
@@ -383,36 +305,6 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         //
         // Get event weight 
         float EventWeight = 1;
-        if(!isData) 
-        {
-            EventWeight = Xsec/TotalNEntries*Lumi; // scale for 1 pb * Lumi
-            // need more weights if needed 
-        } else 
-        {
-            if(!inJSON(VRunLumi,run,lumiblock)) continue; // JSON
-        }
-
-        // filtersi
-        if(isData)
-        {
-            filter_.push_back(scrapingVeto_decision);
-            filter_.push_back(hbhefilter_decision);
-            filter_.push_back(trackingfailurefilter_decision);
-            filter_.push_back(cschalofilter_decision);
-            filter_.push_back(eebadscfilter_decision);
-            filter_.push_back(ecalTPfilter_decision);
-            filter_.push_back(ecallaserfilter_decision);
-            filter_.push_back(trackertoomanyclustersfilter_decision);
-            filter_.push_back(trackertoomanytripletsfilter_decision);
-            filter_.push_back(trackertoomanyseedsfilter_decision);
-            filter_.push_back(ecalBEfilter_decision);
-            filter_.push_back(greedymuonfilter_decision);
-            filter_.push_back(inconsistentPFmuonfilter_decision);
-            filter_.push_back(hcallaserfilter_decision);
-            filter_.push_back(eenoisefilter_decision);
-            filter_.push_back(trackercoherentnoisefilter1_decision);
-            filter_.push_back(trackercoherentnoisefilter2_decision);
-        }
 
         // Get good RA4 muons
         vector<int> RA4MuonVeto; RA4MuonVeto.clear();
@@ -427,12 +319,12 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         vector<int> GoodJets_AK5PFclean = GetJets(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
                                                   HT,LooseBJet,MediumBJet, 
                                                   2.4, 30, 0.3); 
-        double HTCHS=-999.; 
-        vector<int> LooseBJetCHS; 
-        vector<int> MediumBJetCHS; 
-        vector<int> GoodJets_AK5PF = GetJetsCHS(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
-                                                HTCHS,LooseBJetCHS,MediumBJetCHS, 
-                                                2.4, 30, 0.3); 
+//        double HTCHS=-999.; 
+//        vector<int> LooseBJetCHS; 
+//        vector<int> MediumBJetCHS; 
+//        vector<int> GoodJets_AK5PF = GetJetsCHS(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
+//                                                HTCHS,LooseBJetCHS,MediumBJetCHS, 
+//                                                2.4, 30, 0.3); 
         // 
         // pT(R=0.5) > 30 GeV
         // 
@@ -441,7 +333,6 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         double MJ_pT30=-999.; 
         // first, select good fat jets 
         vector<TLorentzVector> Vector_GoodFatjet_pT30; 
-        vector<int> Vector_GoodFatjet_pT30_Index; 
         for(int ifatjet=0; ifatjet<(int)fastjets_AK5PFclean_R1p2_R0p5pT30_px->size(); ifatjet++) 
         {
             float temp_pT_pT30 = TMath::Sqrt(fastjets_AK5PFclean_R1p2_R0p5pT30_px->at(ifatjet)*fastjets_AK5PFclean_R1p2_R0p5pT30_px->at(ifatjet)
@@ -452,9 +343,8 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
                                             fastjets_AK5PFclean_R1p2_R0p5pT30_pz->at(ifatjet),
                                             fastjets_AK5PFclean_R1p2_R0p5pT30_energy->at(ifatjet));
             Vector_GoodFatjet_pT30.push_back(temp_GoodFatjet_pT30);
-            Vector_GoodFatjet_pT30_Index.push_back(ifatjet);
         } 
-       
+      
         vector<float> Vector_mj_pT30;   // mj
         for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT30.size(); igoodfatjet++) 
         {
@@ -469,36 +359,34 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         int Nfatjet_pT30 = Vector_GoodFatjet_pT30.size(); 
        
         // CHS jets
-        double MJCHS_pT30=-999.; 
-        // first, select good fat jets 
-        vector<TLorentzVector> Vector_GoodFatjetCHS_pT30; 
-        vector<int> Vector_GoodFatjetCHS_pT30_Index; 
-        for(int ifatjet=0; ifatjet<(int)fastjets_AK5PF_R1p2_R0p5pT30_px->size(); ifatjet++) 
-        {
-            float temp_pT_pT30 = TMath::Sqrt(fastjets_AK5PF_R1p2_R0p5pT30_px->at(ifatjet)*fastjets_AK5PF_R1p2_R0p5pT30_px->at(ifatjet)
-                                        +fastjets_AK5PF_R1p2_R0p5pT30_py->at(ifatjet)*fastjets_AK5PF_R1p2_R0p5pT30_py->at(ifatjet));
-            if(temp_pT_pT30<50) continue;
-            TLorentzVector temp_GoodFatjetCHS_pT30( fastjets_AK5PF_R1p2_R0p5pT30_px->at(ifatjet), 
-                                            fastjets_AK5PF_R1p2_R0p5pT30_py->at(ifatjet),
-                                            fastjets_AK5PF_R1p2_R0p5pT30_pz->at(ifatjet),
-                                            fastjets_AK5PF_R1p2_R0p5pT30_energy->at(ifatjet));
-            Vector_GoodFatjetCHS_pT30.push_back(temp_GoodFatjetCHS_pT30);
-            Vector_GoodFatjetCHS_pT30_Index.push_back(ifatjet);
-        } 
-       
-        vector<float> Vector_mjCHS_pT30;   // mj
-        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjetCHS_pT30.size(); igoodfatjet++) 
-        {
-            float temp_mj_pT30 = Getmj(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Px(), 
-                                       Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Py(),
-                                       Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Pz(),
-                                       Vector_GoodFatjetCHS_pT30.at(igoodfatjet).E());
-            Vector_mjCHS_pT30.push_back(temp_mj_pT30);
-        }
-        MJCHS_pT30 = GetMJ(Vector_mjCHS_pT30);
-
-        int NfatjetCHS_pT30 = Vector_GoodFatjetCHS_pT30.size(); 
-        
+//        double MJCHS_pT30=-999.; 
+//        // first, select good fat jets 
+//        vector<TLorentzVector> Vector_GoodFatjetCHS_pT30; 
+//        for(int ifatjet=0; ifatjet<(int)fastjets_AK5PF_R1p2_R0p5pT30_px->size(); ifatjet++) 
+//        {
+//            float temp_pT_pT30 = TMath::Sqrt(fastjets_AK5PF_R1p2_R0p5pT30_px->at(ifatjet)*fastjets_AK5PF_R1p2_R0p5pT30_px->at(ifatjet)
+//                                        +fastjets_AK5PF_R1p2_R0p5pT30_py->at(ifatjet)*fastjets_AK5PF_R1p2_R0p5pT30_py->at(ifatjet));
+//            if(temp_pT_pT30<50) continue;
+//            TLorentzVector temp_GoodFatjetCHS_pT30( fastjets_AK5PF_R1p2_R0p5pT30_px->at(ifatjet), 
+//                                            fastjets_AK5PF_R1p2_R0p5pT30_py->at(ifatjet),
+//                                            fastjets_AK5PF_R1p2_R0p5pT30_pz->at(ifatjet),
+//                                            fastjets_AK5PF_R1p2_R0p5pT30_energy->at(ifatjet));
+//            Vector_GoodFatjetCHS_pT30.push_back(temp_GoodFatjetCHS_pT30);
+//        } 
+//       
+//        vector<float> Vector_mjCHS_pT30;   // mj
+//        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjetCHS_pT30.size(); igoodfatjet++) 
+//        {
+//            float temp_mj_pT30 = Getmj(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Px(), 
+//                                       Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Py(),
+//                                       Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Pz(),
+//                                       Vector_GoodFatjetCHS_pT30.at(igoodfatjet).E());
+//            Vector_mjCHS_pT30.push_back(temp_mj_pT30);
+//        }
+//        MJCHS_pT30 = GetMJ(Vector_mjCHS_pT30);
+//
+//        int NfatjetCHS_pT30 = Vector_GoodFatjetCHS_pT30.size(); 
+//        
 
         //
         // Fill the baby variables 
@@ -510,20 +398,20 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         TrigHTMuon_         =   PassHTMuonTrig(); 
         TrigSingleMuon_     =   PassSingleMuonTrig(); 
         Nfatjet_pT30_       =   Nfatjet_pT30;
-        NfatjetCHS_pT30_    =   NfatjetCHS_pT30;
+//        NfatjetCHS_pT30_    =   NfatjetCHS_pT30;
         Nskinnyjet_         =   GoodJets_AK5PFclean.size();
         NBtagCSVM_          =   MediumBJet.size();
-        NskinnyjetCHS_      =   GoodJets_AK5PF.size();
-        NBtagCHSCSVM_       =   MediumBJetCHS.size();
+//        NskinnyjetCHS_      =   GoodJets_AK5PF.size();
+//        NBtagCHSCSVM_       =   MediumBJetCHS.size();
         Npv_                =   Npv;
-        if(!isData) Npu_    =   PU_TrueNumInteractions->at(1);
+        Npu_                =   PU_TrueNumInteractions->at(0);
         EventWeight_        =   EventWeight;
         MJ_pT30_            =   MJ_pT30;
-        MJCHS_pT30_         =   MJCHS_pT30;
+//        MJCHS_pT30_         =   MJCHS_pT30;
         MET_                =   pfTypeImets_et->at(0);
         METPhi_             =   pfTypeImets_phi->at(0);
         HT_                 =   HT;
-        HTCHS_              =   HTCHS;
+//        HTCHS_              =   HTCHS;
         
         for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT30.size(); igoodfatjet++) 
         { 
@@ -531,17 +419,15 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
             FatjetPt_pT30_.push_back(Vector_GoodFatjet_pT30.at(igoodfatjet).Pt());
             FatjetEta_pT30_.push_back(Vector_GoodFatjet_pT30.at(igoodfatjet).Eta());
             FatjetPhi_pT30_.push_back(Vector_GoodFatjet_pT30.at(igoodfatjet).Phi());
-            FatjetN_pT30_.push_back(fastjets_AK5PFclean_R1p2_R0p5pT30_nconstituents->at(Vector_GoodFatjet_pT30_Index.at(igoodfatjet)));
         }
 
-        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjetCHS_pT30.size(); igoodfatjet++) 
-        { 
-            mjCHS_pT30_.push_back(Vector_mjCHS_pT30.at(igoodfatjet));
-            FatjetCHSPt_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Pt());
-            FatjetCHSEta_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Eta());
-            FatjetCHSPhi_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Phi());
-            FatjetCHSN_pT30_.push_back(fastjets_AK5PF_R1p2_R0p5pT30_nconstituents->at(Vector_GoodFatjetCHS_pT30_Index.at(igoodfatjet)));
-        }
+//        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjetCHS_pT30.size(); igoodfatjet++) 
+//        { 
+//            mjCHS_pT30_.push_back(Vector_mjCHS_pT30.at(igoodfatjet));
+//            FatjetCHSPt_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Pt());
+//            FatjetCHSEta_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Eta());
+//            FatjetCHSPhi_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Phi());
+//        }
         
         for(unsigned int imus=0; imus<RA4Muon.size(); imus++) 
         {
@@ -576,7 +462,6 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
           JetPhi_.push_back(jets_AK5PFclean_phi->at(ijet)); 
           JetCSV_.push_back(jets_AK5PFclean_btag_secVertexCombined->at(ijet)); 
         }
-        // gen top pT for TTbar samples  
         for(int igen=0; igen<mc_doc_id->size(); igen++) 
         { 
             GenPt_.push_back(   mc_doc_pt->at(igen));  
@@ -585,24 +470,9 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
             GenId_.push_back(   mc_doc_id->at(igen));  
             GenMId_.push_back(  mc_doc_mother_id->at(igen));  
             GenGMId_.push_back( mc_doc_grandmother_id->at(igen));  
-
-            if(ProcessName.Contains("TT")) 
-            {
-                if(mc_doc_id->at(igen)==6)  
-                {
-                    top1pT_ = mc_doc_pt->at(igen);  
-                    top1Phi_ = mc_doc_phi->at(igen);  
-                    top1Eta_ = mc_doc_eta->at(igen);  
-                }
-                if(mc_doc_id->at(igen)==-6)
-                {
-                    top2pT_ = mc_doc_pt->at(igen);  
-                    top2Phi_ = mc_doc_phi->at(igen);  
-                    top2Eta_ = mc_doc_eta->at(igen);  
-                }
-            }
         }
 
+        
         babyTree_->Fill(); // Fill all events
 
         //for(int i=0; i<GoodJets_AK5PFclean.size(); i++) cout << event << " :: " << HT << endl;

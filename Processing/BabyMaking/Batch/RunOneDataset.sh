@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INPUTDIR=/net/cms26/cms26r0/jaehyeok
+INPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet
 DATASET=$1
 RECOGNIZER=$2
 ISDATA=$3
@@ -19,8 +19,9 @@ rm filenumber.txt filenumbersort.txt
 
 #####
 for NONSLIMFILEPATH in `ls $INPUTDIR/$DATASET/*root`; do
-    NONSLIMFILE="$( cut -d '/' -f 7 <<< "$NONSLIMFILEPATH" )" 
+    NONSLIMFILE="$( cut -d '/' -f 8 <<< "$NONSLIMFILEPATH" )" 
     NONSLIMFILE=`echo $NONSLIMFILE | sed 's/_f/#/g' `
+    #NONSLIMFILE=`echo $NONSLIMFILE | sed 's/s_/s#/g' ` # for non-published cfA sample 
     NONSLIMINDEX="$( cut -d '#' -f 2 <<< "$NONSLIMFILE" )" 
     NONSLIMINDEX=`echo $NONSLIMINDEX | cut -d "_" -f 1 `
     echo $NONSLIMINDEX >> filenumber.txt
@@ -38,10 +39,10 @@ while [ $COUNTER -lt $(($LASTFILENUM)) ]; do
     echo The counter is $COUNTER
     if [ $(($LASTFILENUM-$COUNTER)) -lt $(($NFILEPERJOB)) ] 
     then 
-        echo "JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI"
+        echo "JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI"
         JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI
     else  
-        echo "JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI" 
+        echo "JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI" 
         JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI 
     fi
 
