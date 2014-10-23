@@ -138,7 +138,10 @@ float getDPhi(float phi1, float phi2)
 { 
     float absdphi = abs(phi1-phi2);
     if(absdphi < TMath::Pi()) return absdphi;
-    else 2*TMath::Pi() - absdphi;
+    else return (2*TMath::Pi() - absdphi);
+    // Ryan's : http://www.aidansean.com/cheatsheets/?p=105
+    //return TMath::Abs(TMath::Abs(TMath::Abs(phi1 - phi2) - TMath::Pi())-TMath::Pi());  
+
 }
 float getDEta(float eta1, float eta2)
 {
@@ -178,6 +181,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     vector<float>   *RA4MusPt;
     vector<float>   *RA4MusPhi;
     vector<float>   *RA4MusEta;
+    vector<float>   *RA4ElsPt;
     vector<float>   *JetPt;
     vector<float>   *JetEta;
     vector<float>   *JetPhi;
@@ -202,6 +206,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     TBranch         *b_RA4MusPt;   //!
     TBranch         *b_RA4MusPhi;   //!
     TBranch         *b_RA4MusEta;   //!
+    TBranch         *b_RA4ElsPt;   //!
     TBranch         *b_JetPt;   //!
     TBranch         *b_JetEta;   //!
     TBranch         *b_JetPhi;   //!
@@ -215,6 +220,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     RA4MusPt  = 0;
     RA4MusPhi = 0;
     RA4MusEta = 0;
+    RA4ElsPt  = 0;
     JetPt  = 0;
     JetEta = 0;
     JetPhi = 0;
@@ -239,6 +245,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     ch->SetBranchAddress("RA4MusPt", &RA4MusPt, &b_RA4MusPt);
     ch->SetBranchAddress("RA4MusPhi", &RA4MusPhi, &b_RA4MusPhi);
     ch->SetBranchAddress("RA4MusEta", &RA4MusEta, &b_RA4MusEta);
+    ch->SetBranchAddress("RA4ElsPt", &RA4ElsPt, &b_RA4ElsPt);
     ch->SetBranchAddress("JetPt",  &JetPt,  &b_JetPt);
     ch->SetBranchAddress("JetPhi", &JetPhi, &b_JetPhi);
     ch->SetBranchAddress("JetEta", &JetEta, &b_JetEta);
@@ -279,16 +286,20 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     //
     //
     TH1F *h1_MJ[6], *h1_mT[6], *h1_Nskinnyjet[6], *h1_muspT[6], *h1_musEta[6], *h1_musPhi[6], 
-         *h1_mj[6], *h1_FatjetPt[6], *h1_FatjetEta[6],
+         *h1_mj[6], *h1_FatjetPt[6], *h1_FatjetEta[6], *h1_mjFJFJ[6], 
+         *h1_mjFJFJnotclose[6], *h1_FatjetPtFJFJnotclose[6], *h1_FatjetEtaFJFJnotclose[6],  *h1_FatjetPhiFJFJnotclose[6],
+         *h1_FatjetPtFJFJcloseHigherPt[6], *h1_FatjetEtaFJFJcloseHigherPt[6],  *h1_FatjetPhiFJFJcloseHigherPt[6], 
+         *h1_FatjetPtFJFJcloseLowerPt[6], *h1_FatjetEtaFJFJcloseLowerPt[6],  *h1_FatjetPhiFJFJcloseLowerPt[6], 
+         *h1_FatjetPt1[6],  *h1_FatjetPt2[6],  *h1_FatjetPt3[6],  *h1_FatjetPt4[6],
+         *h1_FatjetPhi1[6], *h1_FatjetPhi2[6], *h1_FatjetPhi3[6], *h1_FatjetPhi4[6],
+         *h1_FatjetEta1[6], *h1_FatjetEta2[6], *h1_FatjetEta3[6], *h1_FatjetEta4[6],
          *h1_mj_mumatch[6], *h1_FatjetPt_mumatch[6], *h1_mj_notmumatch[6], *h1_FatjetPt_notmumatch[6], 
          *h1_BjetPt_bmatchmu[6], *h1_BjetPt_notbmatchmu[6], *h1_dRbmu_bmatchmu[6], *h1_dRbmu_notbmatchmu[6],  
          *h1_dRFJ[6], *h1_dPhiFJ[6], *h1_dEtaFJ[6],
          *h1_mj_bmatch[6], *h1_FatjetPt_bmatch[6], *h1_mj_notbmatch[6], *h1_FatjetPt_notbmatch[6], 
          *h1_mj_metmatch[6], *h1_FatjetPt_metmatch[6], *h1_mj_notmetmatch[6], *h1_FatjetPt_notmetmatch[6], 
-         *h1_HT[6], *h1_MET[6], *h1_METPhi[6], *h1_DPhi[6], *h1_Nfatjet[6], *h1_WpT[6],
-         *h1_genpTttbar[6];
+         *h1_HT[6], *h1_MET[6], *h1_METPhi[6], *h1_DPhi[6], *h1_Nfatjet[6], *h1_WpT[6];
     TH2F *h2_mjvsFatjetPt[6];
-    TH2F *h2_mjvsmj_2fatjet;
     TH2F *h2_mindRFJmjvsmj[6];
 
     for(int i=0; i<6; i++) 
@@ -299,6 +310,39 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_mj[i] = InitTH1F( Form("h1_%s_mj_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mj_%ifatjet", ch->GetTitle(), i), 
                              40, 0, 500);
+        h1_mjFJFJ[i] = InitTH1F( Form("h1_%s_mjFJFJ_%ifatjet", ch->GetTitle(), i), 
+                             Form("h1_%s_mjFJFJ_%ifatjet", ch->GetTitle(), i), 
+                             80, 0, 800);
+        h1_mjFJFJnotclose[i] = InitTH1F( Form("h1_%s_mjFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                             Form("h1_%s_mjFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                             40, 0, 500);
+        h1_FatjetPtFJFJnotclose[i] = InitTH1F( Form("h1_%s_FatjetPtFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                             Form("h1_%s_FatjetPtFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                             40, 0, 500);
+        h1_FatjetEtaFJFJnotclose[i] = InitTH1F( Form("h1_%s_FatjetEtaFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetEtaFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                            30, -3, 3);
+        h1_FatjetPhiFJFJnotclose[i] = InitTH1F( Form("h1_%s_FatjetPhiFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetPhiFJFJnotclose_%ifatjet", ch->GetTitle(), i), 
+                            20, -3.2, 3.2);
+        h1_FatjetEtaFJFJcloseHigherPt[i] = InitTH1F( Form("h1_%s_FatjetEtaFJFJcloseHigherPt_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetEtaFJFJcloseHigherPt_%ifatjet", ch->GetTitle(), i), 
+                            30, -3, 3);
+        h1_FatjetPhiFJFJcloseHigherPt[i] = InitTH1F( Form("h1_%s_FatjetPhiFJFJcloseHigherPt_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetPhiFJFJcloseHigherPt_%ifatjet", ch->GetTitle(), i), 
+                            20, -3.2, 3.2);
+        h1_FatjetPtFJFJcloseHigherPt[i] = InitTH1F( Form("h1_%s_FatjetPtFJFJcloseHigherPt_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetPtFJFJcloseHigherPt_%ifatjet", ch->GetTitle(), i), 
+                            40, 0, 500);
+        h1_FatjetEtaFJFJcloseLowerPt[i] = InitTH1F( Form("h1_%s_FatjetEtaFJFJcloseLowerPt_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetEtaFJFJcloseLowerPt_%ifatjet", ch->GetTitle(), i), 
+                            30, -3, 3);
+        h1_FatjetPhiFJFJcloseLowerPt[i] = InitTH1F( Form("h1_%s_FatjetPhiFJFJcloseLowerPt_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetPhiFJFJcloseLowerPt_%ifatjet", ch->GetTitle(), i), 
+                            20, -3.2, 3.2);
+        h1_FatjetPtFJFJcloseLowerPt[i] = InitTH1F( Form("h1_%s_FatjetPtFJFJcloseLowerPt_%ifatjet", ch->GetTitle(), i), 
+                            Form("h1_%s_FatjetPtFJFJcloseLowerPt_%ifatjet", ch->GetTitle(), i), 
+                            40, 0, 500);
         h1_mj_mumatch[i] = InitTH1F( Form("h1_%s_mj_mumatch_%ifatjet", ch->GetTitle(), i), 
                                    Form("h1_%s_mj_mumatch_%ifatjet", ch->GetTitle(), i), 
                                    40, 0, 500);
@@ -325,10 +369,6 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                                      20, -0.5, 19.5);
         h1_mT[i] = InitTH1F( Form("h1_%s_mT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mT_%ifatjet", ch->GetTitle(), i), 
-                             //20, 0, 200);
-                             20, 0, 600);
-        h1_genpTttbar[i] = InitTH1F( Form("h1_%s_genpTttbar_%ifatjet", ch->GetTitle(), i), 
-                             Form("h1_%s_genpTttbar_%ifatjet", ch->GetTitle(), i), 
                              //20, 0, 200);
                              20, 0, 600);
         h1_muspT[i] = InitTH1F( Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
@@ -379,6 +419,42 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_FatjetPt_notbmatch[i] = InitTH1F( Form("h1_%s_FatjetPt_notbmatch_%ifatjet", ch->GetTitle(), i), 
                                             Form("h1_%s_FatjetPt_notbmatch_%ifatjet", ch->GetTitle(), i), 
                                             20, 0, 800);
+        h1_FatjetPt1[i] = InitTH1F( Form("h1_%s_FatjetPt1_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPt1_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 800);
+        h1_FatjetPt2[i] = InitTH1F( Form("h1_%s_FatjetPt2_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPt2_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 500);
+        h1_FatjetPt3[i] = InitTH1F( Form("h1_%s_FatjetPt3_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPt3_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 300);
+        h1_FatjetPt4[i] = InitTH1F( Form("h1_%s_FatjetPt4_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPt4_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 150);
+        h1_FatjetPhi1[i] = InitTH1F( Form("h1_%s_FatjetPhi1_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPhi1_%ifatjet", ch->GetTitle(), i), 
+                                    32, 0, 3.2);
+        h1_FatjetPhi2[i] = InitTH1F( Form("h1_%s_FatjetPhi2_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPhi2_%ifatjet", ch->GetTitle(), i), 
+                                    32, 0, 3.2);
+        h1_FatjetPhi3[i] = InitTH1F( Form("h1_%s_FatjetPhi3_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPhi3_%ifatjet", ch->GetTitle(), i), 
+                                    32, 0, 3.2);
+        h1_FatjetPhi4[i] = InitTH1F( Form("h1_%s_FatjetPhi4_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetPhi4_%ifatjet", ch->GetTitle(), i), 
+                                    32, 0, 3.2);
+        h1_FatjetEta1[i] = InitTH1F( Form("h1_%s_FatjetEta1_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetEta1_%ifatjet", ch->GetTitle(), i), 
+                                    30, -3, 3);
+        h1_FatjetEta2[i] = InitTH1F( Form("h1_%s_FatjetEta2_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetEta2_%ifatjet", ch->GetTitle(), i), 
+                                    30, -3, 3);
+        h1_FatjetEta3[i] = InitTH1F( Form("h1_%s_FatjetEta3_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetEta3_%ifatjet", ch->GetTitle(), i), 
+                                    30, -3, 3);
+        h1_FatjetEta4[i] = InitTH1F( Form("h1_%s_FatjetEta4_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_FatjetEta4_%ifatjet", ch->GetTitle(), i), 
+                                    30, -3, 3);
         h1_BjetPt_bmatchmu[i] = InitTH1F( Form("h1_%s_BjetPt_bmatchmu_%ifatjet", ch->GetTitle(), i), 
                                          Form("h1_%s_BjetPt_bmatchmu_%ifatjet", ch->GetTitle(), i), 
                                          20, 0, 800);
@@ -411,9 +487,6 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                                            Form("h2_%s_mindRFJmjvsmj_%ifatjet", ch->GetTitle(), i), 
                                            30, 0, 300, 20, 0, 100);
     }
-    h2_mjvsmj_2fatjet = InitTH2F(Form("h2_%s_mjvsmj_%ifatjet", ch->GetTitle(), 2),
-                                 Form("h2_%s_mjvsmj_%ifatjet", ch->GetTitle(), 2),
-                                 20, 0, 500, 20, 0, 500);;
     // Pile up reweighting hist
     //TFile *fPUFile = TFile::Open("aux/puWeights_Summer12_53x_True_1p317ipb.root");
     TFile *fPUFile = TFile::Open("aux/puWeights_Summer12_53x_True_19p5ifb.root");
@@ -503,12 +576,12 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         if(ChainName.Contains("f1200_25")) 
         {
             //EventWeight = EventWeight*19600*0.000871201/137498;                  
-            EventWeight = EventWeight*19600*0.000871201/129178;                  
+            EventWeight = EventWeight*19600*0.00440078/129178;                  
         }
         if(ChainName.Contains("f1200_1000")) 
         {
             //EventWeight = EventWeight*19600*0.000871201/126811;                      
-            EventWeight = EventWeight*19600*0.000871201/96418;                      
+            EventWeight = EventWeight*19600*0.00440078/96418;                      
         }
 
         //
@@ -516,17 +589,16 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         //
 
         // select only single-muon events
-        if( RA4MusPt->size()!=1 ) continue;
-        if( RA4MusVetoPt->size()>0 ) continue;
-        if( RA4ElsVetoPt->size()>0 ) continue;
-        if( RA4MusPt->size()!=1 ) continue;
+        if( RA4MusPt->size()!=1 )       continue;
+        if( RA4MusVetoPt->size()>0 )    continue;
+        if( RA4ElsVetoPt->size()>0 )    continue;
+        if( RA4ElsPt->size()>0 )        continue;
         
         // single lepton trigger efficienc from HWW 
         if(!ChainName.Contains("DATA")) EventWeight = EventWeight * GetMuonEff(RA4MusPt->at(0), RA4MusEta->at(0));
 
         //if(getDPhi(RA4MusPhi->at(0),METPhi)<0.5) continue; // FIXME 
-        //if(Npv>20) continue; // FIXME 
-
+        if(Npv<20) continue; // FIXME 
 
         // selection
         if( HT>500                              && 
@@ -574,547 +646,306 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
         if(cut_others) {
 
+
+            int NFJbin = -1;
+            if(Nfatjet_thres>3) NFJbin=4;
+            else if(Nfatjet_thres>2) NFJbin=3;
+            else if(Nfatjet_thres>1) NFJbin=2;
+            else if(Nfatjet_thres>0) NFJbin=1;
+            else NFJbin=0;
+
+            if(NFJbin==-1) 
+            {   
+                cout << "[MJ Analysis] ERROR : NFJ is cannot be negative" << endl;
+                continue;
+            }
+            
+            //
+            // Fill NFJ bin histogams 
+            //
+            h1_muspT[NFJbin]->Fill(RA4MusPt->at(0), EventWeight);
+            h1_musEta[NFJbin]->Fill(RA4MusEta->at(0), EventWeight);
+            h1_musPhi[NFJbin]->Fill(RA4MusPhi->at(0), EventWeight);
+            h1_mT[NFJbin]->Fill(mT, EventWeight);
+            h1_WpT[NFJbin]->Fill(WpT, EventWeight);
+            h1_MJ[NFJbin]->Fill(MJ, EventWeight);
+            h1_HT[NFJbin]->Fill(HT, EventWeight);
+            h1_MET[NFJbin]->Fill(MET, EventWeight);
+            h1_METPhi[NFJbin]->Fill(METPhi, EventWeight);
+            h1_DPhi[NFJbin]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
+            if(Nfatjet_thres>0) 
+            {
+                h1_FatjetPt1[NFJbin]->Fill(FatjetPt->at(0), EventWeight); 
+                h1_FatjetPhi1[NFJbin]->Fill(FatjetPhi->at(0), EventWeight); 
+                h1_FatjetEta1[NFJbin]->Fill(FatjetEta->at(0), EventWeight); 
+            }
+            if(Nfatjet_thres>1) 
+            {
+                h1_FatjetPt2[NFJbin]->Fill(FatjetPt->at(1), EventWeight); 
+                h1_FatjetPhi2[NFJbin]->Fill(FatjetPhi->at(1), EventWeight); 
+                h1_FatjetEta2[NFJbin]->Fill(FatjetEta->at(1), EventWeight); 
+            }
+            if(Nfatjet_thres>2) 
+            {
+                h1_FatjetPt3[NFJbin]->Fill(FatjetPt->at(2), EventWeight); 
+                h1_FatjetPhi3[NFJbin]->Fill(FatjetPhi->at(2), EventWeight); 
+                h1_FatjetEta3[NFJbin]->Fill(FatjetEta->at(2), EventWeight); 
+            }
             if(Nfatjet_thres>3) 
             {
-                h1_muspT[4]->Fill(RA4MusPt->at(0), EventWeight);
-                h1_musEta[4]->Fill(RA4MusEta->at(0), EventWeight);
-                h1_musPhi[4]->Fill(RA4MusPhi->at(0), EventWeight);
-                h1_mT[4]->Fill(mT, EventWeight);
-                //h1_genpTttbar[4]->Fill(genpTttbar, EventWeight);
-                h1_WpT[4]->Fill(WpT, EventWeight);
-                h1_MJ[4]->Fill(MJ, EventWeight);
-                h1_HT[4]->Fill(HT, EventWeight);
-                h1_MET[4]->Fill(MET, EventWeight);
-                h1_METPhi[4]->Fill(METPhi, EventWeight);
-                h1_DPhi[4]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
+                h1_FatjetPt4[NFJbin]->Fill(FatjetPt->at(3), EventWeight); 
+                h1_FatjetPhi4[NFJbin]->Fill(FatjetPhi->at(3), EventWeight); 
+                h1_FatjetEta4[NFJbin]->Fill(FatjetEta->at(3), EventWeight); 
+            }
+            if(Nfatjet_thres>4) 
+            {
+                h1_FatjetPt4[NFJbin]->Fill(FatjetPt->at(4), EventWeight); // add 5th jet to h1_FatjetPt4
+                h1_FatjetPhi4[NFJbin]->Fill(FatjetPhi->at(4), EventWeight); 
+                h1_FatjetEta4[NFJbin]->Fill(FatjetEta->at(4), EventWeight); 
+            }
+            if(Nfatjet_thres>5) 
+            {
+                h1_FatjetPt4[NFJbin]->Fill(FatjetPt->at(5), EventWeight); // add 6th jet to h1_FatjetPt4
+                h1_FatjetPhi4[NFJbin]->Fill(FatjetPhi->at(5), EventWeight); 
+                h1_FatjetEta4[NFJbin]->Fill(FatjetEta->at(5), EventWeight); 
+            }
 
-                float dRFJmin=999.;
-                float dPhiFJmin=999.;
-                float dEtaFJmin=999.;
-                int idRFJ1=0, idRFJ2=0;
-                for(int i=0; i<(int)mj->size(); i++) 
+            float dRFJmin=999.;
+            float dPhiFJmin=999.;
+            float dEtaFJmin=999.;
+            int idRFJ1=0, idRFJ2=0;
+            for(int i=0; i<(int)mj->size(); i++) 
+            { 
+                if(FatjetPt->at(i)<FatjetpTthres) continue;
+
+                h1_mj[NFJbin]->Fill(mj->at(i), EventWeight);
+                h1_FatjetPt[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                h1_FatjetEta[NFJbin]->Fill(FatjetEta->at(i), EventWeight);
+                h2_mjvsFatjetPt[NFJbin]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
+                // met matching 
+                if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                 { 
-                    if(FatjetPt->at(i)<FatjetpTthres) continue;
-
-                    h1_mj[4]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt[4]->Fill(FatjetPt->at(i), EventWeight);
-                    h1_FatjetEta[4]->Fill(FatjetEta->at(i), EventWeight);
-                    h2_mjvsFatjetPt[4]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
-                    // met matching 
-                    if(getDPhi(FatjetPhi->at(i), METPhi)<1)
-                    { 
-                        h1_mj_metmatch[4]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_metmatch[4]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    else 
-                    { 
-                        h1_mj_notmetmatch[4]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmetmatch[4]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // mu matching 
-                    if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
-                    { 
-                        h1_mj_mumatch[4]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_mumatch[4]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notmumatch[4]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmumatch[4]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // b matching
-                    float dRmin=999.;
-                    for(int j=0; j<(int)JetPt->size(); j++) 
-                    { 
-                        if(JetCSV->at(j) < 0.679) continue;
-                        float dRtmp = getDR(JetEta->at(j), FatjetEta->at(i), JetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRtmp < dRmin) dRmin = dRtmp; 
-                    }
-                    if(dRmin<1.)
-                    { 
-                        h1_mj_bmatch[4]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_bmatch[4]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notbmatch[4]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notbmatch[4]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // dRmin(FJ) 
-                    for(int j=0; j<i; j++) 
-                    { 
-                        float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRFJtmp<dRFJmin)  
-                        {   
-                            dRFJmin=dRFJtmp;
-                            idRFJ1 = j;
-                            idRFJ2 = i;
-                        }
-                        float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
-                        float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i)); 
-                        if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
-                    }
+                    h1_mj_metmatch[NFJbin]->Fill(mj->at(i), EventWeight);
+                    h1_FatjetPt_metmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
                 }
-                h1_dRFJ[4]->Fill(dRFJmin, EventWeight);
-                h1_dPhiFJ[4]->Fill(dPhiFJmin, EventWeight);
-                h1_dEtaFJ[4]->Fill(dEtaFJmin, EventWeight);
-                h2_mindRFJmjvsmj[4]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
-                // b-mu matching
+                else 
+                { 
+                    h1_mj_notmetmatch[NFJbin]->Fill(mj->at(i), EventWeight);
+                    h1_FatjetPt_notmetmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                }
+                // mu matching 
+                if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
+                { 
+                    h1_mj_mumatch[NFJbin]->Fill(mj->at(i), EventWeight);
+                    h1_FatjetPt_mumatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                } 
+                else 
+                { 
+                    h1_mj_notmumatch[NFJbin]->Fill(mj->at(i), EventWeight);
+                    h1_FatjetPt_notmumatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                }
+                // b matching
+                float dRmin=999.;
                 for(int j=0; j<(int)JetPt->size(); j++) 
                 { 
                     if(JetCSV->at(j) < 0.679) continue;
-                    float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
-                    if(dRtmp<1.0) 
+                    float dRtmp = getDR(JetEta->at(j), FatjetEta->at(i), JetPhi->at(j), FatjetPhi->at(i)); 
+                    if(dRtmp < dRmin) dRmin = dRtmp; 
+                }
+                if(dRmin<1.)
+                { 
+                    h1_mj_bmatch[NFJbin]->Fill(mj->at(i), EventWeight);
+                    h1_FatjetPt_bmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                } 
+                else 
+                { 
+                    h1_mj_notbmatch[NFJbin]->Fill(mj->at(i), EventWeight);
+                    h1_FatjetPt_notbmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                }
+                // dRmin(FJ) 
+                for(int j=0; j<i; j++) 
+                { 
+                    float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
+                    if(dRFJtmp<dRFJmin)  
                     {   
-                        h1_BjetPt_bmatchmu[4]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_bmatchmu[4]->Fill(dRtmp, EventWeight);
+                        dRFJmin=dRFJtmp;
+                        idRFJ1 = j;
+                        idRFJ2 = i;
                     }
-                    else 
-                    {
-                        h1_BjetPt_notbmatchmu[4]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_notbmatchmu[4]->Fill(dRtmp, EventWeight);
-                    }
+                    float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
+                    if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
+                    float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i)); 
+                    if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
                 }
-                h1_Nfatjet[4]->Fill(Nfatjet_thres, EventWeight);
-                h1_Nskinnyjet[4]->Fill(Nskinnyjet, EventWeight);
             }
-            else if(Nfatjet_thres>2)
-            {
-                if(!ChainName.Contains("DATA") && Do3FatjetScale) EventWeight = EventWeight * 1.15; // Scale factor for 3 fatjet  
-
-                h1_muspT[3]->Fill(RA4MusPt->at(0), EventWeight);
-                h1_musEta[3]->Fill(RA4MusEta->at(0), EventWeight);
-                h1_musPhi[3]->Fill(RA4MusPhi->at(0), EventWeight);
-                h1_mT[3]->Fill(mT, EventWeight);
-                //h1_genpTttbar[3]->Fill(genpTttbar, EventWeight);
-                h1_WpT[3]->Fill(WpT, EventWeight);
-                h1_MJ[3]->Fill(MJ, EventWeight);
-                h1_HT[3]->Fill(HT, EventWeight);
-                h1_MET[3]->Fill(MET, EventWeight);
-                h1_METPhi[3]->Fill(METPhi, EventWeight);
-                h1_DPhi[3]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
-                float dRFJmin   =   999.;
-                float dPhiFJmin =   999.;
-                float dEtaFJmin =   999.;
-                int idRFJ1=0, idRFJ2=0;
-                for(int i=0; i<(int)mj->size(); i++) 
+            if(dRFJmin>2) continue; // FIXME 
+            //if(mj->at(idRFJ1)>50) continue; // FIXME 
+            h1_dRFJ[NFJbin]->Fill(dRFJmin, EventWeight);
+            h1_dPhiFJ[NFJbin]->Fill(dPhiFJmin, EventWeight);
+            h1_dEtaFJ[NFJbin]->Fill(dEtaFJmin, EventWeight);
+            h2_mindRFJmjvsmj[NFJbin]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
+            // mj(FJ1+FJ2) 
+            float px1 = FatjetPt->at(idRFJ1)*TMath::Cos(FatjetPhi->at(idRFJ1)); 
+            float py1 = FatjetPt->at(idRFJ1)*TMath::Sin(FatjetPhi->at(idRFJ1)); 
+            float pz1 = FatjetPt->at(idRFJ1)/TMath::Tan(2*TMath::ATan(TMath::Exp(-FatjetEta->at(idRFJ1)))); 
+            float e1  = TMath::Sqrt(mj->at(idRFJ1)*mj->at(idRFJ1)+px1*px1+py1*py1+pz1*pz1);  
+            float px2 = FatjetPt->at(idRFJ2)*TMath::Cos(FatjetPhi->at(idRFJ2)); 
+            float py2 = FatjetPt->at(idRFJ2)*TMath::Sin(FatjetPhi->at(idRFJ2));
+            float pz2 = FatjetPt->at(idRFJ2)/TMath::Tan(2*TMath::ATan(TMath::Exp(-FatjetEta->at(idRFJ2)))); 
+            float e2  = TMath::Sqrt(mj->at(idRFJ2)*mj->at(idRFJ2)+px2*px2+py2*py2+pz2*pz2);  
+            float mjFJFJ = TMath::Sqrt((e1+e2)*(e1+e2)-(px1+px2)*(px1+px2)-(py1+py2)*(py1+py2)-(pz1+pz2)*(pz1+pz2)); 
+            h1_mjFJFJ[NFJbin]->Fill(mjFJFJ, EventWeight);
+            // bmatching
+            int nbclose=0;
+            int nbaway=0;
+            for(int i=0; i<(int)mj->size(); i++) 
+            {   
+                if(i==idRFJ1 || i==idRFJ2) 
                 { 
-                    if(FatjetPt->at(i)<FatjetpTthres) continue;
-
-                    h1_mj[3]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt[3]->Fill(FatjetPt->at(i), EventWeight);
-                    h1_FatjetEta[3]->Fill(FatjetEta->at(i), EventWeight);
-                    h2_mjvsFatjetPt[3]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
-                    // met matching 
-                    if(getDPhi(FatjetPhi->at(i), METPhi)<1)
-                    { 
-                        h1_mj_metmatch[3]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_metmatch[3]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    else 
-                    { 
-                        h1_mj_notmetmatch[3]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmetmatch[3]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // b matching
-                    float dRmin=999.;
                     for(int j=0; j<(int)JetPt->size(); j++) 
                     { 
                         if(JetCSV->at(j) < 0.679) continue;
                         float dRtmp = getDR(JetEta->at(j), FatjetEta->at(i), JetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRtmp < dRmin) dRmin = dRtmp; 
-                    }
-                    if(dRmin<1.)
-                    { 
-                        h1_mj_bmatch[3]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_bmatch[3]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notbmatch[3]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notbmatch[3]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // mu matching
-                    if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
-                    { 
-                        h1_mj_mumatch[3]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_mumatch[3]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notmumatch[3]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmumatch[3]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // dRmin(FJ) 
-                    for(int j=0; j<i; j++) 
-                    { 
-                        float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRFJtmp<dRFJmin)  
-                        {
-                            dRFJmin=dRFJtmp;
-                            idRFJ1 = j;
-                            idRFJ2 = i;
-                        }
-                        float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
-                        float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i));
-                        if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
+                        if(dRtmp < 1.0) nbclose++; 
                     }
                 }
-                h1_dRFJ[3]->Fill(dRFJmin, EventWeight);
-                h1_dPhiFJ[3]->Fill(dPhiFJmin, EventWeight);
-                h1_dEtaFJ[3]->Fill(dEtaFJmin, EventWeight);
-                h2_mindRFJmjvsmj[3]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
-                // b-mu matching
-                for(int j=0; j<(int)JetPt->size(); j++) 
-                { 
-                    if(JetCSV->at(j) < 0.679) continue;
-                    float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
-                    if(dRtmp<1.0) 
-                    {
-                        h1_BjetPt_bmatchmu[3]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_bmatchmu[3]->Fill(dRtmp, EventWeight);
-                    }
-                    else    
-                    {
-                        h1_BjetPt_notbmatchmu[3]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_notbmatchmu[3]->Fill(dRtmp, EventWeight);
-                    }
-                }
-                h1_Nfatjet[3]->Fill(Nfatjet_thres, EventWeight);
-                h1_Nskinnyjet[3]->Fill(Nskinnyjet, EventWeight);
-            }
-            else if(Nfatjet_thres>1)
-            {
-                h1_muspT[2]->Fill(RA4MusPt->at(0), EventWeight);
-                h1_musEta[2]->Fill(RA4MusEta->at(0), EventWeight);
-                h1_musPhi[2]->Fill(RA4MusPhi->at(0), EventWeight);
-                h1_mT[2]->Fill(mT, EventWeight);
-                //h1_genpTttbar[2]->Fill(genpTttbar, EventWeight);
-                h1_WpT[2]->Fill(WpT, EventWeight);
-                h1_MJ[2]->Fill(MJ, EventWeight);
-                h1_HT[2]->Fill(HT, EventWeight);
-                h1_MET[2]->Fill(MET, EventWeight);
-                h1_METPhi[2]->Fill(METPhi, EventWeight);
-                h1_DPhi[2]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
-                h2_mjvsmj_2fatjet->Fill(mj->at(0), mj->at(1), EventWeight);
-                float dRFJmin=999.;
-                float dPhiFJmin=999.;
-                float dEtaFJmin=999.;
-                int idRFJ1=0, idRFJ2=0;
-                for(int i=0; i<(int)mj->size(); i++) 
-                { 
-                    if(FatjetPt->at(i)<FatjetpTthres) continue;
-
-                    h1_mj[2]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt[2]->Fill(FatjetPt->at(i), EventWeight);
-                    h1_FatjetEta[2]->Fill(FatjetEta->at(i), EventWeight);
-                    h2_mjvsFatjetPt[2]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
-                    // met matching 
-                    if(getDPhi(FatjetPhi->at(i), METPhi)<1)
-                    { 
-                        h1_mj_metmatch[2]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_metmatch[2]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    else 
-                    { 
-                        h1_mj_notmetmatch[2]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmetmatch[2]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // b matching
-                    float dRmin=999.;
+                else 
+                {
                     for(int j=0; j<(int)JetPt->size(); j++) 
                     { 
                         if(JetCSV->at(j) < 0.679) continue;
                         float dRtmp = getDR(JetEta->at(j), FatjetEta->at(i), JetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRtmp < dRmin) dRmin = dRtmp; 
+                        if(dRtmp < 1.0) nbaway++; 
                     }
-                    if(dRmin<1.)
-                    { 
-                        h1_mj_bmatch[2]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_bmatch[2]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notbmatch[2]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notbmatch[2]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // mu matching
-                    if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
-                    { 
-                        h1_mj_mumatch[2]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_mumatch[2]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notmumatch[2]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmumatch[2]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // dRmin(FJ) 
-                    for(int j=0; j<i; j++) 
-                    { 
-                        float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRFJtmp<dRFJmin)  
-                        {
-                            dRFJmin=dRFJtmp;
-                            idRFJ1 = j;
-                            idRFJ2 = i;
-                        }
-                        float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
-                        float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i));
-                        if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
-                    }
-                }
-                h1_dRFJ[2]->Fill(dRFJmin, EventWeight);
-                h1_dPhiFJ[2]->Fill(dPhiFJmin, EventWeight);
-                h1_dEtaFJ[2]->Fill(dEtaFJmin, EventWeight);
-                h2_mindRFJmjvsmj[2]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
-                // b-mu matching
-                for(int j=0; j<(int)JetPt->size(); j++) 
-                { 
-                    if(JetCSV->at(j) < 0.679) continue;
-                    float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
-                    if(dRtmp<1.0)
-                    {
-                        h1_BjetPt_bmatchmu[2]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_bmatchmu[2]->Fill(dRtmp, EventWeight);
-                    }
-                    else 
-                    {
-                        h1_BjetPt_notbmatchmu[2]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_notbmatchmu[2]->Fill(dRtmp, EventWeight);
-                    }
-                }
-                h1_Nfatjet[2]->Fill(Nfatjet_thres, EventWeight);
-                h1_Nskinnyjet[2]->Fill(Nskinnyjet, EventWeight);
-
+                } 
             }
-            else if(Nfatjet_thres>0)
+            for(int i=0; i<(int)mj->size(); i++) 
+            { 
+                if(i==idRFJ1 || i==idRFJ2) continue; 
+                if(nbclose<0) continue;
+                if(nbaway<0) continue;
+                h1_mjFJFJnotclose[NFJbin]->Fill(mj->at(i), EventWeight);
+                h1_FatjetPtFJFJnotclose[NFJbin]->Fill(FatjetPt->at(i), EventWeight);
+                h1_FatjetEtaFJFJnotclose[NFJbin]->Fill(FatjetEta->at(i), EventWeight);
+                h1_FatjetPhiFJFJnotclose[NFJbin]->Fill(FatjetPhi->at(i), EventWeight);
+            }
+
+            if(FatjetPt->at(idRFJ1)>FatjetPt->at(idRFJ2)) 
             {
-                h1_muspT[1]->Fill(RA4MusPt->at(0), EventWeight);
-                h1_musEta[1]->Fill(RA4MusEta->at(0), EventWeight);
-                h1_musPhi[1]->Fill(RA4MusPhi->at(0), EventWeight);
-                h1_mT[1]->Fill(mT, EventWeight);
-                //h1_genpTttbar[1]->Fill(genpTttbar, EventWeight);
-                h1_WpT[1]->Fill(WpT, EventWeight);
-                h1_MJ[1]->Fill(MJ, EventWeight);
-                h1_HT[1]->Fill(HT, EventWeight);
-                h1_MET[1]->Fill(MET, EventWeight);
-                h1_METPhi[1]->Fill(METPhi, EventWeight);
-                h1_DPhi[1]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
-                float dRFJmin=999.;
-                float dPhiFJmin=999.;
-                float dEtaFJmin=999.;
-                int idRFJ1=0, idRFJ2=0;
-                for(int i=0; i<(int)mj->size(); i++) 
-                { 
-                    if(FatjetPt->at(i)<FatjetpTthres) continue;
-
-                    h1_mj[1]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt[1]->Fill(FatjetPt->at(i), EventWeight);
-                    h1_FatjetEta[1]->Fill(FatjetEta->at(i), EventWeight);
-                    h2_mjvsFatjetPt[1]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
-                    // met matching 
-                    if(getDPhi(FatjetPhi->at(i), METPhi)<1)
-                    { 
-                        h1_mj_metmatch[1]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_metmatch[1]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    else 
-                    { 
-                        h1_mj_notmetmatch[1]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmetmatch[1]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // b matching
-                    float dRmin=999.;
-                    for(int j=0; j<(int)JetPt->size(); j++) 
-                    { 
-                        if(JetCSV->at(j) < 0.679) continue;
-                        float dRtmp = getDR(JetEta->at(j), FatjetEta->at(i), JetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRtmp < dRmin) dRmin = dRtmp; 
-                    }
-                    if(dRmin<1.)
-                    { 
-                        h1_mj_bmatch[1]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_bmatch[1]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notbmatch[1]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notbmatch[1]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // mu matching
-                    if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
-                    { 
-                        h1_mj_mumatch[1]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_mumatch[1]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notmumatch[1]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmumatch[1]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // dRmin(FJ) 
-                    for(int j=0; j<i; j++) 
-                    { 
-                        float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRFJtmp<dRFJmin)
-                        {
-                            dRFJmin=dRFJtmp;
-                            idRFJ1 = j;
-                            idRFJ2 = i;
-                        }    
-                        float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
-                        float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i));
-                        if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
-                    }
-                }
-                h1_dRFJ[1]->Fill(dRFJmin, EventWeight);
-                h1_dPhiFJ[1]->Fill(dPhiFJmin, EventWeight);
-                h1_dEtaFJ[1]->Fill(dEtaFJmin, EventWeight);
-                h2_mindRFJmjvsmj[1]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
-                // b-mu matching
-                for(int j=0; j<(int)JetPt->size(); j++) 
-                { 
-                    if(JetCSV->at(j) < 0.679) continue;
-                    float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
-                    if(dRtmp<1.0) 
-                    {
-                        h1_BjetPt_bmatchmu[1]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_bmatchmu[1]->Fill(dRtmp, EventWeight);
-                    }
-                    else 
-                    {
-                        h1_BjetPt_notbmatchmu[1]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_notbmatchmu[1]->Fill(dRtmp, EventWeight);
-                    }
-                }
-                h1_Nfatjet[1]->Fill(Nfatjet_thres, EventWeight);
-                h1_Nskinnyjet[1]->Fill(Nskinnyjet, EventWeight);
+                h1_FatjetPtFJFJcloseHigherPt[NFJbin]->Fill(FatjetPt->at(idRFJ1), EventWeight);
+                h1_FatjetEtaFJFJcloseHigherPt[NFJbin]->Fill(FatjetEta->at(idRFJ1), EventWeight);
+                h1_FatjetPhiFJFJcloseHigherPt[NFJbin]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
+                h1_FatjetPtFJFJcloseLowerPt[NFJbin]->Fill(FatjetPt->at(idRFJ2), EventWeight);
+                h1_FatjetEtaFJFJcloseLowerPt[NFJbin]->Fill(FatjetEta->at(idRFJ2), EventWeight);
+                h1_FatjetPhiFJFJcloseLowerPt[NFJbin]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
             }
-            else if(Nfatjet_thres==0)
+            else 
+            { 
+                h1_FatjetPtFJFJcloseHigherPt[NFJbin]->Fill(FatjetPt->at(idRFJ2), EventWeight);
+                h1_FatjetEtaFJFJcloseHigherPt[NFJbin]->Fill(FatjetEta->at(idRFJ2), EventWeight);
+                h1_FatjetPhiFJFJcloseHigherPt[NFJbin]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
+                h1_FatjetPtFJFJcloseLowerPt[NFJbin]->Fill(FatjetPt->at(idRFJ1), EventWeight);
+                h1_FatjetEtaFJFJcloseLowerPt[NFJbin]->Fill(FatjetEta->at(idRFJ1), EventWeight);
+                h1_FatjetPhiFJFJcloseLowerPt[NFJbin]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
+            }
+            // b-mu matching
+            for(int j=0; j<(int)JetPt->size(); j++) 
+            { 
+                if(JetCSV->at(j) < 0.679) continue;
+                float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
+                if(dRtmp<1.0) 
+                {   
+                    h1_BjetPt_bmatchmu[NFJbin]->Fill(JetPt->at(j), EventWeight);
+                    h1_dRbmu_bmatchmu[NFJbin]->Fill(dRtmp, EventWeight);
+                }
+                else 
+                {
+                    h1_BjetPt_notbmatchmu[NFJbin]->Fill(JetPt->at(j), EventWeight);
+                    h1_dRbmu_notbmatchmu[NFJbin]->Fill(dRtmp, EventWeight);
+                }
+            }
+            h1_Nfatjet[NFJbin]->Fill(Nfatjet_thres, EventWeight);
+            h1_Nskinnyjet[NFJbin]->Fill(Nskinnyjet, EventWeight);
+                
+            // DEBUG     
+            if(NFJbin==-1) 
             {
-                h1_muspT[0]->Fill(RA4MusPt->at(0), EventWeight);
-                h1_musEta[0]->Fill(RA4MusEta->at(0), EventWeight);
-                h1_musPhi[0]->Fill(RA4MusPhi->at(0), EventWeight);
-                h1_mT[0]->Fill(mT, EventWeight);
-                //h1_genpTttbar[0]->Fill(genpTttbar, EventWeight);
-                h1_WpT[0]->Fill(WpT, EventWeight);
-                h1_MJ[0]->Fill(MJ, EventWeight);
-                h1_HT[0]->Fill(HT, EventWeight);
-                h1_MET[0]->Fill(MET, EventWeight);
-                h1_METPhi[0]->Fill(METPhi, EventWeight);
-                h1_DPhi[0]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
-                float dRFJmin=999.;
-                float dPhiFJmin=999.;
-                float dEtaFJmin=999.;
-                int idRFJ1=0, idRFJ2=0;
-                for(int i=0; i<(int)mj->size(); i++) 
-                { 
-                    if(FatjetPt->at(i)<FatjetpTthres) continue;
+                cout << "Fatjet" << endl;
+                for(int i=0; i<(int)mj->size(); i++)
+                {
+                    if(i==idRFJ1 || i==idRFJ2) cout << "Close :: "; 
+                    else cout << "Away :: "; 
+                    cout << " FatjetPt->at(i): " << FatjetPt->at(i)
+                         << " FatjetEta->at(i): " << FatjetEta->at(i)
+                         << " FatjetPhi->at(i): " << FatjetPhi->at(i)  << endl;
+                } 
 
-                    h1_mj[0]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt[0]->Fill(FatjetPt->at(i), EventWeight);
-                    h1_FatjetEta[0]->Fill(FatjetEta->at(i), EventWeight);
-                    h2_mjvsFatjetPt[0]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
-                    // met matching 
-                    if(getDPhi(FatjetPhi->at(i), METPhi)<1)
-                    { 
-                        h1_mj_metmatch[0]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_metmatch[0]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    else 
-                    { 
-                        h1_mj_notmetmatch[0]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmetmatch[0]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // b matching
-                    float dRmin=999.;
-                    for(int j=0; j<(int)JetPt->size(); j++) 
-                    { 
-                        if(JetCSV->at(j) < 0.679) continue;
-                        float dRtmp = getDR(JetEta->at(j), FatjetEta->at(i), JetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRtmp < dRmin) dRmin = dRtmp; 
-                    }
-                    if(dRmin<1.)
-                    { 
-                        h1_mj_bmatch[0]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_bmatch[0]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notbmatch[0]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notbmatch[0]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // mu matching
-                    if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
-                    { 
-                        h1_mj_mumatch[0]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_mumatch[0]->Fill(FatjetPt->at(i), EventWeight);
-                    } 
-                    else 
-                    { 
-                        h1_mj_notmumatch[0]->Fill(mj->at(i), EventWeight);
-                        h1_FatjetPt_notmumatch[0]->Fill(FatjetPt->at(i), EventWeight);
-                    }
-                    // dRmin(FJ) 
-                    for(int j=0; j<i; j++) 
-                    { 
-                        float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dRFJtmp<dRFJmin)
-                        {
-                            dRFJmin=dRFJtmp;
-                            idRFJ1 = j;
-                            idRFJ2 = i;
-                        }
-                        float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
-                        if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
-                        float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i));
-                        if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
-                    }
-                }
-                h1_dRFJ[0]->Fill(dRFJmin, EventWeight);
-                h1_dPhiFJ[0]->Fill(dPhiFJmin, EventWeight);
-                h1_dEtaFJ[0]->Fill(dEtaFJmin, EventWeight);
-                h2_mindRFJmjvsmj[0]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
-                // b-mu matching
-                for(int j=0; j<(int)JetPt->size(); j++) 
-                { 
+                cout << "Bjet" << endl;
+                for(int j=0; j<(int)JetPt->size(); j++)
+                {
                     if(JetCSV->at(j) < 0.679) continue;
-                    float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
-                    if(dRtmp<1.0) 
-                    {   
-                        h1_BjetPt_bmatchmu[0]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_bmatchmu[0]->Fill(dRtmp, EventWeight);
-                    }
-                    else 
-                    {
-                        h1_BjetPt_notbmatchmu[0]->Fill(JetPt->at(j), EventWeight);
-                        h1_dRbmu_notbmatchmu[0]->Fill(dRtmp, EventWeight);
-                    }
+                    cout << " JetPt->at(j): " << JetPt->at(j)
+                         << " JetEta->at(j): " << JetEta->at(j)
+                         << " JetPhi->at(j): " << JetPhi->at(j)
+                         << " JetCSV->at(j): " << JetCSV->at(j) << endl;
                 }
-                h1_Nfatjet[0]->Fill(Nfatjet_thres, EventWeight);
-                h1_Nskinnyjet[0]->Fill(Nskinnyjet, EventWeight);
+                cout << "-------------------------------------------------------------" << endl;
             }
-
+            //
+            // Fill all NFJ bin histogams 
+            //
             h1_muspT[5]->Fill(RA4MusPt->at(0), EventWeight);
             h1_musEta[5]->Fill(RA4MusEta->at(0), EventWeight);
             h1_musPhi[5]->Fill(RA4MusPhi->at(0), EventWeight);
             h1_mT[5]->Fill(mT, EventWeight);
-            //h1_genpTttbar[5]->Fill(genpTttbar, EventWeight);
             h1_WpT[5]->Fill(WpT, EventWeight);
             h1_MJ[5]->Fill(MJ, EventWeight);
             h1_HT[5]->Fill(HT, EventWeight);
             h1_MET[5]->Fill(MET, EventWeight);
             h1_METPhi[5]->Fill(METPhi, EventWeight);
             h1_DPhi[5]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
-            float dRFJmin=999.;
-            float dPhiFJmin=999.;
-            float dEtaFJmin=999.;
-            int idRFJ1=0, idRFJ2=0;
+            if(Nfatjet_thres>0) 
+            {
+                h1_FatjetPt1[5]->Fill(FatjetPt->at(0), EventWeight); 
+                h1_FatjetPhi1[5]->Fill(FatjetPhi->at(0), EventWeight); 
+                h1_FatjetEta1[5]->Fill(FatjetEta->at(0), EventWeight); 
+            }
+            if(Nfatjet_thres>1) 
+            {
+                h1_FatjetPt2[5]->Fill(FatjetPt->at(1), EventWeight); 
+                h1_FatjetPhi2[5]->Fill(FatjetPhi->at(1), EventWeight); 
+                h1_FatjetEta2[5]->Fill(FatjetEta->at(1), EventWeight); 
+            }
+            if(Nfatjet_thres>2) 
+            {
+                h1_FatjetPt3[5]->Fill(FatjetPt->at(2), EventWeight); 
+                h1_FatjetPhi3[5]->Fill(FatjetPhi->at(2), EventWeight); 
+                h1_FatjetEta3[5]->Fill(FatjetEta->at(2), EventWeight); 
+            }
+            if(Nfatjet_thres>3) 
+            {
+                h1_FatjetPt4[5]->Fill(FatjetPt->at(3), EventWeight); 
+                h1_FatjetPhi4[5]->Fill(FatjetPhi->at(3), EventWeight); 
+                h1_FatjetEta4[5]->Fill(FatjetEta->at(3), EventWeight); 
+            }
+            if(Nfatjet_thres>4) 
+            {
+                h1_FatjetPt4[5]->Fill(FatjetPt->at(4), EventWeight); // add 5th jet to h1_FatjetPt4
+                h1_FatjetPhi4[5]->Fill(FatjetPhi->at(4), EventWeight); 
+                h1_FatjetEta4[5]->Fill(FatjetEta->at(4), EventWeight); 
+            }
+            if(Nfatjet_thres>5) 
+            {
+                h1_FatjetPt4[5]->Fill(FatjetPt->at(5), EventWeight); // add 6th jet to h1_FatjetPt4
+                h1_FatjetPhi4[5]->Fill(FatjetPhi->at(5), EventWeight); 
+                h1_FatjetEta4[5]->Fill(FatjetEta->at(5), EventWeight); 
+            }
+           
+            dRFJmin=999.;
+            dPhiFJmin=999.;
+            dEtaFJmin=999.;
+            idRFJ1=0; 
+            idRFJ2=0;
             for(int i=0; i<(int)mj->size(); i++) 
             { 
                 if(FatjetPt->at(i)<FatjetpTthres) continue;
@@ -1179,10 +1010,45 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                     if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
                 }
             }
+            if(dRFJmin>2) continue; // FIXME 
+            //if(mj->at(idRFJ1)>50) continue; // FIXME 
             h1_dRFJ[5]->Fill(dRFJmin, EventWeight);
             h1_dPhiFJ[5]->Fill(dPhiFJmin, EventWeight);
             h1_dEtaFJ[5]->Fill(dEtaFJmin, EventWeight);
             h2_mindRFJmjvsmj[5]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
+            // mj(FJ1+FJ2) 
+            h1_mjFJFJ[5]->Fill(mjFJFJ, EventWeight);
+            // bmatching
+            for(int i=0; i<(int)mj->size(); i++) 
+            {  
+                if(i==idRFJ1 || i==idRFJ2) continue; 
+                if(nbclose<0) continue;
+                if(nbaway<0) continue;
+                h1_mjFJFJnotclose[5]->Fill(mj->at(i), EventWeight);
+                h1_FatjetPtFJFJnotclose[5]->Fill(FatjetPt->at(i), EventWeight);
+                h1_FatjetEtaFJFJnotclose[5]->Fill(FatjetEta->at(i), EventWeight);
+                h1_FatjetPhiFJFJnotclose[5]->Fill(FatjetPhi->at(i), EventWeight);
+            }
+
+            if(FatjetPt->at(idRFJ1)>FatjetPt->at(idRFJ2))
+            {
+                h1_FatjetPtFJFJcloseHigherPt[5]->Fill(FatjetPt->at(idRFJ1), EventWeight);
+                h1_FatjetEtaFJFJcloseHigherPt[5]->Fill(FatjetEta->at(idRFJ1), EventWeight);
+                h1_FatjetPhiFJFJcloseHigherPt[5]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
+                h1_FatjetPtFJFJcloseLowerPt[5]->Fill(FatjetPt->at(idRFJ2), EventWeight);
+                h1_FatjetEtaFJFJcloseLowerPt[5]->Fill(FatjetEta->at(idRFJ2), EventWeight);
+                h1_FatjetPhiFJFJcloseLowerPt[5]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
+            }
+            else
+            {
+                h1_FatjetPtFJFJcloseHigherPt[5]->Fill(FatjetPt->at(idRFJ2), EventWeight);
+                h1_FatjetEtaFJFJcloseHigherPt[5]->Fill(FatjetEta->at(idRFJ2), EventWeight);
+                h1_FatjetPhiFJFJcloseHigherPt[5]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
+                h1_FatjetPtFJFJcloseLowerPt[5]->Fill(FatjetPt->at(idRFJ1), EventWeight);
+                h1_FatjetEtaFJFJcloseLowerPt[5]->Fill(FatjetEta->at(idRFJ1), EventWeight);
+                h1_FatjetPhiFJFJcloseLowerPt[5]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
+            }
+
             // b-mu matching
             for(int j=0; j<(int)JetPt->size(); j++) 
             { 
@@ -1218,6 +1084,18 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_MET[i]->SetDirectory(0);                         h1_MET[i]->Write();
         h1_METPhi[i]->SetDirectory(0);                      h1_METPhi[i]->Write();
         h1_FatjetPt[i]->SetDirectory(0);                    h1_FatjetPt[i]->Write();
+        h1_FatjetPt1[i]->SetDirectory(0);                   h1_FatjetPt1[i]->Write();
+        h1_FatjetPt2[i]->SetDirectory(0);                   h1_FatjetPt2[i]->Write();
+        h1_FatjetPt3[i]->SetDirectory(0);                   h1_FatjetPt3[i]->Write();
+        h1_FatjetPt4[i]->SetDirectory(0);                   h1_FatjetPt4[i]->Write();
+        h1_FatjetPhi1[i]->SetDirectory(0);                   h1_FatjetPhi1[i]->Write();
+        h1_FatjetPhi2[i]->SetDirectory(0);                   h1_FatjetPhi2[i]->Write();
+        h1_FatjetPhi3[i]->SetDirectory(0);                   h1_FatjetPhi3[i]->Write();
+        h1_FatjetPhi4[i]->SetDirectory(0);                   h1_FatjetPhi4[i]->Write();
+        h1_FatjetEta1[i]->SetDirectory(0);                   h1_FatjetEta1[i]->Write();
+        h1_FatjetEta2[i]->SetDirectory(0);                   h1_FatjetEta2[i]->Write();
+        h1_FatjetEta3[i]->SetDirectory(0);                   h1_FatjetEta3[i]->Write();
+        h1_FatjetEta4[i]->SetDirectory(0);                   h1_FatjetEta4[i]->Write();
         h1_FatjetPt_mumatch[i]->SetDirectory(0);            h1_FatjetPt_mumatch[i]->Write();
         h1_FatjetPt_notmumatch[i]->SetDirectory(0);         h1_FatjetPt_notmumatch[i]->Write();
         h1_FatjetPt_bmatch[i]->SetDirectory(0);             h1_FatjetPt_bmatch[i]->Write();
@@ -1235,6 +1113,17 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_FatjetEta[i]->SetDirectory(0);                   h1_FatjetEta[i]->Write();
         h1_DPhi[i]->SetDirectory(0);                        h1_DPhi[i]->Write();
         h1_mj[i]->SetDirectory(0);                          h1_mj[i]->Write();
+        h1_mjFJFJ[i]->SetDirectory(0);                      h1_mjFJFJ[i]->Write();
+        h1_mjFJFJnotclose[i]->SetDirectory(0);              h1_mjFJFJnotclose[i]->Write();
+        h1_FatjetPtFJFJnotclose[i]->SetDirectory(0);        h1_FatjetPtFJFJnotclose[i]->Write();
+        h1_FatjetEtaFJFJnotclose[i]->SetDirectory(0);       h1_FatjetEtaFJFJnotclose[i]->Write();
+        h1_FatjetPhiFJFJnotclose[i]->SetDirectory(0);       h1_FatjetPhiFJFJnotclose[i]->Write();
+        h1_FatjetPtFJFJcloseHigherPt[i]->SetDirectory(0);          h1_FatjetPtFJFJcloseHigherPt[i]->Write();
+        h1_FatjetEtaFJFJcloseHigherPt[i]->SetDirectory(0);          h1_FatjetEtaFJFJcloseHigherPt[i]->Write();
+        h1_FatjetPhiFJFJcloseHigherPt[i]->SetDirectory(0);          h1_FatjetPhiFJFJcloseHigherPt[i]->Write();
+        h1_FatjetPtFJFJcloseLowerPt[i]->SetDirectory(0);          h1_FatjetPtFJFJcloseLowerPt[i]->Write();
+        h1_FatjetEtaFJFJcloseLowerPt[i]->SetDirectory(0);          h1_FatjetEtaFJFJcloseLowerPt[i]->Write();
+        h1_FatjetPhiFJFJcloseLowerPt[i]->SetDirectory(0);          h1_FatjetPhiFJFJcloseLowerPt[i]->Write();
         h1_mj_mumatch[i]->SetDirectory(0);                  h1_mj_mumatch[i]->Write();
         h1_mj_notmumatch[i]->SetDirectory(0);               h1_mj_notmumatch[i]->Write();
         h1_mj_notbmatch[i]->SetDirectory(0);                h1_mj_notbmatch[i]->Write();
@@ -1242,7 +1131,6 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_mj_notmetmatch[i]->SetDirectory(0);              h1_mj_notmetmatch[i]->Write();
         h1_mj_metmatch[i]->SetDirectory(0);                 h1_mj_metmatch[i]->Write();
         h1_mT[i]->SetDirectory(0);                          h1_mT[i]->Write();
-        //h1_genpTttbar[i]->SetDirectory(0);                  h1_genpTttbar[i]->Write();
         h1_WpT[i]->SetDirectory(0);                         h1_WpT[i]->Write();
         h1_muspT[i]->SetDirectory(0);                       h1_muspT[i]->Write();
         h1_musEta[i]->SetDirectory(0);                      h1_musEta[i]->Write();
@@ -1251,7 +1139,6 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_Nskinnyjet[i]->SetDirectory(0);                  h1_Nskinnyjet[i]->Write();
         h2_mjvsFatjetPt[i]->SetDirectory(0);                h2_mjvsFatjetPt[i]->Write();
     }
-    h2_mjvsmj_2fatjet->SetDirectory(0);                h2_mjvsmj_2fatjet->Write();
     HistFile->Close();
 
 }
@@ -1267,6 +1154,18 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
     if(HistName=="MET")                 	var=(char*)"MET [GeV]";
     if(HistName=="METPhi")              	var=(char*)"#phi(MET)";
     if(HistName=="FatjetPt")            	var=(char*)"pT(Fatjet) [GeV]";                   
+    if(HistName=="FatjetPt1")            	var=(char*)"pT(Fatjet1) [GeV]";                   
+    if(HistName=="FatjetPt2")            	var=(char*)"pT(Fatjet2) [GeV]";                   
+    if(HistName=="FatjetPt3")            	var=(char*)"pT(Fatjet3) [GeV]";                   
+    if(HistName=="FatjetPt4")            	var=(char*)"pT(Fatjet4) [GeV]";                   
+    if(HistName=="FatjetPhi1")            	var=(char*)"#phi(Fatjet1)";                   
+    if(HistName=="FatjetPhi2")            	var=(char*)"#phi(Fatjet2)";                   
+    if(HistName=="FatjetPhi3")            	var=(char*)"#phi(Fatjet3)";                   
+    if(HistName=="FatjetPhi4")            	var=(char*)"#phi(Fatjet4)";                   
+    if(HistName=="FatjetEta1")            	var=(char*)"#eta(Fatjet1)";                   
+    if(HistName=="FatjetEta2")            	var=(char*)"#eta(Fatjet2)";                   
+    if(HistName=="FatjetEta3")            	var=(char*)"#eta(Fatjet3)";                   
+    if(HistName=="FatjetEta4")            	var=(char*)"#eta(Fatjet4)";                   
     if(HistName=="FatjetPt_mumatch")    	var=(char*)"pT(Fatjet)(matched muon) [GeV]";    
     if(HistName=="FatjetPt_notmumatch") 	var=(char*)"pT(Fatjet)(not matched muon) [GeV]";
     if(HistName=="FatjetPt_bmatch")     	var=(char*)"pT(Fatjet)(matched b) [GeV]";        
@@ -1285,6 +1184,18 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
     if(HistName=="HT")                  	var=(char*)"H_{T} [GeV]";                        
     if(HistName=="MJ")                  	var=(char*)"M_{J} [GeV]";                        
     if(HistName=="mj")                  	var=(char*)"m_{j} [GeV]";                        
+    if(HistName=="mjFJFJ")               	var=(char*)"m_{j}(FJ+FJ) [GeV]";                        
+    if(HistName=="mjFJFJnotclose")        	var=(char*)"m_{j}(FJ+FJ not close) [GeV]";                        
+    if(HistName=="FatjetPtFJFJnotclose")   	var=(char*)"pT(Fatjet FJ+FJ not close) [GeV]";                        
+    if(HistName=="FatjetEtaFJFJnotclose")   var=(char*)"#eta(Fatjet FJ+FJ not close)";                        
+    if(HistName=="FatjetPhiFJFJnotclose")   var=(char*)"#phi(Fatjet FJ+FJ not close)";                        
+    if(HistName=="FatjetEtaFJFJclose")      var=(char*)"#eta(Fatjet FJ+FJ close)";                        
+    if(HistName=="FatjetEtaFJFJcloseHigherPt")  var=(char*)"#eta(Fatjet FJ+FJ close higher pT)";                        
+    if(HistName=="FatjetEtaFJFJcloseLowerPt")   var=(char*)"#eta(Fatjet FJ+FJ close lower pT)";                        
+    if(HistName=="FatjetPhiFJFJcloseHigherPt")  var=(char*)"#eta(Fatjet FJ+FJ close higher pT)";                        
+    if(HistName=="FatjetPhiFJFJcloseLowerPt")   var=(char*)"#eta(Fatjet FJ+FJ close lower pT)";                        
+    if(HistName=="FatjetPtFJFJcloseHigherPt")   var=(char*)"#eta(Fatjet FJ+FJ close higher pT)";                        
+    if(HistName=="FatjetPtFJFJcloseLowerPt")    var=(char*)"#eta(Fatjet FJ+FJ close lower pT)";                        
     if(HistName=="mj_mumatch")          	var=(char*)"m_{j}(matched muon) [GeV]";         
     if(HistName=="mj_notmumatch")       	var=(char*)"m_{j}(not matched muon) [GeV]";     
     if(HistName=="mj_bmatch")           	var=(char*)"m_{j}(matched b) [GeV]";             
@@ -1298,7 +1209,6 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
     if(HistName=="Nfatjet")             	var=(char*)"N_{fatjet}";
     if(HistName=="Nskinnyjet")          	var=(char*)"N_{skinny}";
     if(HistName=="WpT")                 	var=(char*)"p_{T}(W) [GeV]";
-    //if(HistName=="genpTttbar")          	var=(char*)"gen p_{T}(ttbar) [GeV]";
 
     TH1F *h1_DATA[6], *h1_T[6], *h1_TT_sl[6], *h1_TT_ll[6], *h1_TT[6], *h1_WJets[6], *h1_DY[6], *h1_MC[6], *h1_Ratio[6]; 
     TH1F *h1_f1200_25[6], *h1_f1200_1000[6];
@@ -1486,7 +1396,7 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
 //
 // 2D histograms 
 //
-void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1) 
+void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1, bool doRatio=false) 
 { 
     TFile* HistFile = TFile::Open(Form("HistFiles/Hist_pT%i.root",pTR0p5));
    
@@ -1506,11 +1416,14 @@ void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1)
 
 
     TH2F *h2_DATA[6], *h2_T[6], *h2_TT_sl[6], *h2_TT_ll[6], *h2_TT[6], *h2_WJets[6], *h2_DY[6]; 
+    TH2F *h2_Ratio[6], *h2_MC[6]; 
     TH2F *h2_f1200_25[6], *h2_f1200_1000[6];
     TCanvas *c_TT_sl = new TCanvas("c_TT_sl","c_TT_sl",1600,360);  
     TCanvas *c_TT_ll = new TCanvas("c_TT_ll","c_TT_ll",1600,360);  
+    TCanvas *c_Ratio = new TCanvas("c_Ratio","c_Ratio",1600,360);  
     c_TT_sl->Divide(4,1);
     c_TT_ll->Divide(4,1);
+    c_Ratio->Divide(4,1);
     for(int i=2; i<6; i++) 
     {
         if(HistName=="mjvsmj" && i!=2) continue;
@@ -1541,17 +1454,37 @@ void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h2_TT_sl[i]->Draw("colz");
         c_TT_ll->cd(i-1);
         h2_TT_ll[i]->Draw("colz");
-    }
-   
-    c_TT_sl->Print( Form("figures_FatjetpT%i_HT500MET100/2D_TT_sl_%s_pT%i%s%s.pdf", FatjetpTthres,
-                HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
-    c_TT_ll->Print( Form("figures_FatjetpT%i_HT500MET100/2D_TT_ll_%s_pT%i%s%s.pdf", FatjetpTthres,
-                HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
     
+        c_TT_sl->Print( Form("figures_FatjetpT%i_HT500MET100/2D_TT_sl_%s_pT%i%s%s.pdf", FatjetpTthres,
+                    HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+        c_TT_ll->Print( Form("figures_FatjetpT%i_HT500MET100/2D_TT_ll_%s_pT%i%s%s.pdf", FatjetpTthres,
+                    HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+    }
+  
+    if(doRatio) 
+    { 
+        for(int i=2; i<6; i++) 
+        {
+            h2_Ratio[i] = (TH2F*) h2_DATA[i]->Clone(); 
+            h2_MC[i]    = (TH2F*) h2_TT_sl[i]->Clone();
+            h2_MC[i]->Add(h2_TT_ll[i]);
+            h2_MC[i]->Add(h2_T[i]);
+            h2_MC[i]->Add(h2_WJets[i]);
+            h2_Ratio[i]->Divide(h2_MC[i]);
+            c_Ratio->cd(i-1);
+            h2_Ratio[i]->SetMinimum(0.5);
+            h2_Ratio[i]->SetMaximum(1.5);
+            h2_Ratio[i]->Draw("colz");
+            c_Ratio->Print( Form("figures_FatjetpT%i_HT500MET100/2D_Ratio_%s_pT%i%s%s.pdf", FatjetpTthres,
+                        HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+        } 
+    }
+
     // 
     HistFile->Close();
     delete c_TT_sl;
     delete c_TT_ll;
+    delete c_Ratio;
 }
 
 
@@ -1636,7 +1569,7 @@ void DrawSL()
     // ----------------------------------------
     //  Draw histograms 
     // ---------------------------------------- 
-    /*
+    
     DrawStack("muspT"           	);
     DrawStack("musPhi"          	);
     DrawStack("musEta"          	);
@@ -1671,17 +1604,40 @@ void DrawSL()
     DrawStack("dRFJ");
     DrawStack("dPhiFJ");
     DrawStack("dEtaFJ");
-    */
-
-//    DrawStack("FatjetPt1"   			);
-//    DrawStack("FatjetPt2"   			);
-//    DrawStack("FatjetPt3"   			);
-//    DrawStack("FatjetPt4"   			);
-    
-    Draw2D("mjvsmj"                 );
     Draw2D("mjvsFatjetPt"           );
+   
     
-//    Draw2DRatio("mindRFJmjvsmj"     );
+    DrawStack("FatjetPt1"   			);
+    DrawStack("FatjetPt2"   			);
+    DrawStack("FatjetPt3"   			);
+    DrawStack("FatjetPt4"   			);
+    DrawStack("FatjetPhi1"   			);
+    DrawStack("FatjetPhi2"   			);
+    DrawStack("FatjetPhi3"   			);
+    DrawStack("FatjetPhi4"   			);
+    DrawStack("FatjetEta1"   			);
+    DrawStack("FatjetEta2"   			);
+    DrawStack("FatjetEta3"   			);
+    DrawStack("FatjetEta4"   			);
+    
+    DrawStack("dRFJ");
+    DrawStack("dPhiFJ");
+    DrawStack("dEtaFJ");
+    DrawStack("mjFJFJ",30,2);
+    DrawStack("mjFJFJnotclose",30,1);
+    
+    DrawStack("FatjetPtFJFJnotclose",30,1);
+    DrawStack("FatjetEtaFJFJnotclose",30,1);
+    DrawStack("FatjetPhiFJFJnotclose",30,1);
+
+    DrawStack("FatjetPtFJFJcloseHigherPt",30,1);
+    DrawStack("FatjetEtaFJFJcloseHigherPt",30,1);
+    DrawStack("FatjetPhiFJFJcloseHigherPt",30,1);
+    DrawStack("FatjetPtFJFJcloseLowerPt",30,1);
+    DrawStack("FatjetEtaFJFJcloseLowerPt",30,1);
+    DrawStack("FatjetPhiFJFJcloseLowerPt",30,1);
+    
+    Draw2D("mindRFJmjvsmj", 30, 1, true );
 
 }
 
