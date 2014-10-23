@@ -19,11 +19,23 @@ using namespace std;
 int pTR0p5=30;
 int doTT=true;
 
+float getDEta(float eta1, float eta2)
+{
+    return abs(eta1-eta2);
+}
 float getDPhi(float phi1, float phi2)
 {
     float absdphi = abs(phi1-phi2);
     if(absdphi < TMath::Pi()) return absdphi;
     else 2*TMath::Pi() - absdphi;
+}
+float getDR(float dphi, float deta)
+{
+    return TMath::Sqrt(dphi*dphi+deta*deta);
+}
+float getDR(float eta1, float eta2, float phi1, float phi2)
+{
+    return getDR(getDPhi(phi1, phi2), eta1-eta2);
 }
 
 void EventDisplayForBaby()
@@ -33,7 +45,8 @@ void EventDisplayForBaby()
     TChain *ch        = new TChain("tree");
     TString BabyDir = "../../../babies/HT500MET100/";  
     if(doTT) ch->Add(BabyDir+"baby_TTJets_SemiLeptMGDecays_8TeV_f*.root");
-    if(!doTT) ch->Add(BabyDir+"baby_T1tttt_*25*.root");
+    //if(!doTT) ch->Add(BabyDir+"baby_T1tttt_*25*.root");
+    if(!doTT) ch->Add(BabyDir+"baby_MuHad*.root");
 
     // branch
     int             run;
@@ -56,6 +69,7 @@ void EventDisplayForBaby()
     vector<float>   *RA4MusPt;
     vector<float>   *RA4MusPhi;
     vector<float>   *RA4MusEta;
+    vector<float>   *RA4ElsPt;
     vector<float>   *JetPt;
     vector<float>   *JetEta;
     vector<float>   *JetPhi;
@@ -89,6 +103,7 @@ void EventDisplayForBaby()
     TBranch         *b_RA4MusPt;   //!
     TBranch         *b_RA4MusPhi;   //!
     TBranch         *b_RA4MusEta;   //!
+    TBranch         *b_RA4ElsPt;   //!
     TBranch         *b_JetPt;   //!
     TBranch         *b_JetEta;   //!
     TBranch         *b_JetPhi;   //!
@@ -108,6 +123,7 @@ void EventDisplayForBaby()
     RA4MusPt  = 0;
     RA4MusPhi = 0;
     RA4MusEta = 0;
+    RA4ElsPt  = 0;
     JetPt  = 0;
     JetEta = 0;
     JetPhi = 0;
@@ -141,23 +157,26 @@ void EventDisplayForBaby()
     ch->SetBranchAddress("RA4MusPt", &RA4MusPt, &b_RA4MusPt);
     ch->SetBranchAddress("RA4MusPhi", &RA4MusPhi, &b_RA4MusPhi);
     ch->SetBranchAddress("RA4MusEta", &RA4MusEta, &b_RA4MusEta);
+    ch->SetBranchAddress("RA4ElsPt", &RA4ElsPt, &b_RA4ElsPt);
     ch->SetBranchAddress("JetPt",  &JetPt,  &b_JetPt);
     ch->SetBranchAddress("JetPhi", &JetPhi, &b_JetPhi);
     ch->SetBranchAddress("JetEta", &JetEta, &b_JetEta);
     ch->SetBranchAddress("JetCSV", &JetCSV, &b_JetCSV);
     ch->SetBranchAddress("RA4MusVetoPt", &RA4MusVetoPt, &b_RA4MusVetoPt);
     ch->SetBranchAddress("RA4ElsVetoPt", &RA4ElsVetoPt, &b_RA4ElsVetoPt);
+    if(doTT)
+    {
     ch->SetBranchAddress("GenPt",  &GenPt,  &b_GenPt);
     ch->SetBranchAddress("GenPhi", &GenPhi, &b_GenPhi);
     ch->SetBranchAddress("GenEta", &GenEta, &b_GenEta);
     ch->SetBranchAddress("GenId", &GenId, &b_GenId);
     ch->SetBranchAddress("GenMId", &GenMId, &b_GenMId);
     ch->SetBranchAddress("GenGMId", &GenGMId, &b_GenGMId);
-
+    }
     
     Int_t nentries = (Int_t)ch->GetEntries();
     //for(int i = 0; i<nentries; i++)
-    for(int i = 0; i<1000; i++)
+    for(int i = 0; i<100000; i++)
     {
         ch->GetEntry(i); 
 
@@ -165,16 +184,52 @@ void EventDisplayForBaby()
         if( RA4MusPt->size()!=1 ) continue;
         if( RA4MusVetoPt->size()>0 ) continue;
         if( RA4ElsVetoPt->size()>0 ) continue;
+        if( RA4ElsPt->size()>0 )        continue;
         
         if( !(HT>500                             && 
              MET>100                             && 
              RA4MusPt->at(0)>20                  &&  
-             NBtagCSVM==2) 
+             NBtagCSVM>1) 
             ) continue;
         
         if( Nfatjet!=3) continue; 
-        //if( mj->at(0)>40 && mj->at(1)>40) continue; 
-        if(getDPhi(RA4MusPhi->at(0),METPhi)>0.5) continue; // FIXME
+            
+        // dRmin(FJ) 
+        float dRFJmin=999.;
+        float dPhiFJmin=999.;
+        float dEtaFJmin=999.;
+        int idRFJ1=0, idRFJ2=0;
+        for(int i=0; i<(int)mj->size(); i++) 
+        { 
+            if(FatjetPt->at(i)<50) continue;
+            for(int j=0; j<i; j++) 
+            { 
+                float dRFJtmp = getDR(FatjetEta->at(j), FatjetEta->at(i), FatjetPhi->at(j), FatjetPhi->at(i)); 
+                if(dRFJtmp<dRFJmin)  
+                {   
+                    dRFJmin=dRFJtmp;
+                    idRFJ1 = j;
+                    idRFJ2 = i;
+                }
+                float dPhiFJtmp = getDPhi(FatjetPhi->at(j), FatjetPhi->at(i)); 
+                if(dPhiFJtmp<dPhiFJmin)  dPhiFJmin=dPhiFJtmp;
+                float dEtaFJtmp = getDEta(FatjetEta->at(j), FatjetEta->at(i)); 
+                if(dEtaFJtmp<dEtaFJmin)  dEtaFJmin=dEtaFJtmp;
+            }
+        }
+        /// FIXME 
+        if(dRFJmin>2) continue; // FIXME
+
+        float dRminFJmu=999.;
+        for(int i=0; i<(int)mj->size(); i++) 
+        {   
+            if((i==idRFJ1 || i==idRFJ2)) continue;
+            //if(i!=idRFJ2) continue;
+            float dRtmp =  getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0));
+            if(dRtmp<dRminFJmu) dRminFJmu = dRtmp;
+        }
+        if(dRminFJmu>1.) continue; // FIXME 
+        if(getDPhi(RA4MusPhi->at(0),METPhi)>0.4) continue; // FIXME
 
         //
         TH2F *h2 = new TH2F("h2","h2", 115, -5.0, 5.0, 72, -3.141592, 3.141592);
@@ -192,76 +247,79 @@ void EventDisplayForBaby()
        
         // Draw gen particles 
         vector<TMarker> constituents, genpart;
-        for(unsigned int imc = 0; imc < GenPt->size(); imc++)
+        if(doTT) 
         {
-            int id  = GenId->at(imc);
-            int mid = GenMId->at(imc);
-            int gid = GenGMId->at(imc);
-            int marknum=0;
-            TString partname;
-            if(abs(id) == 1000021){
-                marknum=8;
-                partname = "gluino";
-            }
-            if(abs(id) == 1000022){
-                marknum=24;
-                partname = "LSP";
-            }
-            if(id == 6 || id==(-6)){
-                //top
-                marknum=22;
-                partname = "top";
-            }
-            if((id==5 && mid==6) || (id==(-5) && mid==(-6)) ){
-                //b from top
-                marknum=23;
-                partname="b";
-            }
-            if( (id==24 && mid==6) || (id==(-24) && mid==(-6)) ){
-                //W
-                marknum=34;
-                partname = "W";
-            }
+            for(unsigned int imc = 0; imc < GenPt->size(); imc++)
+            {
+                int id  = GenId->at(imc);
+                int mid = GenMId->at(imc);
+                int gid = GenGMId->at(imc);
+                int marknum=0;
+                TString partname;
+                if(abs(id) == 1000021){
+                    marknum=8;
+                    partname = "gluino";
+                }
+                if(abs(id) == 1000022){
+                    marknum=24;
+                    partname = "LSP";
+                }
+                if(id == 6 || id==(-6)){
+                    //top
+                    marknum=22;
+                    partname = "top";
+                }
+                if((id==5 && mid==6) || (id==(-5) && mid==(-6)) ){
+                    //b from top
+                    marknum=23;
+                    partname="b";
+                }
+                if( (id==24 && mid==6) || (id==(-24) && mid==(-6)) ){
+                    //W
+                    marknum=34;
+                    partname = "W";
+                }
 
-            if((id==(-13) && mid==24 && gid==6)||(id==(13) && mid==(-24) && gid==(-6))){
-                //mu
-                marknum=29;
-                partname = "#mu";
-            }
+                if((id==(-13) && mid==24 && gid==6)||(id==(13) && mid==(-24) && gid==(-6))){
+                    //mu
+                    marknum=29;
+                    partname = "#mu";
+                }
 
-            if((id==(14) && mid==24 && gid==6)||(id==(-14) && mid==(-24) && gid==(-6))){
-                //nu
-                marknum=30;
-                partname = "#nu";
-            }
-            if(abs(id)<5 && abs(mid)==24 && abs(gid)==6) 
-            { 
-                // Hadronic W
-                marknum=3;
-                if(abs(id)==1) partname = "d";
-                if(abs(id)==2) partname = "u";
-                if(abs(id)==3) partname = "s";
-                if(abs(id)==4) partname = "c";
+                if((id==(14) && mid==24 && gid==6)||(id==(-14) && mid==(-24) && gid==(-6))){
+                    //nu
+                    marknum=30;
+                    partname = "#nu";
+                }
+                if(abs(id)<5 && abs(mid)==24 && abs(gid)==6) 
+                { 
+                    // Hadronic W
+                    marknum=3;
+                    if(abs(id)==1) partname = "d";
+                    if(abs(id)==2) partname = "u";
+                    if(abs(id)==3) partname = "s";
+                    if(abs(id)==4) partname = "c";
 
+                }
+                if(marknum!=0){
+                    TMarker temp = TMarker(GenEta->at(imc),GenPhi->at(imc), marknum);
+                    if((id>0 && id!=13) || id==(-13)){temp.SetMarkerColor(30); /*leg->AddEntry(&temp,partname,"p");*/} //from t
+                    else if((id<0 &&id!=(-13)) || id==13){ temp.SetMarkerColor(46); partname = "anti"+partname; /*leg->AddEntry(&temp,partname,"p");*/}//from tbar
+                    if(abs(id)<5 && abs(mid)==24 && gid==6)  temp.SetMarkerColor(30);
+                    if(abs(id)<5 && abs(mid)==24 && gid==-6)  temp.SetMarkerColor(46);
+                    temp.SetMarkerSize(2);
+                    if(id==6 || id==(-6)) temp.SetMarkerSize(3);
+                    if(abs(id) > 1000000)  temp.SetMarkerColor(9);
+                    genpart.push_back(temp);
+                }
             }
-            if(marknum!=0){
-                TMarker temp = TMarker(GenEta->at(imc),GenPhi->at(imc), marknum);
-                if((id>0 && id!=13) || id==(-13)){temp.SetMarkerColor(30); /*leg->AddEntry(&temp,partname,"p");*/} //from t
-                else if((id<0 &&id!=(-13)) || id==13){ temp.SetMarkerColor(46); partname = "anti"+partname; /*leg->AddEntry(&temp,partname,"p");*/}//from tbar
-                if(abs(id)<5 && abs(mid)==24 && gid==6)  temp.SetMarkerColor(30);
-                if(abs(id)<5 && abs(mid)==24 && gid==-6)  temp.SetMarkerColor(46);
-                temp.SetMarkerSize(2);
-                if(id==6 || id==(-6)) temp.SetMarkerSize(3);
-                if(abs(id) > 1000000)  temp.SetMarkerColor(9);
-                genpart.push_back(temp);
-            }
-        }
-        
+        }// if(doTT)
+
         // Draw MET 
         TMarker met = TMarker(0, METPhi, 27);
         met.SetMarkerSize(3);
         met.SetMarkerColor(kMagenta);
-        genpart.push_back(met);
+        if(doTT) genpart.push_back(met);
 
 
         // jets 
@@ -289,9 +347,12 @@ void EventDisplayForBaby()
         h2->SetZTitle("m_{j} [GeV]");
         h2->Draw("colz");
 
-        for(int ix=0;ix<(int)genpart.size();ix++)
-        {
-            genpart[ix].Draw("same");
+        if(doTT)
+        { 
+            for(int ix=0;ix<(int)genpart.size();ix++)
+            {
+                genpart[ix].Draw("same");
+            }
         }
         for(int iy=0;iy<(int)constituents.size();iy++)
         {
@@ -307,10 +368,10 @@ void EventDisplayForBaby()
 
         //
         c->SaveAs(Form("FiguresEventDisplay/EventDisplay_%s_Run%i_Lumi%i_Event%i_R%.1f_5.pdf", 
-                    doTT?"TT_sl":"T1tttt_f1400_25",run, lumiblock, event));
+                    //doTT?"TT_sl":"T1tttt_f1400_25",run, lumiblock, event));
+                    doTT?"TT_sl":"MuHad",run, lumiblock, event));
         h2->Reset(); 
         for(int ijets=0; ijets<(int)FatjetEta->size(); ijets++) delete cone[ijets];
-   
 
         // print out 
         cout << "-------------------------------------------------------------------- " << endl;
@@ -340,19 +401,22 @@ void EventDisplayForBaby()
             cout << "pT: " << MET << " " 
                  << "phi: " << METPhi << " "
                  << endl;
-        cout << "-- Gen " << endl;
-        for(unsigned int imc = 0; imc < GenPt->size(); imc++) 
+        if(doTT)
         { 
-            int id  = GenId->at(imc);
-            if(abs(id) > 25) continue; 
-//            if(abs(id) == 21) continue; 
-            cout << "Id: "  << id << " " 
-                 << "Mother Id: "  << GenMId->at(imc) << " " 
-                 << "GMother Id: "  << GenGMId->at(imc) << " " 
-                 << "pT: "  << GenPt->at(imc) << " " 
-                 << "eta: " << GenEta->at(imc) << " " 
-                 << "phi: " << GenPhi->at(imc) << " "
-                 << endl;
+            cout << "-- Gen " << endl;
+            for(unsigned int imc = 0; imc < GenPt->size(); imc++) 
+            { 
+                int id  = GenId->at(imc);
+                if(abs(id) > 25) continue; 
+                //            if(abs(id) == 21) continue; 
+                cout << "Id: "  << id << " " 
+                    << "Mother Id: "  << GenMId->at(imc) << " " 
+                    << "GMother Id: "  << GenGMId->at(imc) << " " 
+                    << "pT: "  << GenPt->at(imc) << " " 
+                    << "eta: " << GenEta->at(imc) << " " 
+                    << "phi: " << GenPhi->at(imc) << " "
+                    << endl;
+            }
         }
 
     }
