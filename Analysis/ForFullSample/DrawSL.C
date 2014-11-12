@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip> // for setw()
 
 #include "TROOT.h"
 #include "TChain.h"
@@ -13,7 +14,7 @@
 #include "TPad.h"
 #include "TLegend.h"
 #include "TLorentzVector.h"
-
+#include "TInterpreter.h"
 //#include "babytree.h"
 
 using namespace std;
@@ -48,8 +49,25 @@ TH2F* InitTH2F(char* Name, char* Title, int NXbins, double XMin, double XMax, in
 TH1F* FillTH1F(TH1F* &h1, double var, double weight){
     if(var >= h1->GetXaxis()->GetBinUpEdge(h1->GetXaxis()->GetNbins())) 
         var=h1->GetXaxis()->GetBinUpEdge(h1->GetXaxis()->GetNbins())-0.00001;
+    if(var < h1->GetXaxis()->GetBinLowEdge(1)) 
+        var=h1->GetXaxis()->GetBinLowEdge(1)+0.00001;
     h1->Fill(var, weight);        
     return h1;
+}
+//
+// Fill TH2F
+//
+TH2F* FillTH2F(TH2F* &h2, double varX, double varY, double weight){
+    if(varX >= h2->GetXaxis()->GetBinUpEdge(h2->GetXaxis()->GetNbins())) 
+        varX=h2->GetXaxis()->GetBinUpEdge(h2->GetXaxis()->GetNbins())-0.00001;
+    if(varY >= h2->GetYaxis()->GetBinUpEdge(h2->GetYaxis()->GetNbins())) 
+        varY=h2->GetYaxis()->GetBinUpEdge(h2->GetYaxis()->GetNbins())-0.00001;
+    if(varX < h2->GetXaxis()->GetBinLowEdge(1)) 
+        varX=h2->GetXaxis()->GetBinLowEdge(1)+0.00001;
+    if(varY < h2->GetYaxis()->GetBinLowEdge(1)) 
+        varY=h2->GetYaxis()->GetBinLowEdge(1)+0.00001;
+    h2->Fill(varX, varY, weight);        
+    return h2;
 }
 
 //
@@ -167,6 +185,79 @@ float getDR(float eta1, float eta2, float phi1, float phi2)
 }
 
 //
+// Print A line of table
+//
+void PrintTableOneLine(TString Process, TH1F* h1[6], int lepflav=0, bool doLatex=true)
+{ 
+        if(doLatex)
+        {
+            if(lepflav!=11 && lepflav!=13)
+            {
+                Double_t error[6];
+                for(int i=2; i<6; i++) h1[i]->IntegralAndError(1,10000,error[i]);
+                cout << Process << " & " 
+                     << Form("$%.2f \\pm %.2f$",h1[2]->Integral(),error[2]) << "\t&" 
+                     << Form("$%.2f \\pm %.2f$",h1[3]->Integral(),error[3]) << "\t&" 
+                     << Form("$%.2f \\pm %.2f$",h1[4]->Integral(),error[4]) << "\t&" 
+                     << Form("$%.2f \\pm %.2f$",h1[5]->Integral(),error[5]) << "\t\\\\" 
+                     << endl; 
+            }
+            else 
+            {   
+                int bin = (lepflav-9)/2;
+                cout << Process << " & " 
+                     << Form("$%.2f \\pm %.2f$",h1[2]->GetBinContent(bin),h1[2]->GetBinError(bin)) << "\t&" 
+                     << Form("$%.2f \\pm %.2f$",h1[3]->GetBinContent(bin),h1[3]->GetBinError(bin)) << "\t&" 
+                     << Form("$%.2f \\pm %.2f$",h1[4]->GetBinContent(bin),h1[4]->GetBinError(bin)) << "\t&" 
+                     << Form("$%.2f \\pm %.2f$",h1[5]->GetBinContent(bin),h1[5]->GetBinError(bin)) << "\t\\\\" 
+                     << endl; 
+            }
+        }
+        else 
+        {   
+            if(lepflav!=11 && lepflav!=13)
+            {
+                Double_t error[6];
+                for(int i=2; i<6; i++) h1[i]->IntegralAndError(1,10000,error[i]);
+                cout << "|" << 
+                    setw(20) << Process << " |"  <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[2]->Integral(), error[2]) << " |" <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[3]->Integral(), error[3]) << " |" <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[4]->Integral(), error[4]) << " |" <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[5]->Integral(), error[5]) << " |" << endl; 
+            }
+            else 
+            {   
+                int bin = (lepflav-9)/2;
+                cout << "|" << 
+                    setw(20) << Process << " |"  <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[2]->GetBinContent(bin), h1[2]->GetBinError(bin)) << " |" <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[3]->GetBinContent(bin), h1[3]->GetBinError(bin)) << " |" <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[4]->GetBinContent(bin), h1[4]->GetBinError(bin)) << " |" <<
+                    setw(20) << Form("%.2f +/- %.2f", h1[5]->GetBinContent(bin), h1[5]->GetBinError(bin)) << " |" << endl; 
+            }
+        }
+        
+        // 
+        if(Process.Contains("Bkgd")) 
+        { 
+            if(doLatex) 
+            {   
+                cout << "\\hline \\hline" << endl;  
+            }
+            else 
+            { 
+                cout << "|" << 
+                    setw(20) << Form("--------------------") << "--" <<
+                    setw(20) << Form("--------------------") << "--" <<
+                    setw(20) << Form("--------------------") << "--" <<
+                    setw(20) << Form("--------------------") << "--" <<
+                    setw(20) << Form("--------------------") << "-|" << endl;
+            }
+        }
+}
+
+//
 // per process
 //
 void DoOneProcess(TChain *ch, int pTR0p5) 
@@ -190,6 +281,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     vector<float>   *RA4MusPhi;
     vector<float>   *RA4MusEta;
     vector<float>   *RA4ElsPt;
+    vector<float>   *RA4ElsPhi;
+    vector<float>   *RA4ElsEta;
     vector<float>   *JetPt;
     vector<float>   *JetEta;
     vector<float>   *JetPhi;
@@ -215,6 +308,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     TBranch         *b_RA4MusPhi;   //!
     TBranch         *b_RA4MusEta;   //!
     TBranch         *b_RA4ElsPt;   //!
+    TBranch         *b_RA4ElsPhi;   //!
+    TBranch         *b_RA4ElsEta;   //!
     TBranch         *b_JetPt;   //!
     TBranch         *b_JetEta;   //!
     TBranch         *b_JetPhi;   //!
@@ -229,6 +324,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     RA4MusPhi = 0;
     RA4MusEta = 0;
     RA4ElsPt  = 0;
+    RA4ElsPhi  = 0;
+    RA4ElsEta  = 0;
     JetPt  = 0;
     JetEta = 0;
     JetPhi = 0;
@@ -254,6 +351,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     ch->SetBranchAddress("RA4MusPhi", &RA4MusPhi, &b_RA4MusPhi);
     ch->SetBranchAddress("RA4MusEta", &RA4MusEta, &b_RA4MusEta);
     ch->SetBranchAddress("RA4ElsPt", &RA4ElsPt, &b_RA4ElsPt);
+    ch->SetBranchAddress("RA4ElsPhi", &RA4ElsPhi, &b_RA4ElsPhi);
+    ch->SetBranchAddress("RA4ElsEta", &RA4ElsEta, &b_RA4ElsEta);
     ch->SetBranchAddress("JetPt",  &JetPt,  &b_JetPt);
     ch->SetBranchAddress("JetPhi", &JetPhi, &b_JetPhi);
     ch->SetBranchAddress("JetEta", &JetEta, &b_JetEta);
@@ -293,7 +392,8 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     //
     //
     //
-    TH1F *h1_MJ[6], *h1_mT[6], *h1_Nskinnyjet[6], *h1_muspT[6], *h1_musEta[6], *h1_musPhi[6], 
+    TH1F *h1_yields[6];
+    TH1F *h1_MJ[6], *h1_mT[6], *h1_Nskinnyjet[6], *h1_muspT[6], *h1_muspTminusMET[6], *h1_musEta[6], *h1_musPhi[6], 
          *h1_mj[6], *h1_FatjetPt[6], *h1_FatjetEta[6], *h1_mjFJFJ[6], 
          *h1_mjFJFJnotclose[6], *h1_FatjetPtFJFJnotclose[6], *h1_FatjetEtaFJFJnotclose[6],  *h1_FatjetPhiFJFJnotclose[6],
          *h1_FatjetPtFJFJcloseHigherPt[6], *h1_FatjetEtaFJFJcloseHigherPt[6],  *h1_FatjetPhiFJFJcloseHigherPt[6], 
@@ -312,6 +412,9 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
     for(int i=0; i<6; i++) 
     {
+        h1_yields[i] = InitTH1F( Form("h1_%s_yields_%ifatjet", ch->GetTitle(), i), 
+                                 Form("h1_%s_yields_%ifatjet", ch->GetTitle(), i), 
+                                 2, 0, 2); // bin1 for e, bin2 for mu
         h1_MJ[i] = InitTH1F( Form("h1_%s_MJ_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_MJ_%ifatjet", ch->GetTitle(), i), 
                              20, 0, 1000);
@@ -382,6 +485,10 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_muspT[i] = InitTH1F( Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
                              20, 0, 200);
+        h1_muspTminusMET[i] = InitTH1F( Form("h1_%s_muspTminusMET_%ifatjet", ch->GetTitle(), i), 
+                             Form("h1_%s_muspTminusMET_%ifatjet", ch->GetTitle(), i), 
+                             //20, 100, 400);
+                             20, -2, 8);
         h1_musEta[i] = InitTH1F( Form("h1_%s_musEta_%ifatjet", ch->GetTitle(), i), 
                                 Form("h1_%s_musEta_%ifatjet", ch->GetTitle(), i), 
                                 20, -2.5, 2.5);
@@ -633,13 +740,6 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         MET     = TMath::Sqrt(metx*metx+mety*mety);   
         METPhi  = TMath::ATan2(mety,metx);   
 
-        // selection
-        if( HT>500                              && 
-            MET>120                              && 
-            RA4MusPt->at(0)>20                  &&  
-            NBtagCSVM>1       
-           ) cut_others = true;
-
         // Nfatjet counting with threshold 
         int Nfatjet_thres = 0;
         for(int ifatjet=0; ifatjet<(int)FatjetPt->size(); ifatjet++)
@@ -676,6 +776,25 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             MJ_tmp = MJ_tmp + mj->at(i);   
         }
         MJ = MJ_tmp;
+      
+         
+        Nskinnyjet=0;
+        for(int i=0; i<(int)JetPt->size(); i++) 
+        { 
+            if(JetPt->at(i)>40) Nskinnyjet++;
+        }
+
+
+        // selection
+        if( HT>500                              && 
+            MET>250                             && 
+            RA4MusPt->at(0)>20                  &&  
+            //mT<150                              &&  
+            //MJ>400                              &&  
+            NBtagCSVM>0                         &&
+            Nskinnyjet>2
+           ) cut_others = true;
+
 
         if(cut_others) {
 
@@ -737,87 +856,96 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             //if(getDPhi(RA4MusPhi->at(0),METPhi)>0.5) continue; // FIXME 
             //if(Npv<20) continue; // FIXME 
             /// FIXME 
+            
+            // yields
+            if(RA4ElsPt->size()==1) {FillTH1F(h1_yields[NFJbin], 0.5, EventWeight);   FillTH1F(h1_yields[5], 0.5, EventWeight);}
+            if(RA4MusPt->size()==1) {FillTH1F(h1_yields[NFJbin], 1.5, EventWeight);   FillTH1F(h1_yields[5], 1.5, EventWeight);}
 
-            h1_muspT[NFJbin]->Fill(RA4MusPt->at(0), EventWeight);   h1_muspT[5]->Fill(RA4MusPt->at(0), EventWeight);
-            h1_musEta[NFJbin]->Fill(RA4MusEta->at(0), EventWeight); h1_musEta[5]->Fill(RA4MusEta->at(0), EventWeight);
-            h1_musPhi[NFJbin]->Fill(RA4MusPhi->at(0), EventWeight); h1_musPhi[5]->Fill(RA4MusPhi->at(0), EventWeight);
-            h1_mT[NFJbin]->Fill(mT, EventWeight);                   h1_mT[5]->Fill(mT, EventWeight);
-            h1_WpT[NFJbin]->Fill(WpT, EventWeight);                 h1_WpT[5]->Fill(WpT, EventWeight);
-            h1_MJ[NFJbin]->Fill(MJ, EventWeight);                   h1_MJ[5]->Fill(MJ, EventWeight);
-            h1_HT[NFJbin]->Fill(HT, EventWeight);                   h1_HT[5]->Fill(HT, EventWeight);
-            h1_MET[NFJbin]->Fill(MET, EventWeight);                 h1_MET[5]->Fill(MET, EventWeight);
-            h1_METPhi[NFJbin]->Fill(METPhi, EventWeight);           h1_METPhi[5]->Fill(METPhi, EventWeight);
-            h1_METx[NFJbin]->Fill(MET*TMath::Cos(METPhi), EventWeight);           h1_METx[5]->Fill(MET*TMath::Cos(METPhi), EventWeight);
-            h1_METy[NFJbin]->Fill(MET*TMath::Sin(METPhi), EventWeight);           h1_METy[5]->Fill(MET*TMath::Sin(METPhi), EventWeight);
-            h1_DPhi[NFJbin]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);   h1_DPhi[5]->Fill(getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
+            FillTH1F(h1_muspT[NFJbin], RA4MusPt->at(0), EventWeight);   FillTH1F(h1_muspT[5],RA4MusPt->at(0), EventWeight);
+            FillTH1F(h1_musEta[NFJbin], RA4MusEta->at(0), EventWeight); FillTH1F(h1_musEta[5], RA4MusEta->at(0), EventWeight);
+            FillTH1F(h1_musPhi[NFJbin], RA4MusPhi->at(0), EventWeight); FillTH1F(h1_musPhi[5], RA4MusPhi->at(0), EventWeight);
+            if(getDPhi(RA4MusPhi->at(0),METPhi)<0.4) 
+            { 
+                FillTH1F(h1_muspTminusMET[NFJbin], (MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);   
+                FillTH1F(h1_muspTminusMET[5],(MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);
+            }
+            FillTH1F(h1_mT[NFJbin], mT, EventWeight);                   FillTH1F(h1_mT[5], mT, EventWeight);
+            FillTH1F(h1_WpT[NFJbin], WpT, EventWeight);                 FillTH1F(h1_WpT[5], WpT, EventWeight);
+            FillTH1F(h1_MJ[NFJbin], MJ, EventWeight);                   FillTH1F(h1_MJ[5], MJ, EventWeight);
+            FillTH1F(h1_HT[NFJbin], HT, EventWeight);                   FillTH1F(h1_HT[5], HT, EventWeight);
+            FillTH1F(h1_MET[NFJbin], MET, EventWeight);                 FillTH1F(h1_MET[5], MET, EventWeight);
+            FillTH1F(h1_METPhi[NFJbin], METPhi, EventWeight);           FillTH1F(h1_METPhi[5], METPhi, EventWeight);
+            FillTH1F(h1_METx[NFJbin], MET*TMath::Cos(METPhi), EventWeight);           FillTH1F(h1_METx[5], MET*TMath::Cos(METPhi), EventWeight);
+            FillTH1F(h1_METy[NFJbin], MET*TMath::Sin(METPhi), EventWeight);           FillTH1F(h1_METy[5], MET*TMath::Sin(METPhi), EventWeight);
+            FillTH1F(h1_DPhi[NFJbin], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);   FillTH1F(h1_DPhi[5], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
             if(Nfatjet_thres>0) 
             {
-                h1_FatjetPt1[NFJbin]->Fill(FatjetPt->at(0), EventWeight);   h1_FatjetPt1[5]->Fill(FatjetPt->at(0), EventWeight); 
-                h1_FatjetPhi1[NFJbin]->Fill(FatjetPhi->at(0), EventWeight); h1_FatjetPhi1[5]->Fill(FatjetPhi->at(0), EventWeight); 
-                h1_FatjetEta1[NFJbin]->Fill(FatjetEta->at(0), EventWeight); h1_FatjetEta1[5]->Fill(FatjetEta->at(0), EventWeight); 
+                FillTH1F(h1_FatjetPt1[NFJbin], FatjetPt->at(0), EventWeight);   FillTH1F(h1_FatjetPt1[5], FatjetPt->at(0), EventWeight); 
+                FillTH1F(h1_FatjetPhi1[NFJbin], FatjetPhi->at(0), EventWeight); FillTH1F(h1_FatjetPhi1[5], FatjetPhi->at(0), EventWeight); 
+                FillTH1F(h1_FatjetEta1[NFJbin], FatjetEta->at(0), EventWeight); FillTH1F(h1_FatjetEta1[5], FatjetEta->at(0), EventWeight); 
             }
             if(Nfatjet_thres>1) 
             {
-                h1_FatjetPt2[NFJbin]->Fill(FatjetPt->at(1), EventWeight);   h1_FatjetPt2[5]->Fill(FatjetPt->at(1), EventWeight); 
-                h1_FatjetPhi2[NFJbin]->Fill(FatjetPhi->at(1), EventWeight); h1_FatjetPhi2[5]->Fill(FatjetPhi->at(1), EventWeight); 
-                h1_FatjetEta2[NFJbin]->Fill(FatjetEta->at(1), EventWeight); h1_FatjetEta2[5]->Fill(FatjetEta->at(1), EventWeight); 
+                FillTH1F(h1_FatjetPt2[NFJbin], FatjetPt->at(1), EventWeight);   FillTH1F(h1_FatjetPt2[5], FatjetPt->at(1), EventWeight); 
+                FillTH1F(h1_FatjetPhi2[NFJbin], FatjetPhi->at(1), EventWeight); FillTH1F(h1_FatjetPhi2[5], FatjetPhi->at(1), EventWeight); 
+                FillTH1F(h1_FatjetEta2[NFJbin], FatjetEta->at(1), EventWeight); FillTH1F(h1_FatjetEta2[5], FatjetEta->at(1), EventWeight); 
             }
             if(Nfatjet_thres>2) 
             {
-                h1_FatjetPt3[NFJbin]->Fill(FatjetPt->at(2), EventWeight);   h1_FatjetPt3[5]->Fill(FatjetPt->at(2), EventWeight); 
-                h1_FatjetPhi3[NFJbin]->Fill(FatjetPhi->at(2), EventWeight); h1_FatjetPhi3[5]->Fill(FatjetPhi->at(2), EventWeight); 
-                h1_FatjetEta3[NFJbin]->Fill(FatjetEta->at(2), EventWeight); h1_FatjetEta3[5]->Fill(FatjetEta->at(2), EventWeight); 
+                FillTH1F(h1_FatjetPt3[NFJbin], FatjetPt->at(2), EventWeight);   FillTH1F(h1_FatjetPt3[5], FatjetPt->at(2), EventWeight); 
+                FillTH1F(h1_FatjetPhi3[NFJbin], FatjetPhi->at(2), EventWeight); FillTH1F(h1_FatjetPhi3[5], FatjetPhi->at(2), EventWeight); 
+                FillTH1F(h1_FatjetEta3[NFJbin], FatjetEta->at(2), EventWeight); FillTH1F(h1_FatjetEta3[5], FatjetEta->at(2), EventWeight); 
             }
             if(Nfatjet_thres>3) 
             {
-                h1_FatjetPt4[NFJbin]->Fill(FatjetPt->at(3), EventWeight);   h1_FatjetPt4[5]->Fill(FatjetPt->at(3), EventWeight); 
-                h1_FatjetPhi4[NFJbin]->Fill(FatjetPhi->at(3), EventWeight); h1_FatjetPhi4[5]->Fill(FatjetPhi->at(3), EventWeight); 
-                h1_FatjetEta4[NFJbin]->Fill(FatjetEta->at(3), EventWeight); h1_FatjetEta4[5]->Fill(FatjetEta->at(3), EventWeight); 
+                FillTH1F(h1_FatjetPt4[NFJbin], FatjetPt->at(3), EventWeight);   FillTH1F(h1_FatjetPt4[5], FatjetPt->at(3), EventWeight); 
+                FillTH1F(h1_FatjetPhi4[NFJbin], FatjetPhi->at(3), EventWeight); FillTH1F(h1_FatjetPhi4[5], FatjetPhi->at(3), EventWeight); 
+                FillTH1F(h1_FatjetEta4[NFJbin], FatjetEta->at(3), EventWeight); FillTH1F(h1_FatjetEta4[5], FatjetEta->at(3), EventWeight); 
             }
             if(Nfatjet_thres>4) 
             {
-                // add 5th jet to h1_FatjetPt4
-                h1_FatjetPt4[NFJbin]->Fill(FatjetPt->at(4), EventWeight);   h1_FatjetPt4[5]->Fill(FatjetPt->at(4), EventWeight); 
-                h1_FatjetPhi4[NFJbin]->Fill(FatjetPhi->at(4), EventWeight); h1_FatjetPhi4[5]->Fill(FatjetPhi->at(4), EventWeight); 
-                h1_FatjetEta4[NFJbin]->Fill(FatjetEta->at(4), EventWeight); h1_FatjetEta4[5]->Fill(FatjetEta->at(4), EventWeight); 
+                // add 5th jet to FillTH1F(h1_FatjetPt4
+                FillTH1F(h1_FatjetPt4[NFJbin], FatjetPt->at(4), EventWeight);   FillTH1F(h1_FatjetPt4[5], FatjetPt->at(4), EventWeight); 
+                FillTH1F(h1_FatjetPhi4[NFJbin], FatjetPhi->at(4), EventWeight); FillTH1F(h1_FatjetPhi4[5], FatjetPhi->at(4), EventWeight); 
+                FillTH1F(h1_FatjetEta4[NFJbin], FatjetEta->at(4), EventWeight); FillTH1F(h1_FatjetEta4[5], FatjetEta->at(4), EventWeight); 
             }
             if(Nfatjet_thres>5) 
             {
-                // add 6th jet to h1_FatjetPt4
-                h1_FatjetPt4[NFJbin]->Fill(FatjetPt->at(5), EventWeight);   h1_FatjetPt4[5]->Fill(FatjetPt->at(5), EventWeight); 
-                h1_FatjetPhi4[NFJbin]->Fill(FatjetPhi->at(5), EventWeight); h1_FatjetPhi4[5]->Fill(FatjetPhi->at(5), EventWeight); 
-                h1_FatjetEta4[NFJbin]->Fill(FatjetEta->at(5), EventWeight); h1_FatjetEta4[5]->Fill(FatjetEta->at(5), EventWeight); 
+                // add 6th jet to FillTH1F(h1_FatjetPt4
+                FillTH1F(h1_FatjetPt4[NFJbin], FatjetPt->at(5), EventWeight);   FillTH1F(h1_FatjetPt4[5], FatjetPt->at(5), EventWeight); 
+                FillTH1F(h1_FatjetPhi4[NFJbin], FatjetPhi->at(5), EventWeight); FillTH1F(h1_FatjetPhi4[5], FatjetPhi->at(5), EventWeight); 
+                FillTH1F(h1_FatjetEta4[NFJbin], FatjetEta->at(5), EventWeight); FillTH1F(h1_FatjetEta4[5], FatjetEta->at(5), EventWeight); 
             }
 
             for(int i=0; i<(int)mj->size(); i++) 
             { 
                 if(FatjetPt->at(i)<FatjetpTthres) continue;
 
-                h1_mj[NFJbin]->Fill(mj->at(i), EventWeight);                            h1_mj[5]->Fill(mj->at(i), EventWeight);
-                h1_FatjetPt[NFJbin]->Fill(FatjetPt->at(i), EventWeight);                h1_FatjetPt[5]->Fill(FatjetPt->at(i), EventWeight);
-                h1_FatjetEta[NFJbin]->Fill(FatjetEta->at(i), EventWeight);              h1_FatjetEta[5]->Fill(FatjetEta->at(i), EventWeight);
-                h2_mjvsFatjetPt[NFJbin]->Fill(mj->at(i), FatjetPt->at(i), EventWeight); h2_mjvsFatjetPt[5]->Fill(mj->at(i), FatjetPt->at(i), EventWeight);
+                FillTH1F(h1_mj[NFJbin], mj->at(i), EventWeight);                            FillTH1F(h1_mj[5], mj->at(i), EventWeight);
+                FillTH1F(h1_FatjetPt[NFJbin], FatjetPt->at(i), EventWeight);                FillTH1F(h1_FatjetPt[5], FatjetPt->at(i), EventWeight);
+                FillTH1F(h1_FatjetEta[NFJbin], FatjetEta->at(i), EventWeight);              FillTH1F(h1_FatjetEta[5], FatjetEta->at(i), EventWeight);
+                FillTH2F(h2_mjvsFatjetPt[NFJbin], mj->at(i), FatjetPt->at(i), EventWeight); FillTH2F(h2_mjvsFatjetPt[5], mj->at(i), FatjetPt->at(i), EventWeight);
                 // met matching 
                 if(getDPhi(FatjetPhi->at(i), METPhi)<1)
                 { 
-                    h1_mj_metmatch[NFJbin]->Fill(mj->at(i), EventWeight);               h1_mj_metmatch[5]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt_metmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);   h1_FatjetPt_metmatch[5]->Fill(FatjetPt->at(i), EventWeight);
+                    FillTH1F(h1_mj_metmatch[NFJbin], mj->at(i), EventWeight);               FillTH1F(h1_mj_metmatch[5], mj->at(i), EventWeight);
+                    FillTH1F(h1_FatjetPt_metmatch[NFJbin], FatjetPt->at(i), EventWeight);   FillTH1F(h1_FatjetPt_metmatch[5], FatjetPt->at(i), EventWeight);
                 }
                 else 
                 { 
-                    h1_mj_notmetmatch[NFJbin]->Fill(mj->at(i), EventWeight);            h1_mj_notmetmatch[5]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt_notmetmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);h1_FatjetPt_notmetmatch[5]->Fill(FatjetPt->at(i), EventWeight);
+                    FillTH1F(h1_mj_notmetmatch[NFJbin], mj->at(i), EventWeight);            FillTH1F(h1_mj_notmetmatch[5], mj->at(i), EventWeight);
+                    FillTH1F(h1_FatjetPt_notmetmatch[NFJbin], FatjetPt->at(i), EventWeight);FillTH1F(h1_FatjetPt_notmetmatch[5], FatjetPt->at(i), EventWeight);
                 }
                 // mu matching 
                 if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
                 { 
-                    h1_mj_mumatch[NFJbin]->Fill(mj->at(i), EventWeight);                h1_mj_mumatch[5]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt_mumatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);    h1_FatjetPt_mumatch[5]->Fill(FatjetPt->at(i), EventWeight);
+                    FillTH1F(h1_mj_mumatch[NFJbin], mj->at(i), EventWeight);                FillTH1F(h1_mj_mumatch[5], mj->at(i), EventWeight);
+                    FillTH1F(h1_FatjetPt_mumatch[NFJbin], FatjetPt->at(i), EventWeight);    FillTH1F(h1_FatjetPt_mumatch[5], FatjetPt->at(i), EventWeight);
                 } 
                 else 
                 { 
-                    h1_mj_notmumatch[NFJbin]->Fill(mj->at(i), EventWeight);             h1_mj_notmumatch[5]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt_notmumatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight); h1_FatjetPt_notmumatch[5]->Fill(FatjetPt->at(i), EventWeight);
+                    FillTH1F(h1_mj_notmumatch[NFJbin], mj->at(i), EventWeight);             FillTH1F(h1_mj_notmumatch[5], mj->at(i), EventWeight);
+                    FillTH1F(h1_FatjetPt_notmumatch[NFJbin], FatjetPt->at(i), EventWeight); FillTH1F(h1_FatjetPt_notmumatch[5], FatjetPt->at(i), EventWeight);
                 }
                 // b matching
                 float dRmin=999.;
@@ -829,19 +957,20 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                 }
                 if(dRmin<1.)
                 { 
-                    h1_mj_bmatch[NFJbin]->Fill(mj->at(i), EventWeight);             h1_mj_bmatch[5]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt_bmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight); h1_FatjetPt_bmatch[5]->Fill(FatjetPt->at(i), EventWeight);
+                    FillTH1F(h1_mj_bmatch[NFJbin], mj->at(i), EventWeight);             FillTH1F(h1_mj_bmatch[5], mj->at(i), EventWeight);
+                    FillTH1F(h1_FatjetPt_bmatch[NFJbin], FatjetPt->at(i), EventWeight); FillTH1F(h1_FatjetPt_bmatch[5], FatjetPt->at(i), EventWeight);
                 } 
                 else 
                 { 
-                    h1_mj_notbmatch[NFJbin]->Fill(mj->at(i), EventWeight);              h1_mj_notbmatch[5]->Fill(mj->at(i), EventWeight);
-                    h1_FatjetPt_notbmatch[NFJbin]->Fill(FatjetPt->at(i), EventWeight);  h1_FatjetPt_notbmatch[5]->Fill(FatjetPt->at(i), EventWeight);
+                    FillTH1F(h1_mj_notbmatch[NFJbin], mj->at(i), EventWeight);              FillTH1F(h1_mj_notbmatch[5], mj->at(i), EventWeight);
+                    FillTH1F(h1_FatjetPt_notbmatch[NFJbin], FatjetPt->at(i), EventWeight);  FillTH1F(h1_FatjetPt_notbmatch[5], FatjetPt->at(i), EventWeight);
                 }
             }
-            h1_dRFJ[NFJbin]->Fill(dRFJmin, EventWeight);                                    h1_dRFJ[5]->Fill(dRFJmin, EventWeight);
-            h1_dPhiFJ[NFJbin]->Fill(dPhiFJmin, EventWeight);                                h1_dPhiFJ[5]->Fill(dPhiFJmin, EventWeight);
-            h1_dEtaFJ[NFJbin]->Fill(dEtaFJmin, EventWeight);                                h1_dEtaFJ[5]->Fill(dEtaFJmin, EventWeight);
-            h2_mindRFJmjvsmj[NFJbin]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);    h2_mindRFJmjvsmj[5]->Fill(mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
+
+            FillTH1F(h1_dRFJ[NFJbin], dRFJmin, EventWeight);                                    FillTH1F(h1_dRFJ[5], dRFJmin, EventWeight);
+            FillTH1F(h1_dPhiFJ[NFJbin], dPhiFJmin, EventWeight);                                FillTH1F(h1_dPhiFJ[5], dPhiFJmin, EventWeight);
+            FillTH1F(h1_dEtaFJ[NFJbin], dEtaFJmin, EventWeight);                                FillTH1F(h1_dEtaFJ[5], dEtaFJmin, EventWeight);
+            FillTH2F(h2_mindRFJmjvsmj[NFJbin], mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);    FillTH2F(h2_mindRFJmjvsmj[5], mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
             // mj(FJ1+FJ2) 
             float px1 = FatjetPt->at(idRFJ1)*TMath::Cos(FatjetPhi->at(idRFJ1)); 
             float py1 = FatjetPt->at(idRFJ1)*TMath::Sin(FatjetPhi->at(idRFJ1)); 
@@ -852,7 +981,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             float pz2 = FatjetPt->at(idRFJ2)/TMath::Tan(2*TMath::ATan(TMath::Exp(-FatjetEta->at(idRFJ2)))); 
             float e2  = TMath::Sqrt(mj->at(idRFJ2)*mj->at(idRFJ2)+px2*px2+py2*py2+pz2*pz2);  
             float mjFJFJ = TMath::Sqrt((e1+e2)*(e1+e2)-(px1+px2)*(px1+px2)-(py1+py2)*(py1+py2)-(pz1+pz2)*(pz1+pz2)); 
-            h1_mjFJFJ[NFJbin]->Fill(mjFJFJ, EventWeight);   h1_mjFJFJ[5]->Fill(mjFJFJ, EventWeight);
+            FillTH1F(h1_mjFJFJ[NFJbin], mjFJFJ, EventWeight);   FillTH1F(h1_mjFJFJ[5], mjFJFJ, EventWeight);
             // bmatching
             int nbclose=0;
             int nbaway=0;
@@ -884,41 +1013,41 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                 if(i==idRFJ1 || i==idRFJ2) continue; 
                 if(nbclose<0) continue; // FIXME 
                 if(nbaway<0) continue;  // FIXME 
-                h1_mjFJFJnotclose[NFJbin]->Fill(mj->at(i), EventWeight);                h1_mjFJFJnotclose[5]->Fill(mj->at(i), EventWeight);
-                h1_FatjetPtFJFJnotclose[NFJbin]->Fill(FatjetPt->at(i), EventWeight);    h1_FatjetPtFJFJnotclose[5]->Fill(FatjetPt->at(i), EventWeight);
-                h1_FatjetEtaFJFJnotclose[NFJbin]->Fill(FatjetEta->at(i), EventWeight);  h1_FatjetEtaFJFJnotclose[5]->Fill(FatjetEta->at(i), EventWeight);
-                h1_FatjetPhiFJFJnotclose[NFJbin]->Fill(FatjetPhi->at(i), EventWeight);  h1_FatjetPhiFJFJnotclose[5]->Fill(FatjetPhi->at(i), EventWeight);
+                FillTH1F(h1_mjFJFJnotclose[NFJbin], mj->at(i), EventWeight);                FillTH1F(h1_mjFJFJnotclose[5], mj->at(i), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJnotclose[NFJbin], FatjetPt->at(i), EventWeight);    FillTH1F(h1_FatjetPtFJFJnotclose[5], FatjetPt->at(i), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJnotclose[NFJbin], FatjetEta->at(i), EventWeight);  FillTH1F(h1_FatjetEtaFJFJnotclose[5], FatjetEta->at(i), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJnotclose[NFJbin], FatjetPhi->at(i), EventWeight);  FillTH1F(h1_FatjetPhiFJFJnotclose[5], FatjetPhi->at(i), EventWeight);
             }
 
             if(FatjetPt->at(idRFJ1)>FatjetPt->at(idRFJ2)) 
             {
-                h1_FatjetPtFJFJcloseHigherPt[NFJbin]->Fill(FatjetPt->at(idRFJ1), EventWeight);
-                h1_FatjetPtFJFJcloseHigherPt[5]->Fill(FatjetPt->at(idRFJ1), EventWeight);
-                h1_FatjetEtaFJFJcloseHigherPt[NFJbin]->Fill(FatjetEta->at(idRFJ1), EventWeight);
-                h1_FatjetEtaFJFJcloseHigherPt[5]->Fill(FatjetEta->at(idRFJ1), EventWeight);
-                h1_FatjetPhiFJFJcloseHigherPt[NFJbin]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
-                h1_FatjetPhiFJFJcloseHigherPt[5]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
-                h1_FatjetPtFJFJcloseLowerPt[NFJbin]->Fill(FatjetPt->at(idRFJ2), EventWeight);
-                h1_FatjetPtFJFJcloseLowerPt[5]->Fill(FatjetPt->at(idRFJ2), EventWeight);
-                h1_FatjetEtaFJFJcloseLowerPt[NFJbin]->Fill(FatjetEta->at(idRFJ2), EventWeight);
-                h1_FatjetEtaFJFJcloseLowerPt[5]->Fill(FatjetEta->at(idRFJ2), EventWeight);
-                h1_FatjetPhiFJFJcloseLowerPt[NFJbin]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
-                h1_FatjetPhiFJFJcloseLowerPt[5]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseHigherPt[NFJbin], FatjetPt->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseHigherPt[5], FatjetPt->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseHigherPt[NFJbin], FatjetEta->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseHigherPt[5], FatjetEta->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseHigherPt[NFJbin], FatjetPhi->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseHigherPt[5], FatjetPhi->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseLowerPt[NFJbin], FatjetPt->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseLowerPt[5], FatjetPt->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseLowerPt[NFJbin], FatjetEta->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseLowerPt[5], FatjetEta->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseLowerPt[NFJbin], FatjetPhi->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseLowerPt[5], FatjetPhi->at(idRFJ2), EventWeight);
             }
             else 
             { 
-                h1_FatjetPtFJFJcloseHigherPt[NFJbin]->Fill(FatjetPt->at(idRFJ2), EventWeight);
-                h1_FatjetPtFJFJcloseHigherPt[5]->Fill(FatjetPt->at(idRFJ2), EventWeight);
-                h1_FatjetEtaFJFJcloseHigherPt[NFJbin]->Fill(FatjetEta->at(idRFJ2), EventWeight);
-                h1_FatjetEtaFJFJcloseHigherPt[5]->Fill(FatjetEta->at(idRFJ2), EventWeight);
-                h1_FatjetPhiFJFJcloseHigherPt[NFJbin]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
-                h1_FatjetPhiFJFJcloseHigherPt[5]->Fill(FatjetPhi->at(idRFJ2), EventWeight);
-                h1_FatjetPtFJFJcloseLowerPt[NFJbin]->Fill(FatjetPt->at(idRFJ1), EventWeight);
-                h1_FatjetPtFJFJcloseLowerPt[5]->Fill(FatjetPt->at(idRFJ1), EventWeight);
-                h1_FatjetEtaFJFJcloseLowerPt[NFJbin]->Fill(FatjetEta->at(idRFJ1), EventWeight);
-                h1_FatjetEtaFJFJcloseLowerPt[5]->Fill(FatjetEta->at(idRFJ1), EventWeight);
-                h1_FatjetPhiFJFJcloseLowerPt[NFJbin]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
-                h1_FatjetPhiFJFJcloseLowerPt[5]->Fill(FatjetPhi->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseHigherPt[NFJbin], FatjetPt->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseHigherPt[5], FatjetPt->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseHigherPt[NFJbin], FatjetEta->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseHigherPt[5], FatjetEta->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseHigherPt[NFJbin], FatjetPhi->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseHigherPt[5], FatjetPhi->at(idRFJ2), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseLowerPt[NFJbin], FatjetPt->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPtFJFJcloseLowerPt[5], FatjetPt->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseLowerPt[NFJbin], FatjetEta->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetEtaFJFJcloseLowerPt[5], FatjetEta->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseLowerPt[NFJbin], FatjetPhi->at(idRFJ1), EventWeight);
+                FillTH1F(h1_FatjetPhiFJFJcloseLowerPt[5], FatjetPhi->at(idRFJ1), EventWeight);
             }
             // b-mu matching
             for(int j=0; j<(int)JetPt->size(); j++) 
@@ -927,17 +1056,17 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                 float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
                 if(dRtmp<1.0) 
                 {   
-                    h1_BjetPt_bmatchmu[NFJbin]->Fill(JetPt->at(j), EventWeight);    h1_BjetPt_bmatchmu[5]->Fill(JetPt->at(j), EventWeight);
-                    h1_dRbmu_bmatchmu[NFJbin]->Fill(dRtmp, EventWeight);            h1_dRbmu_bmatchmu[5]->Fill(dRtmp, EventWeight);
+                    FillTH1F(h1_BjetPt_bmatchmu[NFJbin], JetPt->at(j), EventWeight);    FillTH1F(h1_BjetPt_bmatchmu[5], JetPt->at(j), EventWeight);
+                    FillTH1F(h1_dRbmu_bmatchmu[NFJbin], dRtmp, EventWeight);            FillTH1F(h1_dRbmu_bmatchmu[5], dRtmp, EventWeight);
                 }
                 else 
                 {
-                    h1_BjetPt_notbmatchmu[NFJbin]->Fill(JetPt->at(j), EventWeight); h1_BjetPt_notbmatchmu[5]->Fill(JetPt->at(j), EventWeight);
-                    h1_dRbmu_notbmatchmu[NFJbin]->Fill(dRtmp, EventWeight);         h1_dRbmu_notbmatchmu[5]->Fill(dRtmp, EventWeight);
+                    FillTH1F(h1_BjetPt_notbmatchmu[NFJbin], JetPt->at(j), EventWeight); FillTH1F(h1_BjetPt_notbmatchmu[5], JetPt->at(j), EventWeight);
+                    FillTH1F(h1_dRbmu_notbmatchmu[NFJbin], dRtmp, EventWeight);         FillTH1F(h1_dRbmu_notbmatchmu[5], dRtmp, EventWeight);
                 }
             }
-            h1_Nfatjet[NFJbin]->Fill(Nfatjet_thres, EventWeight);   h1_Nfatjet[5]->Fill(Nfatjet_thres, EventWeight);
-            h1_Nskinnyjet[NFJbin]->Fill(Nskinnyjet, EventWeight);   h1_Nskinnyjet[5]->Fill(Nskinnyjet, EventWeight);
+            FillTH1F(h1_Nfatjet[NFJbin], Nfatjet_thres, EventWeight);   FillTH1F(h1_Nfatjet[5], Nfatjet_thres, EventWeight);
+            FillTH1F(h1_Nskinnyjet[NFJbin], Nskinnyjet, EventWeight);   FillTH1F(h1_Nskinnyjet[5], Nskinnyjet, EventWeight);
                 
             // DEBUG     
             if(NFJbin==-1) 
@@ -976,6 +1105,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     // write histograms
     for(int i=0; i<6; i++)  
     {
+        h1_yields[i]->SetDirectory(0);                      h1_yields[i]->Write();
         h1_MJ[i]->SetDirectory(0);                          h1_MJ[i]->Write();
         h1_HT[i]->SetDirectory(0);                          h1_HT[i]->Write();
         h1_MET[i]->SetDirectory(0);                         h1_MET[i]->Write();
@@ -1032,6 +1162,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_mT[i]->SetDirectory(0);                          h1_mT[i]->Write();
         h1_WpT[i]->SetDirectory(0);                         h1_WpT[i]->Write();
         h1_muspT[i]->SetDirectory(0);                       h1_muspT[i]->Write();
+        h1_muspTminusMET[i]->SetDirectory(0);               h1_muspTminusMET[i]->Write();
         h1_musEta[i]->SetDirectory(0);                      h1_musEta[i]->Write();
         h1_musPhi[i]->SetDirectory(0);                      h1_musPhi[i]->Write();
         h1_Nfatjet[i]->SetDirectory(0);                     h1_Nfatjet[i]->Write();
@@ -1047,6 +1178,9 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 //
 void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1) 
 { 
+
+    gInterpreter->ExecuteMacro("~/macros/JaeStyle.C");
+
     TFile* HistFile = TFile::Open(Form("HistFiles/Hist_pT%i.root",pTR0p5));
    
     char *var; 
@@ -1105,6 +1239,7 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
     if(HistName=="mj_notmetmatch")      	var=(char*)"m_{j}(not matched met) [GeV]";       
     if(HistName=="mT")                  	var=(char*)"m_{T} [GeV]";                        
     if(HistName=="muspT")               	var=(char*)"p_{T}(muon) [GeV]";                  
+    if(HistName=="muspTminusMET")          	var=(char*)"(MET-p_{T}(muon))/p_{T}(muon)";                  
     if(HistName=="musEta")              	var=(char*)"#eta(muon)";                         
     if(HistName=="musPhi")              	var=(char*)"#phi(muon)";                         
     if(HistName=="Nfatjet")             	var=(char*)"N_{fatjet}";
@@ -1156,9 +1291,9 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1cosmetic(h1_DATA[i],          Form("DATA %ifatjet", i),               kBlack, 1, 0,           var);
         h1cosmetic(h1_TT[i],            Form("TT %ifatjet", i),                 kBlack, 1, kYellow,     var);
         h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),              kBlack, 1, kYellow,     var);
-        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 1, kYellow-1,   var);
-        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 1, kYellow+1,   var);
-        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 1, kGreen+2,    var);
+        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 1, kOrange-3,   var);
+        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 1, kGreen+2,   var);
+        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 1, kGray+1,    var);
         h1cosmetic(h1_Ratio[i],         Form(" "),                              kBlack, 1, kBlack,      var);
         h1cosmetic(h1_One[i],           Form(" "),                              kBlue,  1, 0,           var); 
         h1cosmetic(h1_f1200_25[i],      Form("T1tttt(1200,25) %ifatjet", i),    kRed,   1, 0,           var);
@@ -1189,7 +1324,7 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         st[i]->Draw("HIST"); 
         st[i]->GetYaxis()->SetLabelSize(0.07); 
         st[i]->GetXaxis()->SetLabelSize(0); 
-        st[i]->GetYaxis()->SetTitleOffset(1.1); 
+        st[i]->GetYaxis()->SetTitleOffset(1.2); 
         st[i]->GetYaxis()->SetTitleSize(0.07); 
         st[i]->GetYaxis()->SetTitle("Events/bin"); 
 
@@ -1219,14 +1354,14 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         l1->AddEntry(h1_T[i],           " t+tW",  "f");
         l1->AddEntry(h1_WJets[i],       " WJets", "f");
 //        l1->AddEntry(h1_DY[i],        " DY",    "f");
-        l1->AddEntry(h1_f1200_25[i],    Form("T1tttt[1200,25]x%i",SignalScale),     "l");
-        l1->AddEntry(h1_f1200_1000[i],  Form("T1tttt[1200,1000]x%i",SignalScale),   "l");
+//        l1->AddEntry(h1_f1200_25[i],    Form("T1tttt[1200,25]x%i",SignalScale),     "l");
+//        l1->AddEntry(h1_f1200_1000[i],  Form("T1tttt[1200,1000]x%i",SignalScale),   "l");
         l1->Draw();
         
         h1_f1200_25[i]->Scale(SignalScale);
         h1_f1200_1000[i]->Scale(SignalScale);
-        h1_f1200_25[i]->Draw("SAME HIST");
-        h1_f1200_1000[i]->Draw("SAME HIST");
+//        h1_f1200_25[i]->Draw("SAME HIST");
+//        h1_f1200_1000[i]->Draw("SAME HIST");
 
         c->cd(i-1);
         TPad *pad2 = new TPad("p_pull", "p_pull", 0.0, 0.0, 1.0, 0.3);
@@ -1242,8 +1377,8 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1_One[i]->SetTitleOffset(1.0);
         h1_One[i]->GetYaxis()->SetNdivisions(3,true);
         h1_One[i]->GetXaxis()->SetNdivisions(5,true);
-        h1_One[i]->SetMinimum(0.5);
-        h1_One[i]->SetMaximum(1.5);
+        h1_One[i]->SetMinimum(0);
+        h1_One[i]->SetMaximum(2);
         h1_One[i]->Draw("HIST");
         //h1_Ratio[i]->SetMinimum(0);
         //h1_Ratio[i]->SetMaximum(2);
@@ -1300,6 +1435,107 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
     HistFile->Close();
     delete c; 
 
+}
+
+void PrintTable(int lepflav=0, bool doLatex=false)
+{ 
+    if(lepflav==0)  cout << "[MJ Table] Yields for Electron+Muon" << endl;
+    if(lepflav==11) cout << "[MJ Table] Yields for Electron" << endl;
+    if(lepflav==13) cout << "[MJ Table] Yields for Muon" << endl;
+
+    TString HistName="yields";
+    int pTR0p5=30;
+
+    TFile* HistFile = TFile::Open(Form("HistFiles/Hist_pT%i.root",pTR0p5));
+        
+    TH1F *h1_DATA[6], *h1_T[6], *h1_TT_sl[6], *h1_TT_ll[6], *h1_TT[6], *h1_WJets[6], *h1_DY[6], *h1_MC[6];
+    TH1F *h1_f1200_25[6], *h1_f1200_1000[6];
+    for(int i=2; i<6; i++)
+    {
+
+        h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i));
+        h1_T[i]         = (TH1F*)HistFile->Get(Form("h1_T_%s_%ifatjet", HistName.Data(), i));
+        h1_TT_sl[i]     = (TH1F*)HistFile->Get(Form("h1_TT_sl_%s_%ifatjet", HistName.Data(), i));
+        h1_TT_ll[i]     = (TH1F*)HistFile->Get(Form("h1_TT_ll_%s_%ifatjet", HistName.Data(), i));
+        h1_WJets[i]     = (TH1F*)HistFile->Get(Form("h1_WJets_%s_%ifatjet", HistName.Data(), i));
+        h1_DY[i]        = (TH1F*)HistFile->Get(Form("h1_DY_%s_%ifatjet", HistName.Data(), i));
+        h1_f1200_25[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1200_25_%s_%ifatjet", HistName.Data(), i));
+        h1_f1200_1000[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1200_1000_%s_%ifatjet", HistName.Data(), i));
+
+        h1_MC[i] = (TH1F*)h1_TT_sl[i]->Clone("h1_MC");
+        h1_MC[i]->Add(h1_TT_ll[i]);
+        h1_MC[i]->Add(h1_WJets[i]);
+        h1_MC[i]->Add(h1_T[i]);
+        h1_MC[i]->Add(h1_DY[i]);
+    }   
+
+    // print header
+    if(doLatex)
+    {
+
+        cout << "\\begin{table}[!htb]" << endl;
+        cout << "\\centering" << endl;
+        cout << "\\begin{tabular}{c | c c c | c }" << endl;
+        cout << "\\hline \\hline" << endl;
+        cout << "Process  & " 
+             << "$N_{FJ}=2$ \t&" 
+             << "$N_{FJ}=3$ \t&" 
+             << "$N_{FJ}\\ge 4$ \t&" 
+             << "$N_{FJ}\\ge 2$ \t\\\\" 
+             << endl; 
+        cout << "\\hline" << endl;
+    }
+    else 
+    { 
+        cout << "|" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "-|" << endl;
+        cout << "|" << 
+            setw(20) << "Process" << " |"  <<
+            setw(20) << "N_FJ=2" << " |" <<
+            setw(20) << "N_FJ=3" << " |" <<
+            setw(20) << "N_FJ>=4" << " |" <<
+            setw(20) << "N_FJ>=2" << " |" << endl;
+        cout << "|" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "-|" << endl;
+    }
+
+    PrintTableOneLine("TT(sl)",             h1_TT_sl,       lepflav,	doLatex);
+    PrintTableOneLine("TT(ll)",             h1_TT_ll,       lepflav,	doLatex);
+    PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex);
+    PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex);
+    PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex);
+    PrintTableOneLine("Total Bkgd",         h1_MC,          lepflav,	doLatex);
+    PrintTableOneLine("DATA",               h1_DATA,        lepflav,	doLatex);
+    PrintTableOneLine("T1tttt[1200,1000]",  h1_f1200_1000,  lepflav,	doLatex);
+    PrintTableOneLine("T1tttt[1200,25]",    h1_f1200_25,    lepflav,	doLatex);
+
+    if(doLatex)
+    {
+        cout << "\\hline \\hline" << endl;
+        cout << "\\end{tabular}" << endl;
+        //cout << "\\label{tab:exp_sig_0j}" << endl;
+        cout << "\\caption{Yields}" << endl;
+        cout << "\\end{table}" << endl;
+    }
+    else 
+    { 
+        cout << "|" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "--" <<
+            setw(20) << Form("--------------------") << "-|" << endl;
+    }
+
+    cout << endl;
 }
 
 //
@@ -1417,8 +1653,8 @@ void DrawSL()
     TChain *ch_f1200_25     = new TChain("tree", "T1tttt_f1200_25");
     TChain *ch_f1200_1000   = new TChain("tree", "T1tttt_f1200_1000");
    
-    //TString BabyDir = "../../../babies/HT500MET100/";  
-    TString BabyDir = "../../../babies/HT500/";  
+    TString BabyDir = "../../../babies/HT500MET100/";  
+    //TString BabyDir = "../../../babies/HT500/";  
     // Data
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012A-13Jul2012-v1_f*.root");  // 808 pb if fully processed : 808 * 646/650 = 803 pb 
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012B-13Jul2012-v1_f*.root");  // 5237-808=4429 pb if fully processed : 4429 * 4247/4294 = 4380 pb  
@@ -1479,8 +1715,9 @@ void DrawSL()
     // ----------------------------------------
     //  Draw histograms 
     // ---------------------------------------- 
-    
+/*   
     DrawStack("muspT"           	);
+    DrawStack("muspTminusMET"  ,30,2);
     DrawStack("musPhi"     	   ,30,5);
     DrawStack("musEta"          	);
     DrawStack("mT"              	);
@@ -1549,7 +1786,15 @@ void DrawSL()
     DrawStack("FatjetEtaFJFJcloseLowerPt",30,1);
     DrawStack("FatjetPhiFJFJcloseLowerPt",30,1);
     
+    
     Draw2D("mindRFJmjvsmj", 30, 1, true );
+
+*/
+    DrawStack("MJ"         			);
+    // Yield table
+    PrintTable(0, false);
+    PrintTable(11, false);
+    PrintTable(13, false);
 
 }
 
