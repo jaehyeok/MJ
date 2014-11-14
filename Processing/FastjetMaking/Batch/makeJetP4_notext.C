@@ -218,7 +218,7 @@ void makeJetP4_notext(TString InRootFile, double Rparam=1.2, int R0p5JetpTcut=30
                 Fatjet_py->push_back(sorted_jets[isortjets].py());
                 Fatjet_pz->push_back(sorted_jets[isortjets].pz());
                 Fatjet_energy->push_back(sorted_jets[isortjets].E());
-                Fatjet_eta->push_back(sorted_jets[isortjets].rap());
+                Fatjet_eta->push_back(sorted_jets[isortjets].eta());
                 Fatjet_phi->push_back( sorted_jets[isortjets].phi()<3.141592?sorted_jets[isortjets].phi():sorted_jets[isortjets].phi()-2*3.141592); 
                 Fatjet_NConstituents->push_back(sorted_jets[isortjets].constituents().size()); 
 
