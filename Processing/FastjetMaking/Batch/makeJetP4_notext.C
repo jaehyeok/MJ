@@ -258,7 +258,7 @@ void makeJetP4_notext(TString InRootFile, double Rparam=1.2, int R0p5JetpTcut=30
                     cout << event_ << " " 
                         << TMath::Sqrt( sorted_jets[isortjets].px()*sorted_jets[isortjets].px()
                                        +sorted_jets[isortjets].py()*sorted_jets[isortjets].py()) << " " 
-                        << sorted_jets[isortjets].rap() << " " 
+                        << sorted_jets[isortjets].eta() << " " 
                         //<< sorted_jets[isortjets].phi()<3.141592 ? sorted_jets[isortjets].phi() : (sorted_jets[isortjets].phi()-2*3.141592) << " "  
                         << endl; 
                 }
