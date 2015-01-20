@@ -943,6 +943,6 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     cout << "[MJ Analysis] ------------------------------------------------------------------------------------"<<endl; 
    
     // cleanup
-    elete chainA;
+    delete chainA;
     delete chainB;
 }
