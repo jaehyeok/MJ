@@ -15,13 +15,13 @@
 #include "TLegend.h"
 #include "TLorentzVector.h"
 #include "TInterpreter.h"
+#include "TLatex.h"
 //#include "babytree.h"
 
 using namespace std;
 int pTR0p5thres     = 30;
 bool doData         = 1;
 bool DoLog          = 0;
-bool OnlyDraw       = 0;
 int SignalScale     = 1000;
 bool RemoveMuon     = 0;
 bool Do3FatjetScale = 0;
@@ -32,6 +32,11 @@ int FatjetpTthres   = 50;
 //
 TH1F* InitTH1F(char* Name, char* Title, int Nbins, double XMin, double XMax){
     TH1F *h1 = new TH1F(Name, Title, Nbins, XMin, XMax);
+    h1->Sumw2();
+    return h1;
+}
+TH1F* InitTH1F(char* Name, char* Title, int Nbins, Float_t* xbins){
+    TH1F *h1 = new TH1F(Name, Title, Nbins, xbins);
     h1->Sumw2();
     return h1;
 }
@@ -87,7 +92,7 @@ void h1cosmetic(TH1F* &h1, char* title, int linecolor=kBlack, int linewidth=1, i
 //
 // h2 cosmetics
 //
-void h2cosmetic(TH2F* &h2, char* title, TString Xvar="", TString Yvar="", TString Zvar="")
+void h2cosmetic(TH2F* &h2, char* title, TString Xvar="", TString Yvar="", TString Zvar="Events/bin")
 {
     h2->SetTitle(title);
     h2->SetXTitle(Xvar);
@@ -108,7 +113,7 @@ double nPUScaleFactor2012(TH1F* h1PU, float npu){
 }
 
 
-float GetMuonEff(float pt, float eta)
+float GetMuonEff(float pt=1, float eta=0)
 { 
    float eff = 1; 
 /* 
@@ -183,6 +188,26 @@ float getDR(float eta1, float eta2, float phi1, float phi2)
 {
     return getDR(getDPhi(phi1, phi2), eta1-eta2);
 }
+
+float getISRSF(float ISRpT)
+{ 
+    // ref : https://twiki.cern.ch/twiki/bin/viewauth/CMS/SMST2ccMadgraph8TeV
+    if( ISRpT>250) return 0.8;
+    else if( ISRpT>150 ) return 0.9;
+    else if( ISRpT>120 ) return 0.95;
+    else return 1;
+}
+
+float getMJSF(float MJ)
+{ 
+    if(MJ>500) return 1.8;
+    else if(MJ>400) return 1.5;
+    else if(MJ>300) return 1.2;
+    else if(MJ>200) return 1.3;
+    else if(MJ>100) return 1.1;
+    else return 0.5;
+}
+
 
 //
 // Print A line of table
@@ -273,6 +298,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     float           MET;
     float           HT;
     float           METPhi;
+    vector<bool>    *filter;
     vector<float>   *mj;
     vector<float>   *FatjetPt;
     vector<float>   *FatjetEta;
@@ -300,6 +326,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     TBranch         *b_MET;   //!
     TBranch         *b_HT;   //!
     TBranch         *b_METPhi;   //!
+    TBranch         *b_filter;   //!
     TBranch         *b_mj;   //!
     TBranch         *b_FatjetPt;   //!
     TBranch         *b_FatjetEta;   //!
@@ -316,6 +343,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     TBranch         *b_JetCSV;   //!
     TBranch         *b_RA4MusVetoPt;   //!
     TBranch         *b_RA4ElsVetoPt;   //!
+    filter        = 0;
     mj        = 0;
     FatjetPt  = 0;
     FatjetEta = 0;
@@ -343,6 +371,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     ch->SetBranchAddress("MET", &MET, &b_MET);
     ch->SetBranchAddress("HT", &HT, &b_HT);
     ch->SetBranchAddress("METPhi", &METPhi, &b_METPhi);
+    ch->SetBranchAddress("filter", &filter, &b_filter);
     ch->SetBranchAddress(Form("mj_pT%i", pTR0p5), &mj, &b_mj);
     ch->SetBranchAddress(Form("FatjetPt_pT%i", pTR0p5), &FatjetPt, &b_FatjetPt);
     ch->SetBranchAddress(Form("FatjetEta_pT%i", pTR0p5), &FatjetEta, &b_FatjetEta);
@@ -365,12 +394,21 @@ void DoOneProcess(TChain *ch, int pTR0p5)
 
     bool        TrigMuon;
     bool        TrigSingleMuon;
+    bool        TrigElectron;
     TBranch     *b_TrigMuon; 
     TBranch     *b_TrigSingleMuon; 
+    TBranch     *b_TrigElectron; 
     if(ChainName.Contains("DATA"))  
     { 
-        ch->SetBranchAddress("TrigMuon", &TrigMuon, &b_TrigMuon);
-        ch->SetBranchAddress("TrigSingleMuon", &TrigSingleMuon, &b_TrigSingleMuon);
+        if(ChainName.Contains("MuHad")) 
+        {
+            ch->SetBranchAddress("TrigMuon", &TrigMuon, &b_TrigMuon);
+            ch->SetBranchAddress("TrigSingleMuon", &TrigSingleMuon, &b_TrigSingleMuon);
+        }
+        if(ChainName.Contains("EHad")) 
+        {
+            ch->SetBranchAddress("TrigElectron", &TrigElectron, &b_TrigElectron);
+        }
     }
     
     float        top1pT;
@@ -393,6 +431,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
     //
     //
     TH1F *h1_yields[6];
+    TH1F *h1_ttbarpT[6];
     TH1F *h1_MJ[6], *h1_mT[6], *h1_Nskinnyjet[6], *h1_muspT[6], *h1_muspTminusMET[6], *h1_musEta[6], *h1_musPhi[6], 
          *h1_mj[6], *h1_FatjetPt[6], *h1_FatjetEta[6], *h1_mjFJFJ[6], 
          *h1_mjFJFJnotclose[6], *h1_FatjetPtFJFJnotclose[6], *h1_FatjetEtaFJFJnotclose[6],  *h1_FatjetPhiFJFJnotclose[6],
@@ -409,17 +448,23 @@ void DoOneProcess(TChain *ch, int pTR0p5)
          *h1_HT[6], *h1_MET[6], *h1_METPhi[6], *h1_METx[6], *h1_METy[6], *h1_DPhi[6], *h1_Nfatjet[6], *h1_WpT[6];
     TH2F *h2_mjvsFatjetPt[6];
     TH2F *h2_mindRFJmjvsmj[6];
+    TH2F *h2_MJmT[6];
 
     for(int i=0; i<6; i++) 
     {
         h1_yields[i] = InitTH1F( Form("h1_%s_yields_%ifatjet", ch->GetTitle(), i), 
                                  Form("h1_%s_yields_%ifatjet", ch->GetTitle(), i), 
                                  2, 0, 2); // bin1 for e, bin2 for mu
+        Float_t MJbinning[7] = {0,100,200,300,400,500,1000};
         h1_MJ[i] = InitTH1F( Form("h1_%s_MJ_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_MJ_%ifatjet", ch->GetTitle(), i), 
-                             20, 0, 1000);
+                             6, MJbinning);
+                             //20, 0, 1000);
         h1_mj[i] = InitTH1F( Form("h1_%s_mj_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mj_%ifatjet", ch->GetTitle(), i), 
+                             40, 0, 500);
+        h1_ttbarpT[i] = InitTH1F( Form("h1_%s_ttbarpT_%ifatjet", ch->GetTitle(), i), 
+                             Form("h1_%s_ttbarpT_%ifatjet", ch->GetTitle(), i), 
                              40, 0, 500);
         h1_mjFJFJ[i] = InitTH1F( Form("h1_%s_mjFJFJ_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mjFJFJ_%ifatjet", ch->GetTitle(), i), 
@@ -478,10 +523,11 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_Nskinnyjet[i] = InitTH1F( Form("h1_%s_Nskinnyjet_%ifatjet", ch->GetTitle(), i), 
                                      Form("h1_%s_Nskinnyjet_%ifatjet", ch->GetTitle(), i), 
                                      20, -0.5, 19.5);
+        Float_t mTbinning[8] = {0,30,60,90,120,180,300,500};
         h1_mT[i] = InitTH1F( Form("h1_%s_mT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mT_%ifatjet", ch->GetTitle(), i), 
-                             //20, 0, 200);
-                             20, 0, 600);
+                             //20, 0, 600);
+                             7, mTbinning);
         h1_muspT[i] = InitTH1F( Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
                              20, 0, 200);
@@ -503,7 +549,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_MET[i] = InitTH1F( Form("h1_%s_MET_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_MET_%ifatjet", ch->GetTitle(), i), 
                              //20, 0, 500);
-                             20, 0, 1000);
+                             18, 100, 1000);
         h1_METPhi[i] = InitTH1F( Form("h1_%s_METPhi_%ifatjet", ch->GetTitle(), i), 
                                  Form("h1_%s_METPhi_%ifatjet", ch->GetTitle(), i), 
                                  20, -TMath::Pi(), TMath::Pi());
@@ -607,6 +653,9 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h2_mindRFJmjvsmj[i]    =   InitTH2F(Form("h2_%s_mindRFJmjvsmj_%ifatjet", ch->GetTitle(), i),
                                            Form("h2_%s_mindRFJmjvsmj_%ifatjet", ch->GetTitle(), i), 
                                            30, 0, 300, 20, 0, 100);
+        h2_MJmT[i]              =   InitTH2F(Form("h2_%s_MJmT_%ifatjet", ch->GetTitle(), i),
+                                            Form("h2_%s_MJmT_%ifatjet", ch->GetTitle(), i), 
+                                            2, 0, 800, 2, 0, 300);
     }
     // Pile up reweighting hist
     //TFile *fPUFile = TFile::Open("aux/puWeights_Summer12_53x_True_1p317ipb.root");
@@ -658,6 +707,42 @@ void DoOneProcess(TChain *ch, int pTR0p5)
       
         bool cut_others = false;
 
+        // Event Filter for data 
+        /*
+        0 scrapingVeto_decision
+        1 hbhefilter_decision
+        2 trackingfailurefilter_decision
+        3 cschalofilter_decision
+        4 eebadscfilter_decision
+        5 ecalTPfilter_decision
+        6 ecallaserfilter_decision
+        7 trackertoomanyclustersfilter_decision
+        8 trackertoomanytripletsfilter_decision
+        9 trackertoomanyseedsfilter_decision
+        10 ecalBEfilter_decision
+        11 greedymuonfilter_decision
+        12 inconsistentPFmuonfilter_decision
+        13 hcallaserfilter_decision
+        14 eenoisefilter_decision
+        15 trackercoherentnoisefilter1_decision
+        16 trackercoherentnoisefilter2_decision
+        
+        // Paul's code : /cms1r0/pbgeff/RA4_2012/src/RA4Ana.C
+        
+        if( hasAGoodVertex
+        && scrapingVeto_decision
+        && hbhefilter_decision
+        && trackingfailurefilter_decision
+        && hcallaserfilter_decision
+        && cschalofilter_decision
+        && eebadscfilter_decision
+        && ecalTPfilter_decision
+        && passesECALHCALfilter
+        && passTrigJSON ) ..
+        */
+        if( ChainName.Contains("DATA") && 
+           !(filter->at(0)*filter->at(1)*filter->at(2)*filter->at(13)*filter->at(3)*filter->at(4)*filter->at(5)) ) continue;
+
         // 
         // weights 
         // 
@@ -666,19 +751,25 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         // Data : trigger
         if(ChainName.Contains("DATA"))  
         { 
-            EventWeight = EventWeight * (TrigMuon); 
+            if(ChainName.Contains("MuHad")) EventWeight = EventWeight * (TrigMuon); 
+            if(ChainName.Contains("EHad")) EventWeight = EventWeight * (TrigElectron); 
         }
         // Pileup 
         if(!ChainName.Contains("DATA")) 
         {
-            EventWeight = EventWeight/19500*19600;                      // luminostiry correction   
-            EventWeight = EventWeight*nPUScaleFactor2012(h1PU, Npu);    // PU   
-            EventWeight = EventWeight*0.94;                             // Btagging SF (https://twiki.cern.ch/twiki/pub/CMSPublic/TWikiBTV_Moriond2013/Fig17b.pdf) 
+            // luminostiry correction   
+            EventWeight     = EventWeight*1;//19500*19600;                      
+            // PU   
+            EventWeight     = EventWeight*nPUScaleFactor2012(h1PU, Npu);        
+            // Btagging SF (https://twiki.cern.ch/twiki/pub/CMSPublic/TWikiBTV_Moriond2013/Fig17b.pdf) 
+            // More precise numbers : https://twiki.cern.ch/twiki/pub/CMS/BtagRecommendation53X/SFb-pt_payload_Moriond13.txt 
+            EventWeight     = EventWeight*0.97*0.97;                             
         }
         // TT reweighting
         // Ref : https://twiki.cern.ch/twiki/bin/viewauth/CMS/TopPtReweighting
         if(ChainName.Contains("TT")) 
         { 
+            // top pT reweighting 
             if(top1pT>400) top1pT=400;
             if(top2pT>400) top2pT=400;
             float weight_top1pT = TMath::Exp(0.159-0.00141*top1pT);
@@ -686,6 +777,12 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             EventWeight = EventWeight * TMath::Sqrt(weight_top1pT*weight_top2pT);
             EventWeight = EventWeight * 1.01; // normalization correction calculated from 
                                               // Semileptonic sample => 24953451 / 24687562 = 1.01
+            // ISR reweighting  
+            // description : https://twiki.cern.ch/twiki/bin/viewauth/CMS/SMST2ccMadgraph8TeV
+            float ISRpx = top1pT*TMath::Cos(top1Phi) + top2pT*TMath::Cos(top2Phi); 
+            float ISRpy = top1pT*TMath::Sin(top1Phi) + top2pT*TMath::Sin(top2Phi); 
+            float ISRpT = TMath::Sqrt(ISRpx*ISRpx+ISRpy*ISRpy);
+
         }
         // Signal cross section
         // Twiki : SUSY xsec twiki : https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SUSYCrossSections8TeVgluglu 
@@ -709,14 +806,25 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         // cuts applied  
         //
 
-        // select only single-muon events
-        if( RA4MusPt->size()!=1 )       continue;
-        if( RA4MusVetoPt->size()>0 )    continue;
-        if( RA4ElsVetoPt->size()>0 )    continue;
-        if( RA4ElsPt->size()>0 )        continue;
-        
-        // single lepton trigger efficienc from HWW 
-        if(!ChainName.Contains("DATA")) EventWeight = EventWeight * GetMuonEff(RA4MusPt->at(0), RA4MusEta->at(0));
+        // select only lepton-muon events
+        if( (RA4ElsPt->size()+RA4MusPt->size())!=1)                 continue;
+        if( ChainName.Contains("MuHad") && RA4MusPt->size()!=1 )    continue;
+        if( ChainName.Contains("EHad")  && RA4ElsPt->size()!=1 )    continue;
+        //if( (RA4MusPt->size())>0)                                   continue; // FIXME 
+        if( RA4MusVetoPt->size()>0 )                                continue;
+        if( RA4ElsVetoPt->size()>0 )                                continue;
+       
+        // trigger efficiencies applied after one-lepton selection due to muon trigger efficiency 
+        // that depends on pT and Eta of muon 
+        if(!ChainName.Contains("DATA")) 
+        {
+            // Trig Efficiency : HT/MET   
+            EventWeight     = EventWeight*0.98;     
+            // Trig Efficiency : Muon leg    
+           if(RA4MusPt->size()==1)  EventWeight = EventWeight * GetMuonEff(RA4MusPt->at(0), RA4MusEta->at(0)); 
+            // Trig Efficiency : Electron leg    
+            if(RA4ElsPt->size()==1)  EventWeight = EventWeight*0.96;                        
+        }
 
         // MET XY shift correction
         float metx = MET*TMath::Cos(METPhi);
@@ -760,14 +868,29 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         //
         // Fill histograms 
         //
-        ///// mT 
-        float mT  = TMath::Sqrt( 2*MET*RA4MusPt->at(0)*(1-TMath::Cos(METPhi-RA4MusPhi->at(0))) ); 
+        ///// mT
+        float mT=-999;
+        float WpT=-999;
+        if(RA4MusPt->size()==1)
+        {
+            mT  = TMath::Sqrt( 2*MET*RA4MusPt->at(0)*(1-TMath::Cos(METPhi-RA4MusPhi->at(0))) ); 
         ///// WpT 
-        float WpT =  TMath::Sqrt(  
+            WpT =  TMath::Sqrt(  
                         (RA4MusPt->at(0)*TMath::Cos(RA4MusPhi->at(0)) + MET*TMath::Cos(METPhi))
                        *(RA4MusPt->at(0)*TMath::Cos(RA4MusPhi->at(0)) + MET*TMath::Cos(METPhi))
                        +(RA4MusPt->at(0)*TMath::Sin(RA4MusPhi->at(0)) + MET*TMath::Sin(METPhi))
                        *(RA4MusPt->at(0)*TMath::Sin(RA4MusPhi->at(0)) + MET*TMath::Sin(METPhi))  ); 
+        }
+        if(RA4ElsPt->size()==1)
+        {
+            mT  = TMath::Sqrt( 2*MET*RA4ElsPt->at(0)*(1-TMath::Cos(METPhi-RA4ElsPhi->at(0))) ); 
+        ///// WpT 
+            WpT =  TMath::Sqrt(  
+                        (RA4ElsPt->at(0)*TMath::Cos(RA4ElsPhi->at(0)) + MET*TMath::Cos(METPhi))
+                       *(RA4ElsPt->at(0)*TMath::Cos(RA4ElsPhi->at(0)) + MET*TMath::Cos(METPhi))
+                       +(RA4ElsPt->at(0)*TMath::Sin(RA4ElsPhi->at(0)) + MET*TMath::Sin(METPhi))
+                       *(RA4ElsPt->at(0)*TMath::Sin(RA4ElsPhi->at(0)) + MET*TMath::Sin(METPhi))  ); 
+        }
         ///// MJ 
         float MJ_tmp=0; 
         for(int i=0; i<(int)mj->size(); i++) 
@@ -783,18 +906,20 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         { 
             if(JetPt->at(i)>40) Nskinnyjet++;
         }
-
-
+        
+        //if( ChainName.Contains("TT") ) EventWeight = EventWeight * getMJSF(MJ); // MJ correction 
+        
+        //
         // selection
+        //
         if( HT>500                              && 
-            MET>250                             && 
-            RA4MusPt->at(0)>20                  &&  
+            MET>100                             && 
+            //RA4MusPt->at(0)>20                  &&  
             //mT<150                              &&  
             //MJ>400                              &&  
-            NBtagCSVM>0                         &&
-            Nskinnyjet>2
+            NBtagCSVM>0                        &&      // should change Btagging efficiency numbers as well
+            Nskinnyjet>-1
            ) cut_others = true;
-
 
         if(cut_others) {
 
@@ -839,15 +964,15 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             }
             
             /// TEST cuts
-            float dRminFJmu=999.;
-            for(int i=0; i<(int)mj->size(); i++) 
-            {   
-                if(FatjetPt->at(i)<FatjetpTthres) continue;
-                //if((i==idRFJ1 || i==idRFJ2)) continue;
-                if(i!=idRFJ2) continue;
-                float dRtmp =  getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0));
-                if(dRtmp<dRminFJmu) dRminFJmu = dRtmp;
-            }
+            //float dRminFJmu=999.;
+            //for(int i=0; i<(int)mj->size(); i++) 
+            //{   
+            //    if(FatjetPt->at(i)<FatjetpTthres) continue;
+            //    //if((i==idRFJ1 || i==idRFJ2)) continue;
+            //    if(i!=idRFJ2) continue;
+            //    float dRtmp =  getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0));
+            //    if(dRtmp<dRminFJmu) dRminFJmu = dRtmp;
+            //}
             //if(RA4MusPt->at(0)>50 || RA4MusPt->at(0)<30) continue; // FIXME 
             //if(dRFJmin>2) continue; // FIXME 
             //if(METPhi>0) continue; // FIXME 
@@ -860,15 +985,41 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             // yields
             if(RA4ElsPt->size()==1) {FillTH1F(h1_yields[NFJbin], 0.5, EventWeight);   FillTH1F(h1_yields[5], 0.5, EventWeight);}
             if(RA4MusPt->size()==1) {FillTH1F(h1_yields[NFJbin], 1.5, EventWeight);   FillTH1F(h1_yields[5], 1.5, EventWeight);}
-
-            FillTH1F(h1_muspT[NFJbin], RA4MusPt->at(0), EventWeight);   FillTH1F(h1_muspT[5],RA4MusPt->at(0), EventWeight);
-            FillTH1F(h1_musEta[NFJbin], RA4MusEta->at(0), EventWeight); FillTH1F(h1_musEta[5], RA4MusEta->at(0), EventWeight);
-            FillTH1F(h1_musPhi[NFJbin], RA4MusPhi->at(0), EventWeight); FillTH1F(h1_musPhi[5], RA4MusPhi->at(0), EventWeight);
-            if(getDPhi(RA4MusPhi->at(0),METPhi)<0.4) 
-            { 
-                FillTH1F(h1_muspTminusMET[NFJbin], (MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);   
-                FillTH1F(h1_muspTminusMET[5],(MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);
+           
+            if(ChainName.Contains("TT")) 
+            {
+                float ISRpx = top1pT*TMath::Cos(top1Phi) + top2pT*TMath::Cos(top2Phi); 
+                float ISRpy = top1pT*TMath::Sin(top1Phi) + top2pT*TMath::Sin(top2Phi); 
+                float ISRpT = TMath::Sqrt(ISRpx*ISRpx+ISRpy*ISRpy);
+                EventWeight = EventWeight * getISRSF(ISRpT);
+                EventWeight = EventWeight * 1.013;
+                FillTH1F(h1_ttbarpT[NFJbin], ISRpT , EventWeight);                   FillTH1F(h1_ttbarpT[5], ISRpT, EventWeight);
             }
+
+            if(RA4MusPt->size()==1)
+            {
+                FillTH1F(h1_muspT[NFJbin], RA4MusPt->at(0), EventWeight);   FillTH1F(h1_muspT[5],RA4MusPt->at(0), EventWeight);
+                FillTH1F(h1_musEta[NFJbin], RA4MusEta->at(0), EventWeight); FillTH1F(h1_musEta[5], RA4MusEta->at(0), EventWeight);
+                FillTH1F(h1_musPhi[NFJbin], RA4MusPhi->at(0), EventWeight); FillTH1F(h1_musPhi[5], RA4MusPhi->at(0), EventWeight);
+                if(getDPhi(RA4MusPhi->at(0),METPhi)<0.4) 
+                { 
+                    FillTH1F(h1_muspTminusMET[NFJbin], (MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);   
+                    FillTH1F(h1_muspTminusMET[5],(MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);
+                }
+                FillTH1F(h1_DPhi[NFJbin], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);   FillTH1F(h1_DPhi[5], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
+            } 
+            if(RA4ElsPt->size()==1)
+            {
+                FillTH1F(h1_muspT[NFJbin], RA4ElsPt->at(0), EventWeight);   FillTH1F(h1_muspT[5],RA4ElsPt->at(0), EventWeight);
+                FillTH1F(h1_musEta[NFJbin], RA4ElsEta->at(0), EventWeight); FillTH1F(h1_musEta[5], RA4ElsEta->at(0), EventWeight);
+                FillTH1F(h1_musPhi[NFJbin], RA4ElsPhi->at(0), EventWeight); FillTH1F(h1_musPhi[5], RA4ElsPhi->at(0), EventWeight);
+                if(getDPhi(RA4ElsPhi->at(0),METPhi)<0.4) 
+                { 
+                    FillTH1F(h1_muspTminusMET[NFJbin], (MET-RA4ElsPt->at(0))/RA4ElsPt->at(0), EventWeight);   
+                    FillTH1F(h1_muspTminusMET[5],(MET-RA4ElsPt->at(0))/RA4ElsPt->at(0), EventWeight);
+                }
+                FillTH1F(h1_DPhi[NFJbin], getDPhi(RA4ElsPhi->at(0),METPhi), EventWeight);   FillTH1F(h1_DPhi[5], getDPhi(RA4ElsPhi->at(0),METPhi), EventWeight);
+            } 
             FillTH1F(h1_mT[NFJbin], mT, EventWeight);                   FillTH1F(h1_mT[5], mT, EventWeight);
             FillTH1F(h1_WpT[NFJbin], WpT, EventWeight);                 FillTH1F(h1_WpT[5], WpT, EventWeight);
             FillTH1F(h1_MJ[NFJbin], MJ, EventWeight);                   FillTH1F(h1_MJ[5], MJ, EventWeight);
@@ -877,7 +1028,6 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             FillTH1F(h1_METPhi[NFJbin], METPhi, EventWeight);           FillTH1F(h1_METPhi[5], METPhi, EventWeight);
             FillTH1F(h1_METx[NFJbin], MET*TMath::Cos(METPhi), EventWeight);           FillTH1F(h1_METx[5], MET*TMath::Cos(METPhi), EventWeight);
             FillTH1F(h1_METy[NFJbin], MET*TMath::Sin(METPhi), EventWeight);           FillTH1F(h1_METy[5], MET*TMath::Sin(METPhi), EventWeight);
-            FillTH1F(h1_DPhi[NFJbin], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);   FillTH1F(h1_DPhi[5], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);
             if(Nfatjet_thres>0) 
             {
                 FillTH1F(h1_FatjetPt1[NFJbin], FatjetPt->at(0), EventWeight);   FillTH1F(h1_FatjetPt1[5], FatjetPt->at(0), EventWeight); 
@@ -937,15 +1087,18 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                     FillTH1F(h1_FatjetPt_notmetmatch[NFJbin], FatjetPt->at(i), EventWeight);FillTH1F(h1_FatjetPt_notmetmatch[5], FatjetPt->at(i), EventWeight);
                 }
                 // mu matching 
-                if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
-                { 
-                    FillTH1F(h1_mj_mumatch[NFJbin], mj->at(i), EventWeight);                FillTH1F(h1_mj_mumatch[5], mj->at(i), EventWeight);
-                    FillTH1F(h1_FatjetPt_mumatch[NFJbin], FatjetPt->at(i), EventWeight);    FillTH1F(h1_FatjetPt_mumatch[5], FatjetPt->at(i), EventWeight);
-                } 
-                else 
-                { 
-                    FillTH1F(h1_mj_notmumatch[NFJbin], mj->at(i), EventWeight);             FillTH1F(h1_mj_notmumatch[5], mj->at(i), EventWeight);
-                    FillTH1F(h1_FatjetPt_notmumatch[NFJbin], FatjetPt->at(i), EventWeight); FillTH1F(h1_FatjetPt_notmumatch[5], FatjetPt->at(i), EventWeight);
+                if(RA4MusPt->size()==1)
+                {
+                    if(getDR(FatjetEta->at(i), RA4MusEta->at(0), FatjetPhi->at(i), RA4MusPhi->at(0))<1) 
+                    { 
+                        FillTH1F(h1_mj_mumatch[NFJbin], mj->at(i), EventWeight);                FillTH1F(h1_mj_mumatch[5], mj->at(i), EventWeight);
+                        FillTH1F(h1_FatjetPt_mumatch[NFJbin], FatjetPt->at(i), EventWeight);    FillTH1F(h1_FatjetPt_mumatch[5], FatjetPt->at(i), EventWeight);
+                    } 
+                    else 
+                    { 
+                        FillTH1F(h1_mj_notmumatch[NFJbin], mj->at(i), EventWeight);             FillTH1F(h1_mj_notmumatch[5], mj->at(i), EventWeight);
+                        FillTH1F(h1_FatjetPt_notmumatch[NFJbin], FatjetPt->at(i), EventWeight); FillTH1F(h1_FatjetPt_notmumatch[5], FatjetPt->at(i), EventWeight);
+                    }
                 }
                 // b matching
                 float dRmin=999.;
@@ -971,6 +1124,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
             FillTH1F(h1_dPhiFJ[NFJbin], dPhiFJmin, EventWeight);                                FillTH1F(h1_dPhiFJ[5], dPhiFJmin, EventWeight);
             FillTH1F(h1_dEtaFJ[NFJbin], dEtaFJmin, EventWeight);                                FillTH1F(h1_dEtaFJ[5], dEtaFJmin, EventWeight);
             FillTH2F(h2_mindRFJmjvsmj[NFJbin], mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);    FillTH2F(h2_mindRFJmjvsmj[5], mj->at(idRFJ1), mj->at(idRFJ2), EventWeight);
+            FillTH2F(h2_MJmT[NFJbin], MJ, mT, EventWeight);    FillTH2F(h2_MJmT[5], MJ, mT, EventWeight);
             // mj(FJ1+FJ2) 
             float px1 = FatjetPt->at(idRFJ1)*TMath::Cos(FatjetPhi->at(idRFJ1)); 
             float py1 = FatjetPt->at(idRFJ1)*TMath::Sin(FatjetPhi->at(idRFJ1)); 
@@ -1050,19 +1204,22 @@ void DoOneProcess(TChain *ch, int pTR0p5)
                 FillTH1F(h1_FatjetPhiFJFJcloseLowerPt[5], FatjetPhi->at(idRFJ1), EventWeight);
             }
             // b-mu matching
-            for(int j=0; j<(int)JetPt->size(); j++) 
-            { 
-                if(JetCSV->at(j) < 0.679) continue;
-                float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
-                if(dRtmp<1.0) 
-                {   
-                    FillTH1F(h1_BjetPt_bmatchmu[NFJbin], JetPt->at(j), EventWeight);    FillTH1F(h1_BjetPt_bmatchmu[5], JetPt->at(j), EventWeight);
-                    FillTH1F(h1_dRbmu_bmatchmu[NFJbin], dRtmp, EventWeight);            FillTH1F(h1_dRbmu_bmatchmu[5], dRtmp, EventWeight);
-                }
-                else 
-                {
-                    FillTH1F(h1_BjetPt_notbmatchmu[NFJbin], JetPt->at(j), EventWeight); FillTH1F(h1_BjetPt_notbmatchmu[5], JetPt->at(j), EventWeight);
-                    FillTH1F(h1_dRbmu_notbmatchmu[NFJbin], dRtmp, EventWeight);         FillTH1F(h1_dRbmu_notbmatchmu[5], dRtmp, EventWeight);
+            if(RA4MusPt->size()==1)
+            {
+                for(int j=0; j<(int)JetPt->size(); j++) 
+                { 
+                    if(JetCSV->at(j) < 0.679) continue;
+                    float dRtmp = getDR(JetEta->at(j), RA4MusEta->at(0), JetPhi->at(j), RA4MusPhi->at(0)); 
+                    if(dRtmp<1.0) 
+                    {   
+                        FillTH1F(h1_BjetPt_bmatchmu[NFJbin], JetPt->at(j), EventWeight);    FillTH1F(h1_BjetPt_bmatchmu[5], JetPt->at(j), EventWeight);
+                        FillTH1F(h1_dRbmu_bmatchmu[NFJbin], dRtmp, EventWeight);            FillTH1F(h1_dRbmu_bmatchmu[5], dRtmp, EventWeight);
+                    }
+                    else 
+                    {
+                        FillTH1F(h1_BjetPt_notbmatchmu[NFJbin], JetPt->at(j), EventWeight); FillTH1F(h1_BjetPt_notbmatchmu[5], JetPt->at(j), EventWeight);
+                        FillTH1F(h1_dRbmu_notbmatchmu[NFJbin], dRtmp, EventWeight);         FillTH1F(h1_dRbmu_notbmatchmu[5], dRtmp, EventWeight);
+                    }
                 }
             }
             FillTH1F(h1_Nfatjet[NFJbin], Nfatjet_thres, EventWeight);   FillTH1F(h1_Nfatjet[5], Nfatjet_thres, EventWeight);
@@ -1108,6 +1265,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_yields[i]->SetDirectory(0);                      h1_yields[i]->Write();
         h1_MJ[i]->SetDirectory(0);                          h1_MJ[i]->Write();
         h1_HT[i]->SetDirectory(0);                          h1_HT[i]->Write();
+        h1_ttbarpT[i]->SetDirectory(0);                     h1_ttbarpT[i]->Write();
         h1_MET[i]->SetDirectory(0);                         h1_MET[i]->Write();
         h1_METPhi[i]->SetDirectory(0);                      h1_METPhi[i]->Write();
         h1_METx[i]->SetDirectory(0);                        h1_METx[i]->Write();
@@ -1168,6 +1326,7 @@ void DoOneProcess(TChain *ch, int pTR0p5)
         h1_Nfatjet[i]->SetDirectory(0);                     h1_Nfatjet[i]->Write();
         h1_Nskinnyjet[i]->SetDirectory(0);                  h1_Nskinnyjet[i]->Write();
         h2_mjvsFatjetPt[i]->SetDirectory(0);                h2_mjvsFatjetPt[i]->Write();
+        h2_MJmT[i]->SetDirectory(0);                        h2_MJmT[i]->Write();
     }
     HistFile->Close();
 
@@ -1246,15 +1405,23 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
     if(HistName=="Nskinnyjet")          	var=(char*)"N_{skinny}";
     if(HistName=="WpT")                 	var=(char*)"p_{T}(W) [GeV]";
 
-    TH1F *h1_DATA[6], *h1_T[6], *h1_TT_sl[6], *h1_TT_ll[6], *h1_TT[6], *h1_WJets[6], *h1_DY[6], *h1_MC[6], *h1_Ratio[6]; 
+    TH1F *h1_DATA[6], *h1_DATA_MuHad[6], *h1_DATA_EHad[6], 
+         *h1_T[6], *h1_TT_sl[6], *h1_TT_ll[6], *h1_TT[6], *h1_WJets[6], *h1_DY[6], *h1_MC[6], *h1_Ratio[6]; 
     TH1F *h1_f1200_25[6], *h1_f1200_1000[6];
     TH1F *h1_One[6];
     THStack *st[6];
     TCanvas *c = new TCanvas("c","c",1200,360);  
     c->Divide(4,1);
+    TCanvas *c2fj = new TCanvas("c2fj","c2fj",300,360);  
     for(int i=2; i<6; i++) 
     {
-        h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i)); 
+        
+        //if(i!=2)  continue; // FIXME 
+
+        h1_DATA_MuHad[i]    = (TH1F*)HistFile->Get(Form("h1_DATA_MuHad_%s_%ifatjet", HistName.Data(), i)); 
+        h1_DATA_EHad[i]     = (TH1F*)HistFile->Get(Form("h1_DATA_EHad_%s_%ifatjet", HistName.Data(), i)); 
+        // merge MuHad + EHad
+        h1_DATA[i]    = (TH1F*)h1_DATA_MuHad[i]->Clone("h1_DATA");  h1_DATA[i]->Add(h1_DATA_EHad[i]);
         h1_T[i]         = (TH1F*)HistFile->Get(Form("h1_T_%s_%ifatjet", HistName.Data(), i));
         h1_TT_sl[i]     = (TH1F*)HistFile->Get(Form("h1_TT_sl_%s_%ifatjet", HistName.Data(), i));
         h1_TT_ll[i]     = (TH1F*)HistFile->Get(Form("h1_TT_ll_%s_%ifatjet", HistName.Data(), i));
@@ -1300,11 +1467,11 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1cosmetic(h1_f1200_1000[i],    Form("T1tttt(1200,1000) %ifatjet", i),  kBlue,  1, 0,           var);
 
         c->cd(i-1);
-
+        //c2fj->cd();
         TPad *pad1 = new TPad("p_main", "p_main", 0.0, 0.3, 1.0, 1.0);
         pad1->SetBottomMargin(0.04);
-        pad1->SetRightMargin(0.07);
-        pad1->SetLeftMargin(0.15);
+        pad1->SetRightMargin(0.1);
+        pad1->SetLeftMargin(0.2);
         pad1->SetLogy(0);
         pad1->Draw();
         pad1->cd();
@@ -1322,10 +1489,10 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         st[i]->SetMaximum(h1_DATA[i]->GetMaximum()*(DoLog?50:1.6));
         //st[i]->SetMinimum(DoLog?0.001:0.1);
         st[i]->Draw("HIST"); 
-        st[i]->GetYaxis()->SetLabelSize(0.07); 
+        //st[i]->GetYaxis()->SetLabelSize(0.07); 
         st[i]->GetXaxis()->SetLabelSize(0); 
-        st[i]->GetYaxis()->SetTitleOffset(1.2); 
-        st[i]->GetYaxis()->SetTitleSize(0.07); 
+        st[i]->GetYaxis()->SetTitleOffset(1.5); 
+        //st[i]->GetYaxis()->SetTitleSize(0.07); 
         st[i]->GetYaxis()->SetTitle("Events/bin"); 
 
         h1_DATA[i]->SetLineColor(kBlack);
@@ -1335,7 +1502,7 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1_DATA[i]->SetStats(0);
         if(doData) h1_DATA[i]->Draw("E SAME");
 
-        TLegend *l1 = new TLegend(0.2, 0.65, 0.90, 0.85);
+        TLegend *l1 = new TLegend(0.25, 0.65, 0.90, 0.85);
         l1->SetNColumns(2);
         l1->SetBorderSize(0);
         l1->SetFillColor(0);
@@ -1363,13 +1530,43 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
 //        h1_f1200_25[i]->Draw("SAME HIST");
 //        h1_f1200_1000[i]->Draw("SAME HIST");
 
+        // CMS Labels
+        float textSize = 0.04;
+
+        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#sqrt{s}=8 TeV, L = %.1f fb^{-1}", 19.5));
+        TexEnergyLumi->SetNDC();
+        TexEnergyLumi->SetTextSize(textSize);
+        TexEnergyLumi->SetTextAlign (31);
+        TexEnergyLumi->SetLineWidth(2);
+
+        //TLatex *TexCMS = new TLatex(0.2,0.92,"CMS Preliminary");
+        TLatex *TexCMS = new TLatex(0.2,0.92,"CMS work in progress");
+        TexCMS->SetNDC();
+        TexCMS->SetTextSize(textSize);
+        TexCMS->SetLineWidth(2);
+
+        // FIXME : need to add lepton flavor
+        TString LabelExt = Form("N_{fatjet} = %i", i);
+        if(i==4) LabelExt="N_{fatjet} >= 4";
+        if(i==5) LabelExt="N_{fatjet} >= 2";
+        TLatex *TexExt = new TLatex(0.85,0.7,LabelExt);
+        TexExt->SetTextAlign (31);
+        TexExt->SetNDC();
+        TexExt->SetTextSize(textSize);
+        TexExt->SetLineWidth(2);
+
+        TexEnergyLumi->Draw("SAME");
+        TexCMS->Draw("SAME");
+        //TexExt->Draw("SAME");
+
         c->cd(i-1);
+        //c2fj->cd();
         TPad *pad2 = new TPad("p_pull", "p_pull", 0.0, 0.0, 1.0, 0.3);
-        pad2->SetLeftMargin(0.15);
+        pad2->SetLeftMargin(0.2);
         pad2->Draw();
         pad2->cd();
         pad2->SetTopMargin(0.04);
-        pad2->SetRightMargin(0.07);
+        pad2->SetRightMargin(0.1);
         pad2->SetBottomMargin(0.4);
 
         h1_One[i]->SetLabelSize(0.16,"XY");
@@ -1378,7 +1575,9 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         h1_One[i]->GetYaxis()->SetNdivisions(3,true);
         h1_One[i]->GetXaxis()->SetNdivisions(5,true);
         h1_One[i]->SetMinimum(0);
-        h1_One[i]->SetMaximum(2);
+        h1_One[i]->SetMaximum(3);
+        h1_One[i]->SetYTitle("Data/MC"); 
+        //h1_One[i]->GetYaxis()->SetTitleOffset(1.0); 
         h1_One[i]->Draw("HIST");
         //h1_Ratio[i]->SetMinimum(0);
         //h1_Ratio[i]->SetMaximum(2);
@@ -1388,52 +1587,31 @@ void DrawStack(TString HistName, int pTR0p5=30, int NMergeBins=1)
         //h1_Ratio[i]->SetTitleSize(0.1,"XY");
         //h1_Ratio[i]->SetTitleOffset(1.5);
         h1_Ratio[i]->Draw("SAME E X0");
+/*        
+        // For David 
+        if(HistName=="mj" && i==2) 
+        {
+        c2fj->Print( Form("figures_FatjetpT%i_HT500MET100/CompareDataMC_JetMass_NFJ2_pT%i%s%s.pdf", FatjetpTthres,
+                pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+        c2fj->Print( Form("figures_FatjetpT%i_HT500MET100/CompareDataMC_JetMass_NFJ2_pT%i%s%s.C", FatjetpTthres,
+                pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+        c2fj->Print( Form("figures_FatjetpT%i_HT500MET100/CompareDataMC_JetMass_NFJ2_pT%i%s%s.root", FatjetpTthres,
+                pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
+        }
+*/
     }
 
+    // print reweighting factor for MJ
+    if(HistName=="MJ")   for(int i=1; i<=h1_Ratio[5]->GetXaxis()->GetNbins(); i++) cout << i << " " << h1_Ratio[5]->GetBinContent(i) << endl;                        
     // 
     if(HistName=="mj") HistName="JetMass";
     c->Print( Form("figures_FatjetpT%i_HT500MET100/CompareDataMC_%s_pT%i%s%s.pdf", FatjetpTthres,
               HistName.Data(), pTR0p5, RemoveMuon?"_MuonRemoved":"", DoLog?"_log":"") ); 
     
-    //
-    // Yield Table 
-    //
-    /*
-    cout << "TT_sl : " 
-         << h1_TT_sl[2]->Integral() << "\t" 
-         << h1_TT_sl[3]->Integral() << "\t" 
-         << h1_TT_sl[4]->Integral() << "\t" 
-         << h1_TT_sl[5]->Integral() 
-         << endl; 
-    cout << "TT_ll : " 
-         << h1_TT_ll[2]->Integral() << "\t" 
-         << h1_TT_ll[3]->Integral() << "\t" 
-         << h1_TT_ll[4]->Integral() << "\t" 
-         << h1_TT_ll[5]->Integral() 
-         << endl; 
-    cout << "WJets : " 
-         << h1_WJets[2]->Integral() << "\t" 
-         << h1_WJets[3]->Integral() << "\t" 
-         << h1_WJets[4]->Integral() << "\t" 
-         << h1_WJets[5]->Integral() 
-         << endl; 
-    cout << "T1tttt_f1200_25 : " 
-         << h1_f1200_25[2]->Integral() << "\t" 
-         << h1_f1200_25[3]->Integral() << "\t" 
-         << h1_f1200_25[4]->Integral() << "\t" 
-         << h1_f1200_25[5]->Integral() 
-         << endl; 
-    cout << "T1tttt_f1200_1000 : " 
-         << h1_f1200_1000[2]->Integral() << "\t" 
-         << h1_f1200_1000[3]->Integral() << "\t" 
-         << h1_f1200_1000[4]->Integral() << "\t" 
-         << h1_f1200_1000[5]->Integral() 
-         << endl; 
-    
-    */
     // 
     HistFile->Close();
     delete c; 
+    delete c2fj; 
 
 }
 
@@ -1448,12 +1626,16 @@ void PrintTable(int lepflav=0, bool doLatex=false)
 
     TFile* HistFile = TFile::Open(Form("HistFiles/Hist_pT%i.root",pTR0p5));
         
-    TH1F *h1_DATA[6], *h1_T[6], *h1_TT_sl[6], *h1_TT_ll[6], *h1_TT[6], *h1_WJets[6], *h1_DY[6], *h1_MC[6];
+    TH1F *h1_DATA[6], *h1_DATA_MuHad[6], *h1_DATA_EHad[6], 
+         *h1_T[6], *h1_TT_sl[6], *h1_TT_ll[6], *h1_TT[6], *h1_WJets[6], *h1_DY[6], *h1_MC[6];
     TH1F *h1_f1200_25[6], *h1_f1200_1000[6];
     for(int i=2; i<6; i++)
     {
 
-        h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i));
+        h1_DATA_MuHad[i]    = (TH1F*)HistFile->Get(Form("h1_DATA_MuHad_%s_%ifatjet", HistName.Data(), i)); 
+        h1_DATA_EHad[i]     = (TH1F*)HistFile->Get(Form("h1_DATA_EHad_%s_%ifatjet", HistName.Data(), i)); 
+        // merge MuHad + EHad
+        h1_DATA[i]      = (TH1F*)h1_DATA_MuHad[i]->Clone("h1_DATA");  h1_DATA[i]->Add(h1_DATA_EHad[i]);
         h1_T[i]         = (TH1F*)HistFile->Get(Form("h1_T_%s_%ifatjet", HistName.Data(), i));
         h1_TT_sl[i]     = (TH1F*)HistFile->Get(Form("h1_TT_sl_%s_%ifatjet", HistName.Data(), i));
         h1_TT_ll[i]     = (TH1F*)HistFile->Get(Form("h1_TT_ll_%s_%ifatjet", HistName.Data(), i));
@@ -1560,7 +1742,7 @@ void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1, bool doRatio=fals
     }
 
 
-    TH2F *h2_DATA[6], *h2_T[6], *h2_TT_sl[6], *h2_TT_ll[6], *h2_TT[6], *h2_WJets[6], *h2_DY[6]; 
+    TH2F *h2_DATA[6], *h2_DATA_MuHad[6], *h2_DATA_EHad[6], *h2_T[6], *h2_TT_sl[6], *h2_TT_ll[6], *h2_TT[6], *h2_WJets[6], *h2_DY[6]; 
     TH2F *h2_Ratio[6], *h2_MC[6]; 
     TH2F *h2_f1200_25[6], *h2_f1200_1000[6];
     TCanvas *c_TT_sl = new TCanvas("c_TT_sl","c_TT_sl",1600,360);  
@@ -1573,12 +1755,15 @@ void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1, bool doRatio=fals
     {
         if(HistName=="mjvsmj" && i!=2) continue;
 
-        h2_DATA[i]          = (TH2F*)HistFile->Get(Form("h2_DATA_%s_%ifatjet", HistName.Data(), i)); 
+        h2_DATA_MuHad[i]    = (TH2F*)HistFile->Get(Form("h2_DATA_MuHad_%s_%ifatjet", HistName.Data(), i)); 
+        h2_DATA_EHad[i]     = (TH2F*)HistFile->Get(Form("h2_DATA_EHad_%s_%ifatjet", HistName.Data(), i)); 
+        // merge MuHad + EHad
+        h2_DATA[i]          = (TH2F*)h2_DATA_MuHad[i]->Clone("h2_DATA");  h2_DATA[i]->Add(h2_DATA_EHad[i]);
         h2_T[i]             = (TH2F*)HistFile->Get(Form("h2_T_%s_%ifatjet", HistName.Data(), i));
         h2_TT_sl[i]         = (TH2F*)HistFile->Get(Form("h2_TT_sl_%s_%ifatjet", HistName.Data(), i));
         h2_TT_ll[i]         = (TH2F*)HistFile->Get(Form("h2_TT_ll_%s_%ifatjet", HistName.Data(), i));
         h2_WJets[i]         = (TH2F*)HistFile->Get(Form("h2_WJets_%s_%ifatjet", HistName.Data(), i));
-//        h2_DY[i]          = (TH2F*)HistFile->Get(Form("h2_DY_%s_%ifatjet", HistName.Data(), i)); 
+        h2_DY[i]          = (TH2F*)HistFile->Get(Form("h2_DY_%s_%ifatjet", HistName.Data(), i)); 
         h2_f1200_25[i]      = (TH2F*)HistFile->Get(Form("h2_T1tttt_f1200_25_%s_%ifatjet", HistName.Data(), i)); 
         h2_f1200_1000[i]    = (TH2F*)HistFile->Get(Form("h2_T1tttt_f1200_1000_%s_%ifatjet", HistName.Data(), i)); 
 
@@ -1589,6 +1774,35 @@ void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1, bool doRatio=fals
         h2cosmetic(h2_WJets[i],         Form("WJets %ifatjet", i),              Xvar,   Yvar,   Zvar);
         h2cosmetic(h2_f1200_25[i],      Form("T1tttt(1200,25) %ifatjet", i),    Xvar,   Yvar,   Zvar);
         h2cosmetic(h2_f1200_1000[i],    Form("T1tttt(1200,1000) %ifatjet", i),  Xvar,   Yvar,   Zvar);
+
+        // MC 
+        h2_MC[i] = (TH2F*)h2_TT_sl[i]->Clone(Form("h2_MC_%s_%ifatjet", HistName.Data(), i));
+        h2_MC[i]->Add(h2_TT_ll[i]);
+        h2_MC[i]->Add(h2_WJets[i]);
+        h2_MC[i]->Add(h2_T[i]);
+        h2_MC[i]->Add(h2_DY[i]);
+    }
+
+    if(HistName=="MJmT") 
+    { 
+        cout << "-- DATA " << endl; 
+        cout << h2_DATA[5]->GetBinContent(1,2) << " " << h2_DATA[5]->GetBinContent(2,2) << endl; 
+        cout << h2_DATA[5]->GetBinContent(1,1) << " " << h2_DATA[5]->GetBinContent(2,1) << endl; 
+        cout << "-- TT sl " << endl; 
+        cout << h2_TT_sl[5]->GetBinContent(1,2) << " " << h2_TT_sl[5]->GetBinContent(2,2) << endl; 
+        cout << h2_TT_sl[5]->GetBinContent(1,1) << " " << h2_TT_sl[5]->GetBinContent(2,1) << endl; 
+        cout << "-- TT_ll " << endl; 
+        cout << h2_TT_ll[5]->GetBinContent(1,2) << " " << h2_TT_ll[5]->GetBinContent(2,2) << endl; 
+        cout << h2_TT_ll[5]->GetBinContent(1,1) << " " << h2_TT_ll[5]->GetBinContent(2,1) << endl; 
+        cout << "-- T " << endl; 
+        cout << h2_T[5]->GetBinContent(1,2) << " " << h2_T[5]->GetBinContent(2,2) << endl; 
+        cout << h2_T[5]->GetBinContent(1,1) << " " << h2_T[5]->GetBinContent(2,1) << endl; 
+        cout << "-- MC " << endl; 
+        cout << h2_MC[5]->GetBinContent(1,2) << " " << h2_MC[5]->GetBinContent(2,2) << endl; 
+        cout << h2_MC[5]->GetBinContent(1,1) << " " << h2_MC[5]->GetBinContent(2,1) << endl; 
+        cout << "-- f1200_25 " << endl; 
+        cout << h2_f1200_25[5]->GetBinContent(1,2) << " " << h2_f1200_25[5]->GetBinContent(2,2) << endl; 
+        cout << h2_f1200_25[5]->GetBinContent(1,1) << " " << h2_f1200_25[5]->GetBinContent(2,1) << endl; 
     }
 
     // Drawing
@@ -1636,7 +1850,7 @@ void Draw2D(TString HistName, int pTR0p5=30, int NMergeBins=1, bool doRatio=fals
 //
 // main 
 //
-void DrawSL() 
+void DrawSL(bool OnlyDraw=false) 
 {
 
     gROOT->ProcessLine(".L /Users/jaehyeok/macros/rootlogon.C");
@@ -1644,7 +1858,8 @@ void DrawSL()
     // ----------------------------------------
     //  Define chains  
     // ----------------------------------------
-    TChain *ch_data         = new TChain("tree", "DATA");
+    TChain *ch_data_muhad   = new TChain("tree", "DATA_MuHad");
+    TChain *ch_data_ehad    = new TChain("tree", "DATA_EHad");
     TChain *ch_ttbar_sl     = new TChain("tree", "TT_sl");
     TChain *ch_ttbar_ll     = new TChain("tree", "TT_ll");
     TChain *ch_wjets        = new TChain("tree", "WJets");
@@ -1653,14 +1868,16 @@ void DrawSL()
     TChain *ch_f1200_25     = new TChain("tree", "T1tttt_f1200_25");
     TChain *ch_f1200_1000   = new TChain("tree", "T1tttt_f1200_1000");
    
-    TString BabyDir = "../../../babies/HT500MET100/";  
+    TString BabyDir = "../../../babies/HT500MET100_17Jan2014/HT500MET100_OR_LL/";  
     //TString BabyDir = "../../../babies/HT500/";  
     // Data
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012A-13Jul2012-v1_f*.root");  // 808 pb if fully processed : 808 * 646/650 = 803 pb 
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012B-13Jul2012-v1_f*.root");  // 5237-808=4429 pb if fully processed : 4429 * 4247/4294 = 4380 pb  
                                                                             // 803 + 4380 = 5183
     //ch_data->Add(BabyDir+"baby_SingleMu_Run2012*.root");                    // Full SingleMu (19.1 fb-1)
-    ch_data->Add(BabyDir+"baby_MuHad_*.root");                              // Full Muhad 
+    ch_data_muhad->Add(BabyDir+"baby_MuHad_*.root");                              // Full Muhad 
+    ch_data_ehad->Add(BabyDir+"baby_HT_*.root");                          // Full Electronhad 
+    ch_data_ehad->Add(BabyDir+"baby_ElectronHad_*.root");                          // Full Electronhad 
     
     // TT 
     //ch_ttbar_sl->Add(BabyDir+"baby_TT_CT*.root");
@@ -1681,7 +1898,8 @@ void DrawSL()
     // ----------------------------------------
     //  Get number of entries 
     // ----------------------------------------
-    cout << "data               : " << ch_data->GetEntries()        << endl;
+    cout << "data MuHad         : " << ch_data_muhad->GetEntries()        << endl;
+    cout << "data ElectronHad   : " << ch_data_ehad->GetEntries()        << endl;
     cout << "ttbarl             : " << ch_ttbar_sl->GetEntries()    << endl;
     cout << "ttbarll            : " << ch_ttbar_ll->GetEntries()    << endl;
     cout << "wjets              : " << ch_wjets->GetEntries()       << endl;
@@ -1695,7 +1913,8 @@ void DrawSL()
         // ----------------------------------------
         //  Fill histrograms 
         // ----------------------------------------
-        DoOneProcess(ch_data,	    pTR0p5thres); 
+        DoOneProcess(ch_data_muhad,	    pTR0p5thres); 
+        DoOneProcess(ch_data_ehad,	    pTR0p5thres); 
         DoOneProcess(ch_ttbar_sl,	pTR0p5thres); 
         DoOneProcess(ch_ttbar_ll,	pTR0p5thres); 
         DoOneProcess(ch_wjets,	    pTR0p5thres); 
@@ -1715,25 +1934,35 @@ void DrawSL()
     // ----------------------------------------
     //  Draw histograms 
     // ---------------------------------------- 
+///*
+    DrawStack("mT"              	);
+    DrawStack("mj"             ,30,1);
+    DrawStack("MJ"       	   ,30,1);
+    DrawStack("HT"         			);
+    DrawStack("MET"       			);
+    DrawStack("Nfatjet"    			);
+    DrawStack("Nskinnyjet" 			);
+    Draw2D("MJmT");
+//*/
 /*   
     DrawStack("muspT"           	);
-    DrawStack("muspTminusMET"  ,30,2);
-    DrawStack("musPhi"     	   ,30,5);
+    DrawStack("muspTminusMET"  ,30,1);
+    DrawStack("musPhi"     	   ,30,1);
     DrawStack("musEta"          	);
     DrawStack("mT"              	);
-    DrawStack("mj"              	);
+    DrawStack("mj"             ,30,2);
     DrawStack("mj_mumatch"      	);
     DrawStack("mj_notmumatch"   	);
     DrawStack("mj_bmatch"       	);
     DrawStack("mj_notbmatch"    	);
     DrawStack("mj_metmatch"       	);
     DrawStack("mj_notmetmatch"    	);
-    DrawStack("MJ"         			);
+    DrawStack("MJ"       	   ,30,2);
     DrawStack("HT"         			);
     DrawStack("Nfatjet"    			);
     DrawStack("Nskinnyjet" 			);
     DrawStack("MET"        			);
-    DrawStack("METPhi"     	   ,30,5);
+    DrawStack("METPhi"     	   ,30,1);
     DrawStack("METx"     	        );
     DrawStack("METy"     	        );
     DrawStack("DPhi"      	   ,30,2);	
@@ -1768,7 +1997,7 @@ void DrawSL()
     DrawStack("FatjetEta2"   			);
     DrawStack("FatjetEta3"   			);
     DrawStack("FatjetEta4"   			);
-    
+  
     DrawStack("dRFJ");
     DrawStack("dPhiFJ");
     DrawStack("dEtaFJ");
@@ -1786,11 +2015,8 @@ void DrawSL()
     DrawStack("FatjetEtaFJFJcloseLowerPt",30,1);
     DrawStack("FatjetPhiFJFJcloseLowerPt",30,1);
     
-    
     Draw2D("mindRFJmjvsmj", 30, 1, true );
-
 */
-    DrawStack("MJ"         			);
     // Yield table
     PrintTable(0, false);
     PrintTable(11, false);
