@@ -15,13 +15,107 @@
 #include "TSystem.h"
 #include "TLorentzVector.h"
 
-#include "Branch_Fatjet_v1.h"
+#include "Branch_v71.h"
 #include "ObjectSelector_Sync.h"
 #include "EventSelector.h"
 #include "Utilities.h"
 #include "inJSON2012.h"
 
+// include necessary fastjet files
+#include "fastjet/PseudoJet.hh"
+#include "fastjet/ClusterSequence.hh"
+
+//
+#ifdef __MAKECINT__
+#pragma link C++ class std::vector < std::vector<float> >+;
+#endif
+
+//
 using namespace std;
+
+//
+typedef std::pair<fastjet::PseudoJet,int > FatJetPair;
+
+//
+// Make fat jets 
+//
+std::vector<FatJetPair> makeFatJet( vector<TLorentzVector> FatJetConstituent, 
+                                   double Rparam=1.2, 
+                                   int ConstituentpTcut=30, 
+                                   float ConstituentEtacut=100) 
+{
+    std::vector<FatJetPair> FatJets_Pair; 
+
+    // Loop over R=0.5 jets, form into PseudoJets vector
+    vector<fastjet::PseudoJet> input_particles;
+    double FatjetConstituent_px_tmp, FatjetConstituent_py_tmp, FatjetConstituent_pz_tmp, FatjetConstituent_energy_tmp;
+
+    for(int ijet = 0; ijet<(int)FatJetConstituent.size(); ijet++) 
+    { 
+
+        FatjetConstituent_px_tmp        = FatJetConstituent.at(ijet).Px();
+        FatjetConstituent_py_tmp        = FatJetConstituent.at(ijet).Py();
+        FatjetConstituent_pz_tmp        = FatJetConstituent.at(ijet).Pz();
+        FatjetConstituent_energy_tmp    = FatJetConstituent.at(ijet).E();	  
+    
+//        cout << ijet << " :: " 
+//             << FatjetConstituent_px_tmp << " " 
+//             << FatjetConstituent_py_tmp << " " 
+//             << FatjetConstituent_pz_tmp << " " 
+//             << FatjetConstituent_energy_tmp << " " 
+//             << endl;
+
+        if(TMath::Sqrt( FatjetConstituent_px_tmp*FatjetConstituent_px_tmp
+                       +FatjetConstituent_py_tmp*FatjetConstituent_py_tmp)<ConstituentpTcut) continue;
+
+        if(TMath::Abs(FatJetConstituent.at(ijet).Eta())>ConstituentEtacut) continue;
+
+        input_particles.push_back(fastjet::PseudoJet( FatjetConstituent_px_tmp, FatjetConstituent_py_tmp,
+                                                      FatjetConstituent_pz_tmp, FatjetConstituent_energy_tmp));
+    }
+    
+    //
+    // Run Fastjet to reconstuct jets 
+    //
+
+    // Create an object that represents your choice of jet algorithm and the associated parameters
+    fastjet::Strategy strategy = fastjet::Best;
+    fastjet::RecombinationScheme recomb_scheme = fastjet::E_scheme;
+    fastjet::JetDefinition jet_def(fastjet::antikt_algorithm, Rparam, recomb_scheme, strategy);
+
+    // run the jet clustering with the above jet definition
+    fastjet::ClusterSequence clust_seq(input_particles, jet_def);
+
+    // 
+    // Get p4 of the reconstructed jets  
+    //
+    double ptmin = 0.0; // could use 3.0 here, instead of applying later
+    vector<fastjet::PseudoJet> inclusive_jets = clust_seq.inclusive_jets(ptmin);
+    //Sort by pt
+    vector<fastjet::PseudoJet> sorted_jets = sorted_by_pt(inclusive_jets);
+    //fill fastjet output into vectors, continue as original code
+    for(int isortjets = 0; isortjets< (int)sorted_jets.size(); isortjets++)
+    {
+        //store only if pt >3 GeV to match CMS jets
+        if(TMath::Sqrt( sorted_jets[isortjets].px()*sorted_jets[isortjets].px()
+                       +sorted_jets[isortjets].py()*sorted_jets[isortjets].py())>50) 
+        {
+            TLorentzVector FatJet_tmp( sorted_jets[isortjets].px(), sorted_jets[isortjets].py(), 
+                                       sorted_jets[isortjets].pz(), sorted_jets[isortjets].E());
+            FatJets_Pair.push_back(std::make_pair(sorted_jets.at(isortjets),sorted_jets.at(isortjets).constituents().size()));
+
+//            cout << isortjets << " :: "  
+//                 << sorted_jets[isortjets].px() << " " 
+//                 << sorted_jets[isortjets].py() << " " 
+//                 << sorted_jets[isortjets].pz() << " " 
+//                 << sorted_jets[isortjets].E() << " " 
+//                 << endl;
+        }
+    }
+
+    return FatJets_Pair;
+}
+
 
 //
 // Get mj 
@@ -51,6 +145,25 @@ float GetMJ(vector<float> Vectormj)
     {
         return -999.;
     }
+}
+
+bool hasGoodVertex(int & firstGoodVertex)
+{
+    bool GoodEvent=false;
+
+    for(unsigned i=0; i<pv_x->size(); i++) {
+        if( fabs(pv_isFake->at(i)) < 0.001
+                && pv_ndof->at(i) > 4
+                // commented out to compare with Robert
+                //      && pv_ndof->at(i) >= 4
+                && sqrt(pv_x->at(i)*pv_x->at(i)+pv_y->at(i)*pv_y->at(i)) < 2
+                && fabs(pv_z->at(i)) < 24)
+        {
+            if(GoodEvent==false) firstGoodVertex=i;
+            GoodEvent=true;
+        }
+    }
+    return GoodEvent;
 }
 
 //
@@ -107,8 +220,16 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     vector<bool> filter_;  
     bool TrigMuon_;  
     bool TrigSingleMuon_;  
+    bool TrigDiMuon_;  
     bool TrigHTMuon_;  
+    bool TrigElectron_;  
+    bool TrigSingleElectron_;  
+    bool TrigDiElectron_;  
+    bool TrigHTElectron_;  
+    bool TrigMuEG_;  
+    int Nfatjet_pT20_; 
     int Nfatjet_pT30_; 
+    int NfatjetCHS_pT20_; 
     int NfatjetCHS_pT30_; 
     int Nskinnyjet_; 
     int NBtagCSVM_; 
@@ -117,7 +238,9 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     int Npv_; 
     float Npu_; 
     float EventWeight_; 
+    float MJ_pT20_; 
     float MJ_pT30_; 
+    float MJCHS_pT20_; 
     float MJCHS_pT30_; 
     float MET_;  
     float METPhi_;  
@@ -129,8 +252,19 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     float top2pT_;  
     float top2Eta_;  
     float top2Phi_;  
+    vector<float> mj_pT20_;
     vector<float> mj_pT30_;
+    vector<float> mjCHS_pT20_;
     vector<float> mjCHS_pT30_;
+    vector<float> mjLep_pT30_;
+    vector<float> FatjetPt_pT20_;
+    vector<float> FatjetEta_pT20_;
+    vector<float> FatjetPhi_pT20_;
+    vector<float> FatjetN_pT20_;
+    vector<float> FatjetCHSPt_pT20_;
+    vector<float> FatjetCHSEta_pT20_;
+    vector<float> FatjetCHSPhi_pT20_;
+    vector<float> FatjetCHSN_pT20_;
     vector<float> FatjetPt_pT30_;
     vector<float> FatjetEta_pT30_;
     vector<float> FatjetPhi_pT30_;
@@ -139,12 +273,20 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     vector<float> FatjetCHSEta_pT30_;
     vector<float> FatjetCHSPhi_pT30_;
     vector<float> FatjetCHSN_pT30_;
+    vector<float> FatjetLepPt_pT30_;
+    vector<float> FatjetLepEta_pT30_;
+    vector<float> FatjetLepPhi_pT30_;
+    vector<float> FatjetLepN_pT30_;
     vector<float> RA4ElsPt_;
     vector<float> RA4ElsEta_;
     vector<float> RA4ElsPhi_;
+    vector<float> RA4ElsE_;
+    vector<float> RA4ElsQ_;
     vector<float> RA4MusPt_;
     vector<float> RA4MusEta_;
     vector<float> RA4MusPhi_;
+    vector<float> RA4MusE_;
+    vector<float> RA4MusQ_;
     vector<float> RA4ElsVetoPt_;
     vector<float> RA4ElsVetoEta_;
     vector<float> RA4ElsVetoPhi_;
@@ -154,10 +296,19 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     vector<float> JetPt_;
     vector<float> JetEta_;
     vector<float> JetPhi_;
+    vector<float> JetE_;
     vector<float> JetCSV_;
+    vector<float> JetMCId_;
+    vector<float> JetCHSPt_;
+    vector<float> JetCHSEta_;
+    vector<float> JetCHSPhi_;
+    vector<float> JetCHSE_;
+    vector<float> JetCHSCSV_;
+    vector<float> JetCHSMCId_;
     vector<float> GenPt_;
     vector<float> GenEta_;
     vector<float> GenPhi_;
+    vector<float> GenE_;
     vector<float> GenId_;
     vector<float> GenMId_;
     vector<float> GenGMId_;
@@ -167,10 +318,18 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("event",          	&event_);     
     babyTree_->Branch("filter",          	&filter_);     
     babyTree_->Branch("TrigMuon",          	&TrigMuon_);     
-    babyTree_->Branch("TrigSingleMuon",    	&TrigMuon_);     
+    babyTree_->Branch("TrigSingleMuon",    	&TrigSingleMuon_);     
+    babyTree_->Branch("TrigDiMuon",    	    &TrigDiMuon_);     
     babyTree_->Branch("TrigHTMuon",       	&TrigHTMuon_);     
+    babyTree_->Branch("TrigElectron",      	&TrigElectron_);     
+    babyTree_->Branch("TrigSingleElectron",	&TrigSingleElectron_);     
+    babyTree_->Branch("TrigDiElectron", 	&TrigDiElectron_);     
+    babyTree_->Branch("TrigHTElectron",    	&TrigHTElectron_);     
+    babyTree_->Branch("TrigMuEG",    	    &TrigMuEG_);     
+    babyTree_->Branch("Nfatjet_pT20",   	&Nfatjet_pT20_);   
     babyTree_->Branch("Nfatjet_pT30",   	&Nfatjet_pT30_);   
-    babyTree_->Branch("NatjetCHS_pT30", 	&NfatjetCHS_pT30_);   
+    babyTree_->Branch("NfatjetCHS_pT20", 	&NfatjetCHS_pT20_);   
+    babyTree_->Branch("NfatjetCHS_pT30", 	&NfatjetCHS_pT30_);   
     babyTree_->Branch("Nskinnyjet",     	&Nskinnyjet_);
     babyTree_->Branch("NBtagCSVM",     	    &NBtagCSVM_);
     babyTree_->Branch("NskinnyjetCHS",  	&NskinnyjetCHS_);
@@ -178,19 +337,33 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("Npv",            	&Npv_);       
     babyTree_->Branch("Npu",            	&Npu_);       
     babyTree_->Branch("EventWeight",    	&EventWeight_);
+    babyTree_->Branch("MJ_pT20",        	&MJ_pT20_);        
     babyTree_->Branch("MJ_pT30",        	&MJ_pT30_);        
+    babyTree_->Branch("MJCHS_pT20",        	&MJCHS_pT20_);        
     babyTree_->Branch("MJCHS_pT30",        	&MJCHS_pT30_);        
     babyTree_->Branch("MET",            	&MET_);        
     babyTree_->Branch("METPhi",            	&METPhi_);        
     babyTree_->Branch("HT",             	&HT_);        
+    babyTree_->Branch("HTCHS",             	&HTCHS_);        
     babyTree_->Branch("top1pT",          	&top1pT_);        
     babyTree_->Branch("top1Eta",          	&top1Eta_);        
     babyTree_->Branch("top1Phi",          	&top1Phi_);        
     babyTree_->Branch("top2pT",          	&top2pT_);        
     babyTree_->Branch("top2Eta",          	&top2Eta_);        
     babyTree_->Branch("top2Phi",          	&top2Phi_);        
+    babyTree_->Branch("mj_pT20",        	&mj_pT20_);     
     babyTree_->Branch("mj_pT30",        	&mj_pT30_);     
+    babyTree_->Branch("mjCHS_pT20",        	&mjCHS_pT20_);     
     babyTree_->Branch("mjCHS_pT30",        	&mjCHS_pT30_);     
+    babyTree_->Branch("mjLep_pT30",        	&mjLep_pT30_);     
+    babyTree_->Branch("FatjetPt_pT20",  	&FatjetPt_pT20_); 
+    babyTree_->Branch("FatjetEta_pT20", 	&FatjetEta_pT20_);
+    babyTree_->Branch("FatjetPhi_pT20",     &FatjetPhi_pT20_);
+    babyTree_->Branch("FatjetN_pT20",       &FatjetN_pT20_);
+    babyTree_->Branch("FatjetCHSPt_pT20",   &FatjetCHSPt_pT20_); 
+    babyTree_->Branch("FatjetCHSEta_pT20",  &FatjetCHSEta_pT20_);
+    babyTree_->Branch("FatjetCHSPhi_pT20",  &FatjetCHSPhi_pT20_);
+    babyTree_->Branch("FatjetCHSN_pT20",    &FatjetCHSN_pT20_);
     babyTree_->Branch("FatjetPt_pT30",  	&FatjetPt_pT30_); 
     babyTree_->Branch("FatjetEta_pT30", 	&FatjetEta_pT30_);
     babyTree_->Branch("FatjetPhi_pT30",     &FatjetPhi_pT30_);
@@ -199,12 +372,20 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("FatjetCHSEta_pT30",  &FatjetCHSEta_pT30_);
     babyTree_->Branch("FatjetCHSPhi_pT30",  &FatjetCHSPhi_pT30_);
     babyTree_->Branch("FatjetCHSN_pT30",    &FatjetCHSN_pT30_);
+    babyTree_->Branch("FatjetLepPt_pT30",   &FatjetLepPt_pT30_); 
+    babyTree_->Branch("FatjetLepEta_pT30",  &FatjetLepEta_pT30_);
+    babyTree_->Branch("FatjetLepPhi_pT30",  &FatjetLepPhi_pT30_);
+    babyTree_->Branch("FatjetLepN_pT30",    &FatjetLepN_pT30_);
     babyTree_->Branch("RA4ElsPt",           &RA4ElsPt_);
     babyTree_->Branch("RA4ElsEta",          &RA4ElsEta_);
     babyTree_->Branch("RA4ElsPhi",          &RA4ElsPhi_);
+    babyTree_->Branch("RA4ElsE",            &RA4ElsE_);
+    babyTree_->Branch("RA4ElsQ",            &RA4ElsQ_);
     babyTree_->Branch("RA4MusPt",           &RA4MusPt_);
     babyTree_->Branch("RA4MusEta",          &RA4MusEta_);
     babyTree_->Branch("RA4MusPhi",          &RA4MusPhi_);
+    babyTree_->Branch("RA4MusE",            &RA4MusE_);
+    babyTree_->Branch("RA4MusQ",            &RA4MusQ_);
     babyTree_->Branch("RA4ElsVetoPt",       &RA4ElsVetoPt_);
     babyTree_->Branch("RA4ElsVetoEta",      &RA4ElsVetoEta_);
     babyTree_->Branch("RA4ElsVetoPhi",      &RA4ElsVetoPhi_);
@@ -214,10 +395,19 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("JetPt",              &JetPt_);
     babyTree_->Branch("JetEta",             &JetEta_);
     babyTree_->Branch("JetPhi",             &JetPhi_);
+    babyTree_->Branch("JetE",               &JetE_);
     babyTree_->Branch("JetCSV",             &JetCSV_);
+    babyTree_->Branch("JetMCId",            &JetMCId_);
+    babyTree_->Branch("JetCHSPt",           &JetCHSPt_);
+    babyTree_->Branch("JetCHSEta",          &JetCHSEta_);
+    babyTree_->Branch("JetCHSPhi",          &JetCHSPhi_);
+    babyTree_->Branch("JetCHSE",            &JetCHSE_);
+    babyTree_->Branch("JetCHSCSV",          &JetCHSCSV_);
+    babyTree_->Branch("JetCHSMCId",         &JetCHSMCId_);
     babyTree_->Branch("GenPt",              &GenPt_);
     babyTree_->Branch("GenEta",             &GenEta_);
     babyTree_->Branch("GenPhi",             &GenPhi_);
+    babyTree_->Branch("GenE",               &GenE_);
     babyTree_->Branch("GenId",              &GenId_);
     babyTree_->Branch("GenMId",             &GenMId_);
     babyTree_->Branch("GenGMId",            &GenGMId_);
@@ -322,8 +512,16 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         event_              =   -1;
         TrigMuon_           =   1;
         TrigSingleMuon_     =   1;
+        TrigDiMuon_         =   1;
         TrigHTMuon_         =   1;
+        TrigElectron_       =   1;
+        TrigSingleElectron_ =   1;
+        TrigDiElectron_     =   1;
+        TrigHTElectron_     =   1;
+        TrigMuEG_           =   1;
+        Nfatjet_pT20_       =   -1;
         Nfatjet_pT30_       =   -1;
+        NfatjetCHS_pT20_    =   -1;
         NfatjetCHS_pT30_    =   -1;
         Nskinnyjet_         =   -1;
         NBtagCSVM_          =   -1;
@@ -332,7 +530,9 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         Npv_                =   -1;
         Npu_                =   -1;
         EventWeight_        =   1.;
+        MJ_pT20_            =-999.;
         MJ_pT30_            =-999.;
+        MJCHS_pT20_         =-999.;
         MJCHS_pT30_         =-999.;
         MET_                =-999.;
         METPhi_             =-999.;
@@ -345,8 +545,19 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         top2Phi_            =-999.;
         top2Eta_            =-999.;
         filter_.clear(); 
+        mj_pT20_.clear();
         mj_pT30_.clear();
+        mjCHS_pT20_.clear();
         mjCHS_pT30_.clear();
+        mjLep_pT30_.clear();
+        FatjetPt_pT20_.clear();
+        FatjetEta_pT20_.clear();
+        FatjetPhi_pT20_.clear();
+        FatjetN_pT20_.clear();
+        FatjetCHSPt_pT20_.clear();
+        FatjetCHSEta_pT20_.clear();
+        FatjetCHSPhi_pT20_.clear();
+        FatjetCHSN_pT20_.clear();
         FatjetPt_pT30_.clear();
         FatjetEta_pT30_.clear();
         FatjetPhi_pT30_.clear();
@@ -355,12 +566,20 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         FatjetCHSEta_pT30_.clear();
         FatjetCHSPhi_pT30_.clear();
         FatjetCHSN_pT30_.clear();
+        FatjetLepPt_pT30_.clear();
+        FatjetLepEta_pT30_.clear();
+        FatjetLepPhi_pT30_.clear();
+        FatjetLepN_pT30_.clear();
         RA4ElsPt_.clear();
         RA4ElsEta_.clear();
         RA4ElsPhi_.clear();
+        RA4ElsE_.clear();
+        RA4ElsQ_.clear();
         RA4MusPt_.clear();
         RA4MusEta_.clear();
         RA4MusPhi_.clear();
+        RA4MusE_.clear();
+        RA4MusQ_.clear();
         RA4ElsVetoPt_.clear();
         RA4ElsVetoEta_.clear();
         RA4ElsVetoPhi_.clear();
@@ -370,10 +589,19 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         JetPt_.clear();
         JetEta_.clear();
         JetPhi_.clear();
+        JetE_.clear();
         JetCSV_.clear();
+        JetMCId_.clear();
+        JetCHSPt_.clear();
+        JetCHSEta_.clear();
+        JetCHSPhi_.clear();
+        JetCHSE_.clear();
+        JetCHSCSV_.clear();
+        JetCHSMCId_.clear();
         GenPt_.clear();
         GenEta_.clear();
         GenPhi_.clear();
+        GenE_.clear();
         GenId_.clear();
         GenMId_.clear();
         GenGMId_.clear();
@@ -387,12 +615,18 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         {
             EventWeight = Xsec/TotalNEntries*Lumi; // scale for 1 pb * Lumi
             // need more weights if needed 
-        } else 
+        } 
+        else 
         {
             if(!inJSON(VRunLumi,run,lumiblock)) continue; // JSON
         }
 
-        // filtersi
+        // Event quality 
+        int firstGoodVertex=0;
+        bool GoodVertex = hasGoodVertex(firstGoodVertex);
+        if(isData && !GoodVertex) continue;
+        
+        // filters
         if(isData)
         {
             filter_.push_back(scrapingVeto_decision);
@@ -416,23 +650,98 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
 
         // Get good RA4 muons
         vector<int> RA4MuonVeto; RA4MuonVeto.clear();
-        vector<int> RA4Muon = GetRA4Muon(RA4MuonVeto);
+        vector<int> RA4Muon = GetRA4Muon(RA4MuonVeto,"", firstGoodVertex);
         // Get good RA4 electrons
         vector<int> RA4ElecVeto; RA4ElecVeto.clear();
-        vector<int> RA4Elec = GetRA4Elec(RA4ElecVeto, "", 0, true);
+        vector<int> RA4Elec = GetRA4Elec(RA4ElecVeto, "", firstGoodVertex, true);
         // Get good skinny jets, HT and B-tagged jets 
         double HT=-999.; 
         vector<int> LooseBJet; 
         vector<int> MediumBJet; 
         vector<int> GoodJets_AK5PFclean = GetJets(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
                                                   HT,LooseBJet,MediumBJet, 
-                                                  2.4, 30, 0.3); 
+                                                  2.4, 40, 0.3); 
         double HTCHS=-999.; 
         vector<int> LooseBJetCHS; 
         vector<int> MediumBJetCHS; 
         vector<int> GoodJets_AK5PF = GetJetsCHS(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
                                                 HTCHS,LooseBJetCHS,MediumBJetCHS, 
-                                                2.4, 30, 0.3); 
+                                                2.4, 40, 0.3); 
+        //
+        // Skim : HT>500 && MET>100 OR dilepton
+        //
+        // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv  
+        bool Skim = ((HT>500 || HTCHS>500) && pfTypeImets_et->at(0)>100) || (RA4Muon.size()+RA4Elec.size())>1;
+        if(!Skim) continue;
+        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
+
+/*
+        // 
+        // pT(R=0.5) > 20 GeV
+        // 
+        
+        // Regular jets
+        double MJ_pT20=-999.; 
+        // first, select good fat jets 
+        vector<TLorentzVector> Vector_GoodFatjet_pT20; 
+        vector<int> Vector_GoodFatjet_pT20_Index; 
+        for(int ifatjet=0; ifatjet<(int)fastjets_AK5PFclean_R1p2_R0p5pT20_px->size(); ifatjet++) 
+        {
+            float temp_pT_pT20 = TMath::Sqrt(fastjets_AK5PFclean_R1p2_R0p5pT20_px->at(ifatjet)*fastjets_AK5PFclean_R1p2_R0p5pT20_px->at(ifatjet)
+                                        +fastjets_AK5PFclean_R1p2_R0p5pT20_py->at(ifatjet)*fastjets_AK5PFclean_R1p2_R0p5pT20_py->at(ifatjet));
+            if(temp_pT_pT20<50) continue;
+            TLorentzVector temp_GoodFatjet_pT20( fastjets_AK5PFclean_R1p2_R0p5pT20_px->at(ifatjet), 
+                                            fastjets_AK5PFclean_R1p2_R0p5pT20_py->at(ifatjet),
+                                            fastjets_AK5PFclean_R1p2_R0p5pT20_pz->at(ifatjet),
+                                            fastjets_AK5PFclean_R1p2_R0p5pT20_energy->at(ifatjet));
+            Vector_GoodFatjet_pT20.push_back(temp_GoodFatjet_pT20);
+            Vector_GoodFatjet_pT20_Index.push_back(ifatjet);
+        } 
+       
+        vector<float> Vector_mj_pT20;   // mj
+        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT20.size(); igoodfatjet++) 
+        {
+            float temp_mj_pT20 = Getmj(Vector_GoodFatjet_pT20.at(igoodfatjet).Px(), 
+                                  Vector_GoodFatjet_pT20.at(igoodfatjet).Py(),
+                                  Vector_GoodFatjet_pT20.at(igoodfatjet).Pz(),
+                                  Vector_GoodFatjet_pT20.at(igoodfatjet).E());
+            Vector_mj_pT20.push_back(temp_mj_pT20);
+        }
+        MJ_pT20 = GetMJ(Vector_mj_pT20);
+
+        int Nfatjet_pT20 = Vector_GoodFatjet_pT20.size(); 
+       
+        // CHS jets
+        double MJCHS_pT20=-999.; 
+        // first, select good fat jets 
+        vector<TLorentzVector> Vector_GoodFatjetCHS_pT20; 
+        vector<int> Vector_GoodFatjetCHS_pT20_Index; 
+        for(int ifatjet=0; ifatjet<(int)fastjets_AK5PF_R1p2_R0p5pT20_px->size(); ifatjet++) 
+        {
+            float temp_pT_pT20 = TMath::Sqrt(fastjets_AK5PF_R1p2_R0p5pT20_px->at(ifatjet)*fastjets_AK5PF_R1p2_R0p5pT20_px->at(ifatjet)
+                                        +fastjets_AK5PF_R1p2_R0p5pT20_py->at(ifatjet)*fastjets_AK5PF_R1p2_R0p5pT20_py->at(ifatjet));
+            if(temp_pT_pT20<50) continue;
+            TLorentzVector temp_GoodFatjetCHS_pT20( fastjets_AK5PF_R1p2_R0p5pT20_px->at(ifatjet), 
+                                            fastjets_AK5PF_R1p2_R0p5pT20_py->at(ifatjet),
+                                            fastjets_AK5PF_R1p2_R0p5pT20_pz->at(ifatjet),
+                                            fastjets_AK5PF_R1p2_R0p5pT20_energy->at(ifatjet));
+            Vector_GoodFatjetCHS_pT20.push_back(temp_GoodFatjetCHS_pT20);
+            Vector_GoodFatjetCHS_pT20_Index.push_back(ifatjet);
+        } 
+       
+        vector<float> Vector_mjCHS_pT20;   // mj
+        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjetCHS_pT20.size(); igoodfatjet++) 
+        {
+            float temp_mj_pT20 = Getmj(Vector_GoodFatjetCHS_pT20.at(igoodfatjet).Px(), 
+                                       Vector_GoodFatjetCHS_pT20.at(igoodfatjet).Py(),
+                                       Vector_GoodFatjetCHS_pT20.at(igoodfatjet).Pz(),
+                                       Vector_GoodFatjetCHS_pT20.at(igoodfatjet).E());
+            Vector_mjCHS_pT20.push_back(temp_mj_pT20);
+        }
+        MJCHS_pT20 = GetMJ(Vector_mjCHS_pT20);
+
+        int NfatjetCHS_pT20 = Vector_GoodFatjetCHS_pT20.size(); 
+        
         // 
         // pT(R=0.5) > 30 GeV
         // 
@@ -498,7 +807,129 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         MJCHS_pT30 = GetMJ(Vector_mjCHS_pT30);
 
         int NfatjetCHS_pT30 = Vector_GoodFatjetCHS_pT30.size(); 
+*/       
+       
+        //
+        // Make fatjet 
+        //
+        vector<TLorentzVector> FatJetConstituent_pT20; 
+        vector<TLorentzVector> FatJetConstituent_pT30; 
+        vector<TLorentzVector> FatJetConstituentCHS_pT20; 
+        vector<TLorentzVector> FatJetConstituentCHS_pT30; 
+        for(unsigned int ijet=0;ijet<jets_AK5PFclean_pt->size();ijet++)
+        {
+            TLorentzVector tmp(jets_AK5PFclean_px->at(ijet),jets_AK5PFclean_py->at(ijet),
+                               jets_AK5PFclean_pz->at(ijet), jets_AK5PFclean_energy->at(ijet));
+            if(jets_AK5PFclean_pt->at(ijet)<20) continue;
+            FatJetConstituent_pT20.push_back(tmp);
+            if(jets_AK5PFclean_pt->at(ijet)<30) continue;
+            FatJetConstituent_pT30.push_back(tmp);
+        }
+        for(unsigned int ijet=0;ijet<jets_AK5PF_pt->size();ijet++)
+        {
+            TLorentzVector tmp(jets_AK5PF_px->at(ijet), jets_AK5PF_py->at(ijet),
+                               jets_AK5PF_pz->at(ijet), jets_AK5PF_energy->at(ijet));
+            if(jets_AK5PF_pt->at(ijet)<20) continue;
+            FatJetConstituentCHS_pT20.push_back(tmp);
+            if(jets_AK5PF_pt->at(ijet)<30) continue;
+            FatJetConstituentCHS_pT30.push_back(tmp);
+        }
+        // make vector of contituents adding RA4 leptons  
+        double HT_dummy=-999.; 
+        vector<int> LooseBJet_dummy; 
+        vector<int> MediumBJet_dummy; 
+        vector<int> GoodJets_AK5PFclean_PlusRA4Lep = GetJets(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
+                                                             HT_dummy,LooseBJet_dummy,MediumBJet_dummy, 
+                                                             5, 30, 0.3); 
         
+        vector<TLorentzVector> FatJetConstituent_pT30_PlusRA4Lep; 
+        for(int igoodjet=0; igoodjet<(int)GoodJets_AK5PFclean_PlusRA4Lep.size(); igoodjet++) 
+        {
+            int ijet = GoodJets_AK5PFclean_PlusRA4Lep.at(igoodjet); 
+            TLorentzVector tmp(jets_AK5PFclean_px->at(ijet), jets_AK5PFclean_py->at(ijet),
+                               jets_AK5PFclean_pz->at(ijet), jets_AK5PFclean_energy->at(ijet));
+            FatJetConstituent_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int igoodmus=0; igoodmus<RA4Muon.size(); igoodmus++) 
+        {
+            int imu = RA4Muon.at(igoodmus); 
+            TLorentzVector tmp(mus_px->at(imu), mus_py->at(imu),
+                               mus_pz->at(imu), mus_energy->at(imu));
+            FatJetConstituent_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int ivetomus=0; ivetomus<RA4MuonVeto.size(); ivetomus++) 
+        {
+            int imu = RA4MuonVeto.at(ivetomus); 
+            TLorentzVector tmp(mus_px->at(imu), mus_py->at(imu),
+                               mus_pz->at(imu), mus_energy->at(imu));
+            FatJetConstituent_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int igoodels=0; igoodels<RA4Elec.size(); igoodels++) 
+        {
+            int iel = RA4Elec.at(igoodels); 
+            TLorentzVector tmp(els_px->at(iel), els_py->at(iel),
+                               els_pz->at(iel), els_energy->at(iel));
+            //cout << tmp.Px() << " " << tmp.Py() << " " << tmp.Pz() << " " << tmp.E() << " " << tmp.M() << endl; 
+            FatJetConstituent_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int ivetoels=0; ivetoels<RA4ElecVeto.size(); ivetoels++) 
+        {
+            int iel = RA4ElecVeto.at(ivetoels); 
+            TLorentzVector tmp(els_px->at(iel), els_py->at(iel),
+                               els_pz->at(iel), els_energy->at(iel));
+            FatJetConstituent_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        std::vector<FatJetPair> FatJet_R1p2_pT20_Eta5    = makeFatJet(FatJetConstituent_pT20, 1.2, 20, 5);
+        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5    = makeFatJet(FatJetConstituent_pT30, 1.2, 30, 5);
+        std::vector<FatJetPair> FatJetCHS_R1p2_pT20_Eta5 = makeFatJet(FatJetConstituentCHS_pT20, 1.2, 20, 5);
+        std::vector<FatJetPair> FatJetCHS_R1p2_pT30_Eta5 = makeFatJet(FatJetConstituentCHS_pT30, 1.2, 30, 5);
+        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5_PlusRA4Lep    = makeFatJet(FatJetConstituent_pT30_PlusRA4Lep, 1.2, 30, 5);
+
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT20_Eta5.size();ifj++)
+        {
+            if(FatJet_R1p2_pT20_Eta5.at(ifj).first.pt()<50) continue;
+            mj_pT20_.push_back(FatJet_R1p2_pT20_Eta5.at(ifj).first.m());
+            FatjetPt_pT20_.push_back(FatJet_R1p2_pT20_Eta5.at(ifj).first.pt());
+            FatjetEta_pT20_.push_back(FatJet_R1p2_pT20_Eta5.at(ifj).first.eta());
+            FatjetPhi_pT20_.push_back(FatJet_R1p2_pT20_Eta5.at(ifj).first.phi()<3.141592?FatJet_R1p2_pT20_Eta5.at(ifj).first.phi():FatJet_R1p2_pT20_Eta5.at(ifj).first.phi()-2*3.141592);
+            FatjetN_pT20_.push_back(FatJet_R1p2_pT20_Eta5.at(ifj).second);
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta5.size();ifj++)
+        {
+            if(FatJet_R1p2_pT30_Eta5.at(ifj).first.pt()<50) continue;
+            mj_pT30_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.m());
+            FatjetPt_pT30_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.pt());
+            FatjetEta_pT30_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.eta());
+            FatjetPhi_pT30_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.phi()<3.141592?FatJet_R1p2_pT30_Eta5.at(ifj).first.phi():FatJet_R1p2_pT30_Eta5.at(ifj).first.phi()-2*3.141592);
+            FatjetN_pT30_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).second);
+        }
+        for(unsigned int ifj=0; ifj<FatJetCHS_R1p2_pT20_Eta5.size();ifj++)
+        {
+            if(FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.pt()<50) continue;
+            mjCHS_pT20_.push_back(FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.m());
+            FatjetCHSPt_pT20_.push_back(FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.pt());
+            FatjetCHSEta_pT20_.push_back(FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.eta());
+            FatjetCHSPhi_pT20_.push_back(FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.phi()<3.141592?FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.phi():FatJetCHS_R1p2_pT20_Eta5.at(ifj).first.phi()-2*3.141592);
+            FatjetCHSN_pT20_.push_back(FatJetCHS_R1p2_pT20_Eta5.at(ifj).second);
+        }
+        for(unsigned int ifj=0; ifj<FatJetCHS_R1p2_pT30_Eta5.size();ifj++)
+        {
+            if(FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.pt()<50) continue;
+            mjCHS_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.m());
+            FatjetCHSPt_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.pt());
+            FatjetCHSEta_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.eta());
+            FatjetCHSPhi_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.phi()<3.141592?FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.phi():FatJetCHS_R1p2_pT30_Eta5.at(ifj).first.phi()-2*3.141592);
+            FatjetCHSN_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5.at(ifj).second);
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta5_PlusRA4Lep.size();ifj++)
+        {
+            if(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.pt()<50) continue;
+            mjLep_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.m());
+            FatjetLepPt_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.pt());
+            FatjetLepEta_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.eta());
+            FatjetLepPhi_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi()<3.141592?FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi():FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi()-2*3.141592);
+            FatjetLepN_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).second);
+        }
 
         //
         // Fill the baby variables 
@@ -509,8 +940,16 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         TrigMuon_           =   PassMuonTrig(); 
         TrigHTMuon_         =   PassHTMuonTrig(); 
         TrigSingleMuon_     =   PassSingleMuonTrig(); 
-        Nfatjet_pT30_       =   Nfatjet_pT30;
-        NfatjetCHS_pT30_    =   NfatjetCHS_pT30;
+        TrigDiMuon_         =   PassDiMuonTrig(); 
+        TrigElectron_       =   PassElecTrig(); 
+        TrigHTElectron_     =   PassHTElecTrig(); 
+        TrigSingleElectron_ =   PassSingleElecTrig(); 
+        TrigDiElectron_     =   PassDiElecTrig(); 
+        TrigMuEG_           =   PassMuEGTrig(); 
+        Nfatjet_pT20_       =   mj_pT20_.size();
+        Nfatjet_pT30_       =   mj_pT30_.size();
+        NfatjetCHS_pT20_    =   mjCHS_pT20_.size();
+        NfatjetCHS_pT30_    =   mjCHS_pT30_.size();
         Nskinnyjet_         =   GoodJets_AK5PFclean.size();
         NBtagCSVM_          =   MediumBJet.size();
         NskinnyjetCHS_      =   GoodJets_AK5PF.size();
@@ -518,13 +957,33 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         Npv_                =   Npv;
         if(!isData) Npu_    =   PU_TrueNumInteractions->at(1);
         EventWeight_        =   EventWeight;
-        MJ_pT30_            =   MJ_pT30;
-        MJCHS_pT30_         =   MJCHS_pT30;
+        MJ_pT20_            =   GetMJ(mj_pT20_);
+        MJ_pT30_            =   GetMJ(mj_pT30_);
+        MJCHS_pT20_         =   GetMJ(mjCHS_pT20_);
+        MJCHS_pT30_         =   GetMJ(mjCHS_pT30_);
         MET_                =   pfTypeImets_et->at(0);
         METPhi_             =   pfTypeImets_phi->at(0);
         HT_                 =   HT;
         HTCHS_              =   HTCHS;
-        
+       /* 
+        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT20.size(); igoodfatjet++) 
+        { 
+            mj_pT20_.push_back(Vector_mj_pT20.at(igoodfatjet));
+            FatjetPt_pT20_.push_back(Vector_GoodFatjet_pT20.at(igoodfatjet).Pt());
+            FatjetEta_pT20_.push_back(Vector_GoodFatjet_pT20.at(igoodfatjet).Eta());
+            FatjetPhi_pT20_.push_back(Vector_GoodFatjet_pT20.at(igoodfatjet).Phi());
+            FatjetN_pT20_.push_back(fastjets_AK5PFclean_R1p2_R0p5pT20_nconstituents->at(Vector_GoodFatjet_pT20_Index.at(igoodfatjet)));
+        }
+
+        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjetCHS_pT20.size(); igoodfatjet++) 
+        { 
+            mjCHS_pT20_.push_back(Vector_mjCHS_pT20.at(igoodfatjet));
+            FatjetCHSPt_pT20_.push_back(Vector_GoodFatjetCHS_pT20.at(igoodfatjet).Pt());
+            FatjetCHSEta_pT20_.push_back(Vector_GoodFatjetCHS_pT20.at(igoodfatjet).Eta());
+            FatjetCHSPhi_pT20_.push_back(Vector_GoodFatjetCHS_pT20.at(igoodfatjet).Phi());
+            FatjetCHSN_pT20_.push_back(fastjets_AK5PF_R1p2_R0p5pT20_nconstituents->at(Vector_GoodFatjetCHS_pT20_Index.at(igoodfatjet)));
+        }
+
         for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT30.size(); igoodfatjet++) 
         { 
             mj_pT30_.push_back(Vector_mj_pT30.at(igoodfatjet));
@@ -542,18 +1001,22 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
             FatjetCHSPhi_pT30_.push_back(Vector_GoodFatjetCHS_pT30.at(igoodfatjet).Phi());
             FatjetCHSN_pT30_.push_back(fastjets_AK5PF_R1p2_R0p5pT30_nconstituents->at(Vector_GoodFatjetCHS_pT30_Index.at(igoodfatjet)));
         }
-        
+       */ 
         for(unsigned int imus=0; imus<RA4Muon.size(); imus++) 
         {
             RA4MusPt_.push_back(mus_pt->at(RA4Muon.at(imus)));
             RA4MusEta_.push_back(mus_eta->at(RA4Muon.at(imus)));
             RA4MusPhi_.push_back(mus_phi->at(RA4Muon.at(imus)));
+            RA4MusE_.push_back(mus_energy->at(RA4Muon.at(imus)));
+            RA4MusQ_.push_back(mus_charge->at(RA4Muon.at(imus)));
         }
         for(unsigned int iels=0; iels<RA4Elec.size(); iels++) 
         {
             RA4ElsPt_.push_back(els_pt->at(RA4Elec.at(iels)));
             RA4ElsEta_.push_back(els_eta->at(RA4Elec.at(iels)));
             RA4ElsPhi_.push_back(els_phi->at(RA4Elec.at(iels)));
+            RA4ElsE_.push_back(els_energy->at(RA4Elec.at(iels)));
+            RA4ElsQ_.push_back(els_charge->at(RA4Elec.at(iels)));
         }
         for(unsigned int imus=0; imus<RA4MuonVeto.size(); imus++) 
         {
@@ -574,13 +1037,28 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
           JetPt_.push_back(jets_AK5PFclean_pt->at(ijet)); 
           JetEta_.push_back(jets_AK5PFclean_eta->at(ijet)); 
           JetPhi_.push_back(jets_AK5PFclean_phi->at(ijet)); 
+          JetE_.push_back(jets_AK5PFclean_energy->at(ijet)); 
           JetCSV_.push_back(jets_AK5PFclean_btag_secVertexCombined->at(ijet)); 
+          JetMCId_.push_back(jets_AK5PFclean_partonFlavour->at(ijet)); 
         }
+        
+        for(int igoodjet=0; igoodjet<(int)GoodJets_AK5PF.size(); igoodjet++) 
+        {
+          int ijet = GoodJets_AK5PF.at(igoodjet); 
+          JetCHSPt_.push_back(jets_AK5PF_pt->at(ijet)); 
+          JetCHSEta_.push_back(jets_AK5PF_eta->at(ijet)); 
+          JetCHSPhi_.push_back(jets_AK5PF_phi->at(ijet)); 
+          JetCHSE_.push_back(jets_AK5PF_energy->at(ijet)); 
+          JetCHSCSV_.push_back(jets_AK5PF_btag_secVertexCombined->at(ijet)); 
+          JetCHSMCId_.push_back(jets_AK5PF_partonFlavour->at(ijet)); 
+        }
+
         // gen top pT for TTbar samples  
         for(int igen=0; igen<mc_doc_id->size(); igen++) 
         { 
             GenPt_.push_back(   mc_doc_pt->at(igen));  
             GenPhi_.push_back(  mc_doc_phi->at(igen));  
+            GenE_.push_back(  mc_doc_energy->at(igen));  
             GenEta_.push_back(  mc_doc_eta->at(igen));  
             GenId_.push_back(   mc_doc_id->at(igen));  
             GenMId_.push_back(  mc_doc_mother_id->at(igen));  
