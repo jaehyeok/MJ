@@ -40,5 +40,7 @@ Now, you are ready to run the code. Do
 root -q -b DoAnalysis.C
 ```
 
+Then, you will have histogram files in `HistFiles`, plots in pdf format in `Figures` and tables of yields in Latex format in `Tables`.  
+
 #### Possible improvements 
 
