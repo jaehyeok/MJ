@@ -95,7 +95,7 @@ void PrintTableOneLine(TString Process, TH1F* h1[7], int lepflav=0, bool doLatex
         }
 }
 
-void MakeTables(int lepflav=0, bool doLatex=false)
+void MakeTables(int lepflav=0, char* Region="Baseline", bool doLatex=false)
 { 
     if(lepflav==0)  cout << "[MJ Table] Yields for Electron+Muon" << endl;
     if(lepflav==11) cout << "[MJ Table] Yields for Electron" << endl;
@@ -103,7 +103,7 @@ void MakeTables(int lepflav=0, bool doLatex=false)
 
     TString HistName="yields";
 
-    TFile* HistFile = TFile::Open("HistFiles/Hist.root");
+    TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Region));
         
     TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_TT[7], *h1_WJets[7], *h1_DY[7], *h1_MC[7];
     TH1F *h1_f1500_100[7], *h1_f1200_800[7];
@@ -180,8 +180,8 @@ void MakeTables(int lepflav=0, bool doLatex=false)
     {
         cout << "\\hline \\hline" << endl;
         cout << "\\end{tabular}" << endl;
-        //cout << "\\label{tab:exp_sig_0j}" << endl;
-        cout << "\\caption{Yields}" << endl;
+        cout << "\\label{tab:"<< Region <<"}" << endl;
+        cout << "\\caption{" << Region << "}" << endl;
         cout << "\\end{table}" << endl;
     }
     else 

@@ -1,6 +1,3 @@
-#include "babytree.h"
-
-using namespace std;
 
 //
 // main 
@@ -26,9 +23,9 @@ void DoAnalysis(bool OnlyDraw=false)
     TChain *ch_t            = new TChain("tree", "T");
     TChain *ch_f1500_100    = new TChain("tree", "T1tttt_f1500_100");
     TChain *ch_f1200_800    = new TChain("tree", "T1tttt_f1200_800");
-   
-    //TString BabyDir = "HT500MET100/";  
-    TString BabyDir = "HT750MET250/";  
+  
+    TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/HT750MET250/";
+    
     // Data
     //ch_data->Add(BabyDir+"baby_MuHad_*.root");                            
     
@@ -60,71 +57,84 @@ void DoAnalysis(bool OnlyDraw=false)
     cout << "Single top         : " << ch_t->GetEntries()           << endl;
     cout << "T1tttt(1500,100)   : " << ch_f1500_100->GetEntries()    << endl;
     cout << "T1tttt(1200,8000)  : " << ch_f1200_800->GetEntries()  << endl;
-    
-    if(!OnlyDraw) 
+   
+
+    //
+    // Loop over SR and CR : make sure that these regions exist in "PassSelection.h"
+    //
+    char* Region[] = {"SR0", "SR1"}; 
+
+    for(int iregion=0; iregion<2; iregion++)
     {
-        // ----------------------------------------
-        //  Fill histrograms 
-        // ----------------------------------------
-        MakeHists(ch_data	    ); 
-        MakeHists(ch_ttbar_sl	); 
-        MakeHists(ch_ttbar_ll	); 
-        MakeHists(ch_wjets	    ); 
-        MakeHists(ch_dy	        ); 
-        MakeHists(ch_t	        ); 
-        MakeHists(ch_f1500_100	);  
-        MakeHists(ch_f1200_800	); 
+        if(!OnlyDraw) 
+        {
+            // ----------------------------------------
+            //  Fill histrograms 
+            // ----------------------------------------
+            MakeHists(ch_data,	    Region[iregion]); 
+            MakeHists(ch_ttbar_sl,  Region[iregion]); 
+            MakeHists(ch_ttbar_ll,  Region[iregion]); 
+            MakeHists(ch_wjets,     Region[iregion]); 
+            MakeHists(ch_dy,	    Region[iregion]); 
+            MakeHists(ch_t,         Region[iregion]); 
+            MakeHists(ch_f1500_100, Region[iregion]);  
+            MakeHists(ch_f1200_800, Region[iregion]); 
+
+            // ----------------------------------------
+            //  Make the final histogram file
+            // ----------------------------------------
+            cout << "[MJ Analysis] Merging result files" << endl;
+            gSystem->Exec(Form("rm HistFiles/Hist_%s.root", Region[iregion]));
+            gSystem->Exec(Form("hadd -f HistFiles/Hist_%s.root HistFiles/*_%s.root", Region[iregion], Region[iregion]));
+        }
 
         // ----------------------------------------
-        //  Make the final histogram file
-        // ----------------------------------------
-        cout << "[MJ Analysis] Merging result files" << endl;
-        gSystem->Exec("rm HistFiles/Hist.root");
-        gSystem->Exec("hadd -f HistFiles/Hist.root HistFiles/*.root");
-    }
+        //  Draw histograms 
+        // ---------------------------------------- 
 
-    // ----------------------------------------
-    //  Draw histograms 
-    // ---------------------------------------- 
-    
-    Make1DPlots("muspT"    	    );
-    Make1DPlots("musPhi"        );
-    Make1DPlots("musEta"   	    );
-    Make1DPlots("elspT"    	    );
-    Make1DPlots("elsPhi"        );
-    Make1DPlots("elsEta"   	    );
-    Make1DPlots("mT"       	    );
-    Make1DPlots("mj"       	    );
-    Make1DPlots("MJ"       	    );
-    Make1DPlots("HT"       	    );
-    Make1DPlots("Nfatjet"       );
-    Make1DPlots("Nskinnyjet"    );
-    Make1DPlots("Ncsvm" 	    );
-    Make1DPlots("MET"           );
-    Make1DPlots("METPhi"        );
-    Make1DPlots("WpT"           );
-    Make1DPlots("FatjetPt1"     );
-    Make1DPlots("FatjetPt2"     );
-    Make1DPlots("FatjetPt3"     );
-    Make1DPlots("FatjetPt4"     );
-    Make1DPlots("FatjetPhi1"    );
-    Make1DPlots("FatjetPhi2"    );
-    Make1DPlots("FatjetPhi3"    );
-    Make1DPlots("FatjetPhi4"    );
-    Make1DPlots("FatjetEta1"    );
-    Make1DPlots("FatjetEta2"    );
-    Make1DPlots("FatjetEta3"    );
-    Make1DPlots("FatjetEta4"    );
-    Make1DPlots("mj1"   	  	);
-    Make1DPlots("mj2"   	    );
-    Make1DPlots("mj3"   	    );
-    Make1DPlots("mj4"   	    );
-    Make1DPlots("mj3overmj2"    );
-    Make1DPlots("mj2overmj1"    );
+        Make1DPlots("muspT",        Region[iregion]);
+        Make1DPlots("musPhi",       Region[iregion]);
+        Make1DPlots("musEta",       Region[iregion]);
+        Make1DPlots("elspT",        Region[iregion]);
+        Make1DPlots("elsPhi",       Region[iregion]);
+        Make1DPlots("elsEta",       Region[iregion]);
+        Make1DPlots("mT",           Region[iregion]);
+        Make1DPlots("mj",           Region[iregion]);
+        Make1DPlots("MJ",           Region[iregion]);
+        Make1DPlots("HT",           Region[iregion]);
+        Make1DPlots("Nfatjet",      Region[iregion]);
+        Make1DPlots("Nskinnyjet",   Region[iregion]);
+        Make1DPlots("Ncsvm",        Region[iregion]);
+        Make1DPlots("MET",          Region[iregion]);
+        Make1DPlots("METPhi",       Region[iregion]);
+        Make1DPlots("WpT",          Region[iregion]);
+        /*
+           Make1DPlots("FatjetPt1"     ,Region[iregion]);
+           Make1DPlots("FatjetPt2"     ,Region[iregion]);
+           Make1DPlots("FatjetPt3"     ,Region[iregion]);
+           Make1DPlots("FatjetPt4"     ,Region[iregion]);
+           Make1DPlots("FatjetPhi1"    ,Region[iregion]);
+           Make1DPlots("FatjetPhi2"    ,Region[iregion]);
+           Make1DPlots("FatjetPhi3"    ,Region[iregion]);
+           Make1DPlots("FatjetPhi4"    ,Region[iregion]);
+           Make1DPlots("FatjetEta1"    ,Region[iregion]);
+           Make1DPlots("FatjetEta2"    ,Region[iregion]);
+           Make1DPlots("FatjetEta3"    ,Region[iregion]);
+           Make1DPlots("FatjetEta4"    ,Region[iregion]);
+         */
+        Make1DPlots("mj1",          Region[iregion]);
+        Make1DPlots("mj2",          Region[iregion]);
+        Make1DPlots("mj3",          Region[iregion]);
+        Make1DPlots("mj4",          Region[iregion]);
+        Make1DPlots("mj3overmj2",   Region[iregion]);
+        Make1DPlots("mj2overmj1",   Region[iregion]);
 
-// Yield table
-    MakeTables(0, false);
-    MakeTables(11, false);
-    MakeTables(13, false);
+        // 
+        // Yield table
+        // 
+        MakeTables(0,   Region[iregion], false);
+        MakeTables(11,  Region[iregion], false);
+        MakeTables(13,  Region[iregion], false);
+    } //for(int iregion=0; iregion<2; iregion++)
 
 }

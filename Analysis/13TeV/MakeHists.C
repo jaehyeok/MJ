@@ -22,7 +22,8 @@ int     mjthres         = 0;
 //
 //TH1F initialization
 //
-TH1F* InitTH1F(char* Name, char* Title, int Nbins, double XMin, double XMax){
+TH1F* InitTH1F(char* Name, char* Title, int Nbins, double XMin, double XMax)
+{
     TH1F *h1 = new TH1F(Name, Title, Nbins, XMin, XMax);
     h1->Sumw2();
     return h1;
@@ -30,26 +31,34 @@ TH1F* InitTH1F(char* Name, char* Title, int Nbins, double XMin, double XMax){
 //
 //TH2F initialization
 //
-TH2F* InitTH2F(char* Name, char* Title, int NXbins, double XMin, double XMax, int NYbins, double YMin, double YMax){
+TH2F* InitTH2F(char* Name, char* Title, int NXbins, double XMin, double XMax, int NYbins, double YMin, double YMax)
+{
     TH2F *h2 = new TH2F(Name, Title, NXbins, XMin, XMax, NYbins, YMin, YMax);
     h2->Sumw2();
     return h2;
 }
+
 //
 // Fill TH1F
 //
-TH1F* FillTH1F(TH1F* &h1, double var, double weight){
+void FillTH1F(TH1F* &h1, double var, double weight)
+{
     if(var >= h1->GetXaxis()->GetBinUpEdge(h1->GetXaxis()->GetNbins())) 
         var=h1->GetXaxis()->GetBinUpEdge(h1->GetXaxis()->GetNbins())-0.00001;
     if(var < h1->GetXaxis()->GetBinLowEdge(1)) 
         var=h1->GetXaxis()->GetBinLowEdge(1)+0.00001;
     h1->Fill(var, weight);        
-    return h1;
 }
+void FillTH1FAll(TH1F* h1[7], int NFJ, double var, double weight)
+{
+    FillTH1F(h1[NFJ], var,  weight);
+    FillTH1F(h1[6], var,  weight);
+}
+
 //
 // Fill TH2F
 //
-TH2F* FillTH2F(TH2F* &h2, double varX, double varY, double weight){
+void FillTH2F(TH2F* &h2, double varX, double varY, double weight){
     if(varX >= h2->GetXaxis()->GetBinUpEdge(h2->GetXaxis()->GetNbins())) 
         varX=h2->GetXaxis()->GetBinUpEdge(h2->GetXaxis()->GetNbins())-0.00001;
     if(varY >= h2->GetYaxis()->GetBinUpEdge(h2->GetYaxis()->GetNbins())) 
@@ -59,7 +68,11 @@ TH2F* FillTH2F(TH2F* &h2, double varX, double varY, double weight){
     if(varY < h2->GetYaxis()->GetBinLowEdge(1)) 
         varY=h2->GetYaxis()->GetBinLowEdge(1)+0.00001;
     h2->Fill(varX, varY, weight);        
-    return h2;
+}
+void FillTH2FAll(TH2F* h2[7], int NFJ, double varX, double varY, double weight)
+{
+    FillTH2F(h2[NFJ], varX,  varY, weight);
+    FillTH2F(h2[6], varX,  varY, weight);
 }
 
 //
@@ -76,9 +89,10 @@ double nPUScaleFactor2012(TH1F* h1PU, float npu){
 float GetMuonEff(float pt, float eta)
 { 
    float eff = 1; 
-/* 
+ 
    // For SingleMu dataset
    if(pt<25) eff = 0;
+/* 
    
    if(pt>25 && pt<30)  
    { 
@@ -143,7 +157,6 @@ float getDR(float dphi, float deta)
 {
     return TMath::Sqrt(dphi*dphi+deta*deta);
 }
-
 float getDR(float eta1, float eta2, float phi1, float phi2)
 {
     return getDR(getDPhi(phi1, phi2), eta1-eta2);
@@ -152,7 +165,7 @@ float getDR(float eta1, float eta2, float phi1, float phi2)
 //
 // per process
 //
-void MakeHists(TChain *ch) 
+void MakeHists(TChain *ch, char* Region) 
 { 
 
     InitBaby(ch); 
@@ -160,7 +173,7 @@ void MakeHists(TChain *ch)
     cout << "[MJ Analysis] " << ChainName << endl;  
 
     //
-    //
+    // Define histograms
     //
     TH1F *h1_yields[7];
     TH1F *h1_MJ[7], *h1_mT[7], *h1_Nskinnyjet[7], *h1_Ncsvm[7], 
@@ -182,7 +195,7 @@ void MakeHists(TChain *ch)
     for(int i=0; i<7; i++) 
     {   
         //
-        // yields                    
+        // yields : for table                   
         //
         h1_yields[i] = InitTH1F( Form("h1_%s_yields_%ifatjet", ch->GetTitle(), i), 
                                  Form("h1_%s_yields_%ifatjet", ch->GetTitle(), i), 
@@ -415,10 +428,10 @@ void MakeHists(TChain *ch)
     
         // separate TT_sl and TT_ll
         int Ngenlep=0;
-        for(int i=0; i<GenId->size(); i++)
+        for(unsigned int igen=0; igen<GenId_->size(); igen++)
         { 
-            if( TMath::Abs(GenMId->at(i))!=24 ) continue;
-            if( TMath::Abs(GenId->at(i))!=11 && TMath::Abs(GenId->at(i))!=13 && TMath::Abs(GenId->at(i))!=15 ) continue;
+            if( TMath::Abs(GenMId_->at(igen))!=24 ) continue;
+            if( TMath::Abs(GenId_->at(igen))!=11 && TMath::Abs(GenId_->at(igen))!=13 && TMath::Abs(GenId_->at(igen))!=15 ) continue;
             Ngenlep++;
         }
         if(ChainName.Contains("TT_sl") && Ngenlep!=1) continue;  
@@ -428,71 +441,61 @@ void MakeHists(TChain *ch)
         // weights 
         // 
         // Temp fixes for wrong event weights 
-
         // TTJets cross section  
         if(ChainName.Contains("TT"))  
         { 
-            EventWeight = EventWeight*806.1/832.; // I used 832 pb while M used 806.1 pb.
+            EventWeight_ = EventWeight_*806.1/832.; // I used 832 pb while M used 806.1 pb.
         }
         // Pileup 
 
         // 
         // single-lepton events selection
         // 
-        if(!PassNLep(1))  continue;
+        if(!PassNLep(1))  continue; // need this upfront because of mT calculation
 
-        // Nfatjet counting with threshold 
+        // Nfatjet, MJ, mj sorting 
         int Nfatjet_thres = 0;
-        for(int ifatjet=0; ifatjet<(int)FatjetPt->size(); ifatjet++)
+        double MJ_thres=0; 
+        vector<double> mj_thres_sorted; 
+        for(int ifj=0; ifj<(int)FatjetPt_->size(); ifj++)
         {   
-            float FatjetPt_cor = FatjetPt->at(ifatjet); 
-            if(FatjetPt_cor>FatjetpTthres) Nfatjet_thres++;
+            if(FatjetPt_->at(ifj)<FatjetpTthres) continue; 
+            if(mj_->at(ifj)<mjthres) continue; 
+            Nfatjet_thres++;
+            MJ_thres = MJ_thres + mj_->at(ifj);   
+            mj_thres_sorted.push_back(mj_->at(ifj));
         }
+        sort(mj_thres_sorted.begin(), mj_thres_sorted.end());
+        reverse(mj_thres_sorted.begin(), mj_thres_sorted.end());
 
         //
-        // Fill histograms 
+        // Calculate variables 
         //
-        float mT;
-        float WpT;
-        if(RA4MusPt->size()==1) {
-            mT  = TMath::Sqrt( 2*MET*RA4MusPt->at(0)*(1-TMath::Cos(METPhi-RA4MusPhi->at(0))) ); 
+        double mT;
+        double WpT;
+        if(RA4MusPt_->size()==1) {
+            mT  = TMath::Sqrt( 2*MET_*RA4MusPt_->at(0)*(1-TMath::Cos(METPhi_-RA4MusPhi_->at(0))) ); 
             WpT = TMath::Sqrt(  
-                        (RA4MusPt->at(0)*TMath::Cos(RA4MusPhi->at(0)) + MET*TMath::Cos(METPhi))
-                       *(RA4MusPt->at(0)*TMath::Cos(RA4MusPhi->at(0)) + MET*TMath::Cos(METPhi))
-                       +(RA4MusPt->at(0)*TMath::Sin(RA4MusPhi->at(0)) + MET*TMath::Sin(METPhi))
-                       *(RA4MusPt->at(0)*TMath::Sin(RA4MusPhi->at(0)) + MET*TMath::Sin(METPhi))  ); 
+                        (RA4MusPt_->at(0)*TMath::Cos(RA4MusPhi_->at(0)) + MET_*TMath::Cos(METPhi_))
+                       *(RA4MusPt_->at(0)*TMath::Cos(RA4MusPhi_->at(0)) + MET_*TMath::Cos(METPhi_))
+                       +(RA4MusPt_->at(0)*TMath::Sin(RA4MusPhi_->at(0)) + MET_*TMath::Sin(METPhi_))
+                       *(RA4MusPt_->at(0)*TMath::Sin(RA4MusPhi_->at(0)) + MET_*TMath::Sin(METPhi_))  ); 
         }
-        if(RA4ElsPt->size()==1) {
-            mT  = TMath::Sqrt( 2*MET*RA4ElsPt->at(0)*(1-TMath::Cos(METPhi-RA4ElsPhi->at(0))) ); 
+        if(RA4ElsPt_->size()==1) {
+            mT  = TMath::Sqrt( 2*MET_*RA4ElsPt_->at(0)*(1-TMath::Cos(METPhi_-RA4ElsPhi_->at(0))) ); 
             WpT = TMath::Sqrt(  
-                        (RA4ElsPt->at(0)*TMath::Cos(RA4ElsPhi->at(0)) + MET*TMath::Cos(METPhi))
-                       *(RA4ElsPt->at(0)*TMath::Cos(RA4ElsPhi->at(0)) + MET*TMath::Cos(METPhi))
-                       +(RA4ElsPt->at(0)*TMath::Sin(RA4ElsPhi->at(0)) + MET*TMath::Sin(METPhi))
-                       *(RA4ElsPt->at(0)*TMath::Sin(RA4ElsPhi->at(0)) + MET*TMath::Sin(METPhi))  ); 
+                        (RA4ElsPt_->at(0)*TMath::Cos(RA4ElsPhi_->at(0)) + MET_*TMath::Cos(METPhi_))
+                       *(RA4ElsPt_->at(0)*TMath::Cos(RA4ElsPhi_->at(0)) + MET_*TMath::Cos(METPhi_))
+                       +(RA4ElsPt_->at(0)*TMath::Sin(RA4ElsPhi_->at(0)) + MET_*TMath::Sin(METPhi_))
+                       *(RA4ElsPt_->at(0)*TMath::Sin(RA4ElsPhi_->at(0)) + MET_*TMath::Sin(METPhi_))  ); 
         }
 
-        // sort mj   
-        vector<float> mj_sorted; 
-        for(int i=0; i<(int)mj->size(); i++)  mj_sorted.push_back(mj->at(i));
-        sort(mj_sorted.begin(), mj_sorted.end());
-        reverse(mj_sorted.begin(), mj_sorted.end());
-
-        ///// MJ 
-        float MJ_tmp=0; 
-        for(int i=0; i<(int)mj->size(); i++) 
-        {
-            if(FatjetPt->at(i)<FatjetpTthres) continue;
-            MJ_tmp = MJ_tmp + mj->at(i);   
-        }
-        MJ = MJ_tmp;
-        
         //
-        // Selection   
+        // Apply selection   
         //
-        
         // baseline selection
         if( !PassBaselineSelection() ) continue; 
-        if( !PassSelection("SR0", HT, MET, NBtagCSVM, Nskinnyjet, mT, MJ)) continue;
+        if( Region!="Baseline" && !PassSelection(Region, HT_, MET_, NBtagCSVM_, Nskinnyjet_, mT, MJ_thres)) continue;
  
         int NFJbin = -1;
         if(Nfatjet_thres>4) NFJbin=5;
@@ -507,146 +510,141 @@ void MakeHists(TChain *ch)
             cout << "[MJ Analysis] ERROR : NFJ is cannot be negative" << endl;
             continue;
         }
-
-        //if(NFJbin<2) continue; 
-
-        // TT gen composition  
+        
+        //     
+        // ttbar gen composition  
+        //     
         int Ne=0;
         int Nm=0;
         int Nt=0;
-        int Nth=0;
-        int Ntl=0;
         int Ntn=0; int Nen=0; int Nmn=0;
-        for(int i=0; i<GenId->size(); i++)
+        for(unsigned int igen=0; igen<GenId_->size(); igen++)
         { 
-            if( TMath::Abs(GenMId->at(i))==24 && TMath::Abs(GenId->at(i))==11 ) Ne++;
-            if( TMath::Abs(GenMId->at(i))==24 && TMath::Abs(GenId->at(i))==13 ) Nm++;
-            if( TMath::Abs(GenMId->at(i))==24 && TMath::Abs(GenId->at(i))==15 ) Nt++;
-            if( (TMath::Abs(GenGMId->at(i))==24||TMath::Abs(GenGMId->at(i))==15) && TMath::Abs(GenMId->at(i))==15 && TMath::Abs(GenId->at(i))==12 ) Nen++;
-            if( (TMath::Abs(GenGMId->at(i))==24||TMath::Abs(GenGMId->at(i))==15) && TMath::Abs(GenMId->at(i))==15 && TMath::Abs(GenId->at(i))==14 ) Nmn++;
-            if( (TMath::Abs(GenGMId->at(i))==24||TMath::Abs(GenGMId->at(i))==15) && TMath::Abs(GenMId->at(i))==15 && TMath::Abs(GenId->at(i))==16 ) Ntn++;
+            if( TMath::Abs(GenMId_->at(igen))==24 && TMath::Abs(GenId_->at(igen))==11 ) Ne++;
+            if( TMath::Abs(GenMId_->at(igen))==24 && TMath::Abs(GenId_->at(igen))==13 ) Nm++;
+            if( TMath::Abs(GenMId_->at(igen))==24 && TMath::Abs(GenId_->at(igen))==15 ) Nt++;
+            if( (TMath::Abs(GenGMId_->at(igen))==24||TMath::Abs(GenGMId_->at(igen))==15) && TMath::Abs(GenMId_->at(igen))==15 && TMath::Abs(GenId_->at(igen))==12 ) Nen++;
+            if( (TMath::Abs(GenGMId_->at(igen))==24||TMath::Abs(GenGMId_->at(igen))==15) && TMath::Abs(GenMId_->at(igen))==15 && TMath::Abs(GenId_->at(igen))==14 ) Nmn++;
+            if( (TMath::Abs(GenGMId_->at(igen))==24||TMath::Abs(GenGMId_->at(igen))==15) && TMath::Abs(GenMId_->at(igen))==15 && TMath::Abs(GenId_->at(igen))==16 ) Ntn++;
         }
         //cout << Ne << " " << Nm << " " << Nt << " " << Nen << " " << Nmn << " " << Ntn << endl;
-        if( (Ne==2) || (Ne==1 && Nm==1) || (Nm==2) )                                    Nll  = Nll + EventWeight; 
-        if( (Ne==1 || Nm==1) && (Nt==1) )                                               Nlt  = Nlt + EventWeight; 
-        if( (Nt==2) )                                                                   Ntt  = Ntt + EventWeight; 
-        if( (Ne==1 || Nm==1) && (Nt==1) && (Ntn==1 && (Nen==1 || Nmn==1)) )             Nltl = Nltl + EventWeight; 
-        if( (Ne==1 || Nm==1) && (Nt==1) && (Ntn==1 && (Nen==0 && Nmn==0)) )             Nlth = Nlth + EventWeight; 
+        if( Ne==2 || (Ne==1 && Nm==1) || Nm==2 )                                    Nll  = Nll + EventWeight_; 
+        if( (Ne==1 || Nm==1) && Nt==1 )                                             Nlt  = Nlt + EventWeight_; 
+        if( Nt==2 )                                                                 Ntt  = Ntt + EventWeight_; 
+        if( (Ne==1 || Nm==1) && Nt==1 && (Ntn==1 && (Nen==1 || Nmn==1)) )           Nltl = Nltl + EventWeight_; 
+        if( (Ne==1 || Nm==1) && Nt==1 && (Ntn==1 && (Nen==0 && Nmn==0)) )           Nlth = Nlth + EventWeight_; 
 
         //
         // Fill histogams 
         //
-        
+
         // yields
-        if(RA4ElsPt->size()==1) {FillTH1F(h1_yields[NFJbin], 0.5, EventWeight);   FillTH1F(h1_yields[6], 0.5, EventWeight);}
-        if(RA4MusPt->size()==1) {FillTH1F(h1_yields[NFJbin], 1.5, EventWeight);   FillTH1F(h1_yields[6], 1.5, EventWeight);}
+        if(RA4ElsPt_->size()==1) FillTH1FAll(h1_yields, NFJbin, 0.5, EventWeight_);   
+        if(RA4MusPt_->size()==1) FillTH1FAll(h1_yields, NFJbin, 1.5, EventWeight_);  
         
         // plots
-        if(RA4MusPt->size()==1) {
-            FillTH1F(h1_muspT[NFJbin],  RA4MusPt->at(0),  EventWeight); FillTH1F(h1_muspT[6],RA4MusPt->at(0), EventWeight);
-            FillTH1F(h1_musEta[NFJbin], RA4MusEta->at(0), EventWeight); FillTH1F(h1_musEta[6], RA4MusEta->at(0), EventWeight);
-            FillTH1F(h1_musPhi[NFJbin], RA4MusPhi->at(0), EventWeight); FillTH1F(h1_musPhi[6], RA4MusPhi->at(0), EventWeight);
-            if(getDPhi(RA4MusPhi->at(0),METPhi)<0.4) 
+        if(RA4MusPt_->size()==1) {
+            FillTH1FAll(h1_muspT,   NFJbin,  RA4MusPt_->at(0),  EventWeight_); 
+            FillTH1FAll(h1_musEta,  NFJbin, RA4MusEta_->at(0), EventWeight_); 
+            FillTH1FAll(h1_musPhi,  NFJbin, RA4MusPhi_->at(0), EventWeight_); 
+            if(getDPhi(RA4MusPhi_->at(0),METPhi_)<0.4) 
             { 
-                FillTH1F(h1_muspTminusMET[NFJbin], (MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);   
-                FillTH1F(h1_muspTminusMET[6],(MET-RA4MusPt->at(0))/RA4MusPt->at(0), EventWeight);
+                FillTH1FAll(h1_muspTminusMET, NFJbin, (MET_-RA4MusPt_->at(0))/RA4MusPt_->at(0), EventWeight_);   
             }
         }
-        if(RA4ElsPt->size()==1) {
-            FillTH1F(h1_elspT[NFJbin], RA4ElsPt->at(0), EventWeight);   FillTH1F(h1_elspT[6],RA4ElsPt->at(0), EventWeight);
-            FillTH1F(h1_elsEta[NFJbin], RA4ElsEta->at(0), EventWeight); FillTH1F(h1_elsEta[6], RA4ElsEta->at(0), EventWeight);
-            FillTH1F(h1_elsPhi[NFJbin], RA4ElsPhi->at(0), EventWeight); FillTH1F(h1_elsPhi[6], RA4ElsPhi->at(0), EventWeight);
-            if(getDPhi(RA4ElsPhi->at(0),METPhi)<0.4) 
+        if(RA4ElsPt_->size()==1) {
+            FillTH1FAll(h1_elspT, NFJbin, RA4ElsPt_->at(0), EventWeight_);   
+            FillTH1FAll(h1_elsEta, NFJbin, RA4ElsEta_->at(0), EventWeight_); 
+            FillTH1FAll(h1_elsPhi, NFJbin, RA4ElsPhi_->at(0), EventWeight_); 
+            if(getDPhi(RA4ElsPhi_->at(0),METPhi_)<0.4) 
             { 
-                FillTH1F(h1_elspTminusMET[NFJbin], (MET-RA4ElsPt->at(0))/RA4ElsPt->at(0), EventWeight);   
-                FillTH1F(h1_elspTminusMET[6],(MET-RA4ElsPt->at(0))/RA4ElsPt->at(0), EventWeight);
+                FillTH1FAll(h1_elspTminusMET, NFJbin, (MET_-RA4ElsPt_->at(0))/RA4ElsPt_->at(0), EventWeight_);   
             }
         }
 
-        if(NFJbin>1){ FillTH2F(h2_mj1vsmj2[NFJbin], mj_sorted.at(0), mj_sorted.at(1), EventWeight);           
-                      FillTH2F(h2_mj1vsmj2[6], mj_sorted.at(0), mj_sorted.at(1), EventWeight); }           
-        if(NFJbin>2){ FillTH2F(h2_mj2vsmj3[NFJbin], mj_sorted.at(1), mj_sorted.at(2), EventWeight);           
-                      FillTH2F(h2_mj2vsmj3[6], mj_sorted.at(1), mj_sorted.at(2), EventWeight); }           
-        if(NFJbin>3){ FillTH2F(h2_mj3vsmj4[NFJbin], mj_sorted.at(2), mj_sorted.at(3), EventWeight);           
-                      FillTH2F(h2_mj3vsmj4[6], mj_sorted.at(2), mj_sorted.at(3), EventWeight); }           
-        FillTH2F(h2_HTMET[NFJbin], HT, MET, EventWeight);           FillTH2F(h2_HTMET[6], HT, MET, EventWeight);
-        FillTH2F(h2_MJmT[NFJbin], MJ, mT, EventWeight);             FillTH2F(h2_MJmT[6], MJ, mT, EventWeight);
-        FillTH2F(h2_HTmT[NFJbin], HT, mT, EventWeight);             FillTH2F(h2_HTmT[6], HT, mT, EventWeight);
-        FillTH2F(h2_MJMET[NFJbin], MJ, MET, EventWeight);           FillTH2F(h2_MJMET[6], MJ, MET, EventWeight);
-        FillTH2F(h2_HTMJ[NFJbin], HT, MJ,EventWeight);              FillTH2F(h2_HTMJ[6], HT, MJ, EventWeight);
-        FillTH2F(h2_METmT[NFJbin], MET, mT, EventWeight);           FillTH2F(h2_METmT[6], MET, mT, EventWeight);
-        FillTH1F(h1_mT[NFJbin], mT, EventWeight);                   FillTH1F(h1_mT[6], mT, EventWeight);
-        FillTH1F(h1_WpT[NFJbin], WpT, EventWeight);                 FillTH1F(h1_WpT[6], WpT, EventWeight);
-        FillTH1F(h1_MJ[NFJbin], MJ, EventWeight);                   FillTH1F(h1_MJ[6], MJ, EventWeight);
-        FillTH1F(h1_HT[NFJbin], HT, EventWeight);                   FillTH1F(h1_HT[6], HT, EventWeight);
-        FillTH1F(h1_MET[NFJbin], MET, EventWeight);                 FillTH1F(h1_MET[6], MET, EventWeight);
-        FillTH1F(h1_METPhi[NFJbin], METPhi, EventWeight);           FillTH1F(h1_METPhi[6], METPhi, EventWeight);
-        FillTH1F(h1_METx[NFJbin], MET*TMath::Cos(METPhi), EventWeight);           FillTH1F(h1_METx[6], MET*TMath::Cos(METPhi), EventWeight);
-        FillTH1F(h1_METy[NFJbin], MET*TMath::Sin(METPhi), EventWeight);           FillTH1F(h1_METy[6], MET*TMath::Sin(METPhi), EventWeight);
-        if(RA4MusPt->size()==1) {FillTH1F(h1_DPhi[NFJbin], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);   FillTH1F(h1_DPhi[6], getDPhi(RA4MusPhi->at(0),METPhi), EventWeight);}
-        if(RA4ElsPt->size()==1) {FillTH1F(h1_DPhi[NFJbin], getDPhi(RA4ElsPhi->at(0),METPhi), EventWeight);   FillTH1F(h1_DPhi[6], getDPhi(RA4ElsPhi->at(0),METPhi), EventWeight);}
+        if(NFJbin>1) FillTH2FAll(h2_mj1vsmj2, NFJbin, mj_thres_sorted.at(0), mj_thres_sorted.at(1), EventWeight_);           
+        if(NFJbin>2) FillTH2FAll(h2_mj2vsmj3, NFJbin, mj_thres_sorted.at(1), mj_thres_sorted.at(2), EventWeight_);           
+        if(NFJbin>3) FillTH2FAll(h2_mj3vsmj4, NFJbin, mj_thres_sorted.at(2), mj_thres_sorted.at(3), EventWeight_);           
+        FillTH2FAll(h2_HTMET, NFJbin, HT_, MET_, EventWeight_);         
+        FillTH2FAll(h2_MJmT, NFJbin, MJ_thres, mT, EventWeight_);       
+        FillTH2FAll(h2_HTmT, NFJbin, HT_, mT, EventWeight_);            
+        FillTH2FAll(h2_MJMET, NFJbin, MJ_thres, MET_, EventWeight_);    
+        FillTH2FAll(h2_HTMJ, NFJbin, HT_, MJ_thres,EventWeight_);       
+        FillTH2FAll(h2_METmT, NFJbin, MET_, mT, EventWeight_);           
+        FillTH1FAll(h1_mT,  NFJbin, mT, EventWeight_);                 
+        FillTH1FAll(h1_WpT, NFJbin, WpT, EventWeight_);               
+        FillTH1FAll(h1_HT, NFJbin, HT_, EventWeight_);                
+        FillTH1FAll(h1_MJ, NFJbin, MJ_thres, EventWeight_); 
+        FillTH1FAll(h1_MET, NFJbin, MET_, EventWeight_);              
+        FillTH1FAll(h1_METPhi, NFJbin, METPhi_, EventWeight_);        
+        FillTH1FAll(h1_METx, NFJbin, MET_*TMath::Cos(METPhi_), EventWeight_);           
+        FillTH1FAll(h1_METy, NFJbin, MET_*TMath::Sin(METPhi_), EventWeight_);           
+        if(RA4MusPt_->size()==1) FillTH1FAll(h1_DPhi, NFJbin, getDPhi(RA4MusPhi_->at(0),METPhi_), EventWeight_);   
+        if(RA4ElsPt_->size()==1) FillTH1FAll(h1_DPhi, NFJbin, getDPhi(RA4ElsPhi_->at(0),METPhi_), EventWeight_);   
         
         if(Nfatjet_thres>0) 
         {
-            FillTH1F(h1_FatjetPt1[NFJbin], FatjetPt->at(0), EventWeight);   FillTH1F(h1_FatjetPt1[6], FatjetPt->at(0), EventWeight); 
-            FillTH1F(h1_mj1[NFJbin], mj_sorted.at(0), EventWeight);   FillTH1F(h1_mj1[6], mj_sorted.at(0), EventWeight); 
-            FillTH1F(h1_FatjetPhi1[NFJbin], FatjetPhi->at(0), EventWeight); FillTH1F(h1_FatjetPhi1[6], FatjetPhi->at(0), EventWeight); 
-            FillTH1F(h1_FatjetEta1[NFJbin], FatjetEta->at(0), EventWeight); FillTH1F(h1_FatjetEta1[6], FatjetEta->at(0), EventWeight); 
+            FillTH1FAll(h1_FatjetPt1,   NFJbin, FatjetPt_->at(0),       EventWeight_);   
+            FillTH1FAll(h1_mj1,         NFJbin, mj_thres_sorted.at(0),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi1,  NFJbin, FatjetPhi_->at(0),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta1,  NFJbin, FatjetEta_->at(0),      EventWeight_); 
         }
         if(Nfatjet_thres>1) 
         {
-            FillTH1F(h1_FatjetPt2[NFJbin], FatjetPt->at(1), EventWeight);   FillTH1F(h1_FatjetPt2[6], FatjetPt->at(1), EventWeight); 
-            FillTH1F(h1_mj2[NFJbin], mj_sorted.at(1), EventWeight);   FillTH1F(h1_mj2[6], mj_sorted.at(1), EventWeight); 
-            FillTH1F(h1_mj2overmj1[NFJbin], mj_sorted.at(1)/mj_sorted.at(0), EventWeight);   FillTH1F(h1_mj2overmj1[6], mj_sorted.at(1)/mj_sorted.at(0), EventWeight); 
-            FillTH1F(h1_FatjetPhi2[NFJbin], FatjetPhi->at(1), EventWeight); FillTH1F(h1_FatjetPhi2[6], FatjetPhi->at(1), EventWeight); 
-            FillTH1F(h1_FatjetEta2[NFJbin], FatjetEta->at(1), EventWeight); FillTH1F(h1_FatjetEta2[6], FatjetEta->at(1), EventWeight); 
+            FillTH1FAll(h1_FatjetPt2,   NFJbin, FatjetPt_->at(1),       EventWeight_);   
+            FillTH1FAll(h1_mj2,         NFJbin, mj_thres_sorted.at(1),  EventWeight_);    
+            FillTH1FAll(h1_mj2overmj1,  NFJbin, mj_thres_sorted.at(1)/mj_thres_sorted.at(0), EventWeight_);   
+            FillTH1FAll(h1_FatjetPhi2,  NFJbin, FatjetPhi_->at(1),      EventWeight_);  
+            FillTH1FAll(h1_FatjetEta2,  NFJbin, FatjetEta_->at(1),      EventWeight_);  
         }
         if(Nfatjet_thres>2) 
         {
-            FillTH1F(h1_FatjetPt3[NFJbin], FatjetPt->at(2), EventWeight);   FillTH1F(h1_FatjetPt3[6], FatjetPt->at(2), EventWeight); 
-            FillTH1F(h1_mj3[NFJbin], mj_sorted.at(2), EventWeight);   FillTH1F(h1_mj3[6], mj_sorted.at(2), EventWeight); 
-            FillTH1F(h1_mj3overmj2[NFJbin], mj_sorted.at(2)/mj_sorted.at(1), EventWeight);   FillTH1F(h1_mj3overmj2[6], mj_sorted.at(2)/mj_sorted.at(1), EventWeight); 
-            FillTH1F(h1_FatjetPhi3[NFJbin], FatjetPhi->at(2), EventWeight); FillTH1F(h1_FatjetPhi3[6], FatjetPhi->at(2), EventWeight); 
-            FillTH1F(h1_FatjetEta3[NFJbin], FatjetEta->at(2), EventWeight); FillTH1F(h1_FatjetEta3[6], FatjetEta->at(2), EventWeight); 
+            FillTH1FAll(h1_FatjetPt3,   NFJbin, FatjetPt_->at(2),       EventWeight_);   
+            FillTH1FAll(h1_mj3,         NFJbin, mj_thres_sorted.at(2),  EventWeight_);    
+            FillTH1FAll(h1_mj3overmj2,  NFJbin, mj_thres_sorted.at(2)/mj_thres_sorted.at(1), EventWeight_);   
+            FillTH1FAll(h1_FatjetPhi3,  NFJbin, FatjetPhi_->at(2),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta3,  NFJbin, FatjetEta_->at(2),      EventWeight_); 
         }
         if(Nfatjet_thres>3) 
         {
-            FillTH1F(h1_FatjetPt4[NFJbin], FatjetPt->at(3), EventWeight);   FillTH1F(h1_FatjetPt4[6], FatjetPt->at(3), EventWeight); 
-            FillTH1F(h1_mj4[NFJbin], mj_sorted.at(3), EventWeight);   FillTH1F(h1_mj4[6], mj_sorted.at(3), EventWeight); 
-            FillTH1F(h1_FatjetPhi4[NFJbin], FatjetPhi->at(3), EventWeight); FillTH1F(h1_FatjetPhi4[6], FatjetPhi->at(3), EventWeight); 
-            FillTH1F(h1_FatjetEta4[NFJbin], FatjetEta->at(3), EventWeight); FillTH1F(h1_FatjetEta4[6], FatjetEta->at(3), EventWeight); 
+            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(3),       EventWeight_);   
+            FillTH1FAll(h1_mj4,         NFJbin, mj_thres_sorted.at(3),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(3),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(3),      EventWeight_); 
         }
         if(Nfatjet_thres>4) 
         {
             // add 5th jet to h1_FatjetPt4
-            FillTH1F(h1_FatjetPt4[NFJbin], FatjetPt->at(4), EventWeight);   FillTH1F(h1_FatjetPt4[6], FatjetPt->at(4), EventWeight); 
-            FillTH1F(h1_mj4[NFJbin], mj_sorted.at(4), EventWeight);   FillTH1F(h1_mj4[6], mj_sorted.at(4), EventWeight); 
-            FillTH1F(h1_FatjetPhi4[NFJbin], FatjetPhi->at(4), EventWeight); FillTH1F(h1_FatjetPhi4[6], FatjetPhi->at(4), EventWeight); 
-            FillTH1F(h1_FatjetEta4[NFJbin], FatjetEta->at(4), EventWeight); FillTH1F(h1_FatjetEta4[6], FatjetEta->at(4), EventWeight); 
+            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(4),       EventWeight_);   
+            FillTH1FAll(h1_mj4,         NFJbin, mj_thres_sorted.at(4),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(4),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(4),      EventWeight_); 
         }
         if(Nfatjet_thres>5) 
         {
             // add 6th jet to h1_FatjetPt4
-            FillTH1F(h1_FatjetPt4[NFJbin], FatjetPt->at(5), EventWeight);   FillTH1F(h1_FatjetPt4[6], FatjetPt->at(5), EventWeight); 
-            FillTH1F(h1_mj4[NFJbin], mj_sorted.at(5), EventWeight);   FillTH1F(h1_mj4[6], mj_sorted.at(5), EventWeight); 
-            FillTH1F(h1_FatjetPhi4[NFJbin], FatjetPhi->at(5), EventWeight); FillTH1F(h1_FatjetPhi4[6], FatjetPhi->at(5), EventWeight); 
-            FillTH1F(h1_FatjetEta4[NFJbin], FatjetEta->at(5), EventWeight); FillTH1F(h1_FatjetEta4[6], FatjetEta->at(5), EventWeight); 
+            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(5),       EventWeight_);   
+            FillTH1FAll(h1_mj4,         NFJbin, mj_thres_sorted.at(5),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(5),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(5),      EventWeight_); 
         }
 
-        for(int i=0; i<(int)mj->size(); i++) 
+        for(int imj=0; imj<(int)mj_->size(); imj++) 
         { 
-            if(FatjetPt->at(i)<FatjetpTthres) continue;
-
-            FillTH1F(h1_mj[NFJbin], mj->at(i), EventWeight);                            FillTH1F(h1_mj[6], mj->at(i), EventWeight);
-            FillTH1F(h1_FatjetPt[NFJbin], FatjetPt->at(i), EventWeight);                FillTH1F(h1_FatjetPt[6], FatjetPt->at(i), EventWeight);
-            FillTH1F(h1_FatjetEta[NFJbin], FatjetEta->at(i), EventWeight);              FillTH1F(h1_FatjetEta[6], FatjetEta->at(i), EventWeight);
+            if(FatjetPt_->at(imj)<FatjetpTthres) continue; 
+            if(mj_->at(imj)<mjthres) continue; 
+            
+            FillTH1FAll(h1_mj,          NFJbin, mj_->at(imj),           EventWeight_);                            
+            FillTH1FAll(h1_FatjetPt,    NFJbin, FatjetPt_->at(imj),     EventWeight_);                
+            FillTH1FAll(h1_FatjetEta,   NFJbin, FatjetEta_->at(imj),    EventWeight_);              
         }
 
-        FillTH1F(h1_Nfatjet[NFJbin], Nfatjet_thres, EventWeight);   FillTH1F(h1_Nfatjet[6], Nfatjet_thres, EventWeight);
-        FillTH1F(h1_Nskinnyjet[NFJbin], Nskinnyjet, EventWeight);   FillTH1F(h1_Nskinnyjet[6], Nskinnyjet, EventWeight);
-        FillTH1F(h1_Ncsvm[NFJbin], NBtagCSVM, EventWeight);   FillTH1F(h1_Ncsvm[6], NBtagCSVM, EventWeight);
+        FillTH1FAll(h1_Nfatjet,     NFJbin, Nfatjet_thres,  EventWeight_);       
+        FillTH1FAll(h1_Nskinnyjet,  NFJbin, Nskinnyjet_,    EventWeight_);      
+        FillTH1FAll(h1_Ncsvm,       NFJbin, NBtagCSVM_,     EventWeight_);            
             
     } // for(int i = 0; i<nentries; i++)
+    
     if(ChainName.Contains("TT_ll")) 
     { 
         cout << "---------------------------------" << endl;
@@ -657,8 +655,9 @@ void MakeHists(TChain *ch)
         cout << "Nltl : " << Nltl << endl;
         cout << "---------------------------------" << endl;
     }
+
     TString HistFileName = ch->GetTitle();
-    HistFileName = Form("HistFiles/%s.root", HistFileName.Data());
+    HistFileName = Form("HistFiles/%s_%s.root", HistFileName.Data(), Region);
     cout << "[MJ Analysis] Writing " << HistFileName << endl;
     TFile *HistFile = new TFile(HistFileName, "RECREATE");
     gROOT->cd();
@@ -722,5 +721,4 @@ void MakeHists(TChain *ch)
         h2_mj3vsmj4[i]->SetDirectory(0);                    h2_mj3vsmj4[i]->Write();
     }
     HistFile->Close();
-
 }

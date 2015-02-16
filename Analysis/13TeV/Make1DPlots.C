@@ -52,11 +52,11 @@ void h2cosmetic(TH2F* &h2, char* title, TString Xvar="", TString Yvar="", TStrin
 //
 // Stacks
 //
-void Make1DPlots(TString HistName, int NMergeBins=1) 
+void Make1DPlots(TString HistName, char* Region, int NMergeBins=1) 
 { 
     gInterpreter->ExecuteMacro("~/macros/JaeStyle.C");
 
-    TFile* HistFile = TFile::Open("HistFiles/Hist.root");
+    TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Region));
    
     char *var; 
     if(HistName=="MET")                 	var=(char*)"MET [GeV]";
@@ -107,8 +107,10 @@ void Make1DPlots(TString HistName, int NMergeBins=1)
     TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_TT[7], *h1_WJets[7], *h1_DY[7], *h1_MC[7]; 
     TH1F *h1_f1500_100[7], *h1_f1200_800[7];
     THStack *st[7];
-    TCanvas *c = new TCanvas("c","c",1500,300);  
-    c->Divide(5,1);
+    //TCanvas *c = new TCanvas("c","c",1500,300);  
+    //c->Divide(5,1);
+    TCanvas *c = new TCanvas("c","c",1200,800);  
+    c->Divide(3,2);
     for(int i=2; i<7; i++) 
     {
         h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i)); 
@@ -249,7 +251,7 @@ void Make1DPlots(TString HistName, int NMergeBins=1)
 
     // 
     if(HistName=="mj") HistName="JetMass";
-    c->Print( Form("fig/CompareDataMC_%s.pdf", HistName.Data(), DoLog?"_log":"") ); 
+    c->Print( Form("Figures/CompareDataMC_%s_%s%s.pdf", HistName.Data(), Region, DoLog?"_log":"") ); 
     
     // 
     HistFile->Close();

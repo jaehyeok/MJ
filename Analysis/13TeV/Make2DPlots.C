@@ -84,9 +84,9 @@ void Make2DPlots(TString HistName, int NMergeBins=1, bool doRatio=false)
         c_TT_ll->cd(i-1);
         h2_TT_ll[i]->Draw("colz");
     
-        c_TT_sl->Print( Form("fig/2D_TT_sl_%s%s.pdf", 
+        c_TT_sl->Print( Form("Figures/2D_TT_sl_%s%s.pdf", 
                     HistName.Data(), DoLog?"_log":"") ); 
-        c_TT_ll->Print( Form("fig/2D_TT_ll_%s%s.pdf", 
+        c_TT_ll->Print( Form("Figures/2D_TT_ll_%s%s.pdf", 
                     HistName.Data(), DoLog?"_log":"") ); 
     }
   
@@ -104,7 +104,7 @@ void Make2DPlots(TString HistName, int NMergeBins=1, bool doRatio=false)
             h2_Ratio[i]->SetMinimum(0.5);
             h2_Ratio[i]->SetMaximum(1.5);
             h2_Ratio[i]->Draw("colz");
-            c_Ratio->Print( Form("fig/2D_Ratio_%s%s.pdf",
+            c_Ratio->Print( Form("Figures/2D_Ratio_%s%s.pdf",
                         HistName.Data(), DoLog?"_log":"") ); 
         } 
     }
