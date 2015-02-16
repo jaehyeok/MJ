@@ -91,7 +91,6 @@ void DoAnalysis(bool OnlyDraw=false)
         // ----------------------------------------
         //  Draw histograms 
         // ---------------------------------------- 
-
         Make1DPlots("muspT",        Region[iregion]);
         Make1DPlots("musPhi",       Region[iregion]);
         Make1DPlots("musEta",       Region[iregion]);
@@ -108,20 +107,18 @@ void DoAnalysis(bool OnlyDraw=false)
         Make1DPlots("MET",          Region[iregion]);
         Make1DPlots("METPhi",       Region[iregion]);
         Make1DPlots("WpT",          Region[iregion]);
-        /*
-           Make1DPlots("FatjetPt1"     ,Region[iregion]);
-           Make1DPlots("FatjetPt2"     ,Region[iregion]);
-           Make1DPlots("FatjetPt3"     ,Region[iregion]);
-           Make1DPlots("FatjetPt4"     ,Region[iregion]);
-           Make1DPlots("FatjetPhi1"    ,Region[iregion]);
-           Make1DPlots("FatjetPhi2"    ,Region[iregion]);
-           Make1DPlots("FatjetPhi3"    ,Region[iregion]);
-           Make1DPlots("FatjetPhi4"    ,Region[iregion]);
-           Make1DPlots("FatjetEta1"    ,Region[iregion]);
-           Make1DPlots("FatjetEta2"    ,Region[iregion]);
-           Make1DPlots("FatjetEta3"    ,Region[iregion]);
-           Make1DPlots("FatjetEta4"    ,Region[iregion]);
-         */
+        Make1DPlots("FatjetPt1"     ,Region[iregion]);
+        Make1DPlots("FatjetPt2"     ,Region[iregion]);
+        Make1DPlots("FatjetPt3"     ,Region[iregion]);
+        Make1DPlots("FatjetPt4"     ,Region[iregion]);
+        Make1DPlots("FatjetPhi1"    ,Region[iregion]);
+        Make1DPlots("FatjetPhi2"    ,Region[iregion]);
+        Make1DPlots("FatjetPhi3"    ,Region[iregion]);
+        Make1DPlots("FatjetPhi4"    ,Region[iregion]);
+        Make1DPlots("FatjetEta1"    ,Region[iregion]);
+        Make1DPlots("FatjetEta2"    ,Region[iregion]);
+        Make1DPlots("FatjetEta3"    ,Region[iregion]);
+        Make1DPlots("FatjetEta4"    ,Region[iregion]);
         Make1DPlots("mj1",          Region[iregion]);
         Make1DPlots("mj2",          Region[iregion]);
         Make1DPlots("mj3",          Region[iregion]);
@@ -129,12 +126,13 @@ void DoAnalysis(bool OnlyDraw=false)
         Make1DPlots("mj3overmj2",   Region[iregion]);
         Make1DPlots("mj2overmj1",   Region[iregion]);
 
-        // 
-        // Yield table
-        // 
+        // ----------------------------------------
+        //  Make table of yields 
+        // ---------------------------------------- 
         MakeTables(0,   Region[iregion], false);
         MakeTables(11,  Region[iregion], false);
         MakeTables(13,  Region[iregion], false);
+        
     } //for(int iregion=0; iregion<2; iregion++)
 
 }
