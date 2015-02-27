@@ -182,6 +182,9 @@ void MakeHists(TChain *ch, char* Region)
          *h1_mj[7], *h1_FatjetPt[7], *h1_FatjetEta[7], 
          *h1_FatjetPt1[7],  *h1_FatjetPt2[7],  *h1_FatjetPt3[7],  *h1_FatjetPt4[7],
          *h1_mj1[7],  *h1_mj2[7],  *h1_mj3[7],  *h1_mj4[7], 
+         *h1_mj1OverMJ[7],  *h1_mj2OverMJ[7],  *h1_mj3OverMJ[7],  *h1_mj4OverMJ[7], 
+         *h1_N1[7],  *h1_N2[7],  *h1_N3[7],  *h1_N4[7], 
+         *h1_mjOverPt1[7],  *h1_mjOverPt2[7],  *h1_mjOverPt3[7],  *h1_mjOverPt4[7], 
          *h1_mj3overmj2[7], *h1_mj2overmj1[7],
          *h1_FatjetPhi1[7], *h1_FatjetPhi2[7], *h1_FatjetPhi3[7], *h1_FatjetPhi4[7],
          *h1_FatjetEta1[7], *h1_FatjetEta2[7], *h1_FatjetEta3[7], *h1_FatjetEta4[7],
@@ -299,13 +302,49 @@ void MakeHists(TChain *ch, char* Region)
                                     20, 0, 500);
         h1_mj2[i] = InitTH1F( Form("h1_%s_mj2_%ifatjet", ch->GetTitle(), i), 
                                     Form("h1_%s_mj2_%ifatjet", ch->GetTitle(), i), 
-                                    20, 0, 500);
+                                    20, 0, 250);
         h1_mj3[i] = InitTH1F( Form("h1_%s_mj3_%ifatjet", ch->GetTitle(), i), 
                                     Form("h1_%s_mj3_%ifatjet", ch->GetTitle(), i), 
-                                    20, 0, 500);
+                                    20, 0, 150);
         h1_mj4[i] = InitTH1F( Form("h1_%s_mj4_%ifatjet", ch->GetTitle(), i), 
                                     Form("h1_%s_mj4_%ifatjet", ch->GetTitle(), i), 
-                                    20, 0, 500);
+                                    20, 0, 100);
+        h1_N1[i] = InitTH1F( Form("h1_%s_N1_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_N1_%ifatjet", ch->GetTitle(), i), 
+                                    5, 0.5, 5.5);
+        h1_N2[i] = InitTH1F( Form("h1_%s_N2_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_N2_%ifatjet", ch->GetTitle(), i), 
+                                    5, 0.5, 5.5);
+        h1_N3[i] = InitTH1F( Form("h1_%s_N3_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_N3_%ifatjet", ch->GetTitle(), i), 
+                                    5, 0.5, 5.5);
+        h1_N4[i] = InitTH1F( Form("h1_%s_N4_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_N4_%ifatjet", ch->GetTitle(), i), 
+                                    5, 0.5, 5.5);
+        h1_mjOverPt1[i] = InitTH1F( Form("h1_%s_mjOverPt1_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mjOverPt1_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mjOverPt2[i] = InitTH1F( Form("h1_%s_mjOverPt2_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mjOverPt2_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mjOverPt3[i] = InitTH1F( Form("h1_%s_mjOverPt3_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mjOverPt3_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mjOverPt4[i] = InitTH1F( Form("h1_%s_mjOverPt4_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mjOverPt4_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mj1OverMJ[i] = InitTH1F( Form("h1_%s_mj1OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mj1OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mj2OverMJ[i] = InitTH1F( Form("h1_%s_mj2OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mj2OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mj3OverMJ[i] = InitTH1F( Form("h1_%s_mj3OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mj3OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
+        h1_mj4OverMJ[i] = InitTH1F( Form("h1_%s_mj4OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    Form("h1_%s_mj4OverMJ_%ifatjet", ch->GetTitle(), i), 
+                                    20, 0, 1);
         h1_mj3overmj2[i] = InitTH1F( Form("h1_%s_mj3overmj2_%ifatjet", ch->GetTitle(), i), 
                                     Form("h1_%s_mj3overmj2_%ifatjet", ch->GetTitle(), i), 
                                     20, 0, 1);
@@ -442,10 +481,10 @@ void MakeHists(TChain *ch, char* Region)
         // 
         // Temp fixes for wrong event weights 
         // TTJets cross section  
-        if(ChainName.Contains("TT"))  
-        { 
-            EventWeight_ = EventWeight_*806.1/832.; // I used 832 pb while M used 806.1 pb.
-        }
+        //if(ChainName.Contains("TT"))  
+        //{ 
+            //EventWeight_ = EventWeight_*806.1/832.; // I used 832 pb while M used 806.1 pb.
+        //}
         // Pileup 
 
         // 
@@ -457,6 +496,7 @@ void MakeHists(TChain *ch, char* Region)
         int Nfatjet_thres = 0;
         double MJ_thres=0; 
         vector<double> mj_thres_sorted; 
+        vector<int> mj_thres_sorted_index; 
         for(int ifj=0; ifj<(int)FatjetPt_->size(); ifj++)
         {   
             if(FatjetPt_->at(ifj)<FatjetpTthres) continue; 
@@ -467,6 +507,38 @@ void MakeHists(TChain *ch, char* Region)
         }
         sort(mj_thres_sorted.begin(), mj_thres_sorted.end());
         reverse(mj_thres_sorted.begin(), mj_thres_sorted.end());
+
+        // Get indices of sorted mj 
+        // I know this is not the best way of doing this, but ... 
+        for(int imj_sorted=0; imj_sorted<(int)mj_thres_sorted.size(); imj_sorted++) 
+        { 
+            for(int imj=0; imj<(int)mj_->size(); imj++)
+            { 
+                if(FatjetPt_->at(imj)<FatjetpTthres) continue; 
+                if(mj_->at(imj)<mjthres) continue; 
+                if(mj_->at(imj) == mj_thres_sorted.at(imj_sorted) ) 
+                {   
+                    mj_thres_sorted_index.push_back(imj);
+                    continue;
+                }
+            }
+        }
+        if(mj_thres_sorted.size() != mj_thres_sorted_index.size() ) 
+        { 
+            cout << "[MJ Analysis] !! Caution : Something is wrong with sorted mj index !!" << endl;
+            continue;
+        }
+        // DEBUG  
+        //cout << "_____________________________" << endl;
+        for(int imj_sorted_index=0; imj_sorted_index<(int)mj_thres_sorted_index.size(); imj_sorted_index++) 
+        { 
+            //cout << imj_sorted_index << " : " 
+            //     << mj_thres_sorted.at(imj_sorted_index) << " " 
+            //     << mj_->at(mj_thres_sorted_index.at(imj_sorted_index)) << " "
+            //     << mj_->at(imj_sorted_index) << endl;
+            if( mj_thres_sorted.at(imj_sorted_index) != mj_->at(mj_thres_sorted_index.at(imj_sorted_index))) 
+                    cout << " Wrong index matching" << endl;
+        }
 
         //
         // Calculate variables 
@@ -495,7 +567,7 @@ void MakeHists(TChain *ch, char* Region)
         //
         // baseline selection
         if( !PassBaselineSelection() ) continue; 
-        if( Region!="Baseline" && !PassSelection(Region, HT_, MET_, NBtagCSVM_, Nskinnyjet_, mT, MJ_thres)) continue;
+        if( !PassSelection(Region, HT_, MET_, NBtagCSVM_, Nskinnyjet_, mT, MJ_thres)) continue;
  
         int NFJbin = -1;
         if(Nfatjet_thres>4) NFJbin=5;
@@ -584,49 +656,67 @@ void MakeHists(TChain *ch, char* Region)
         
         if(Nfatjet_thres>0) 
         {
-            FillTH1FAll(h1_FatjetPt1,   NFJbin, FatjetPt_->at(0),       EventWeight_);   
+            FillTH1FAll(h1_FatjetPt1,   NFJbin, FatjetPt_->at(mj_thres_sorted_index.at(0)),       EventWeight_);   
             FillTH1FAll(h1_mj1,         NFJbin, mj_thres_sorted.at(0),  EventWeight_);    
-            FillTH1FAll(h1_FatjetPhi1,  NFJbin, FatjetPhi_->at(0),      EventWeight_); 
-            FillTH1FAll(h1_FatjetEta1,  NFJbin, FatjetEta_->at(0),      EventWeight_); 
+            FillTH1FAll(h1_mj1OverMJ,   NFJbin, mj_thres_sorted.at(0)/MJ_thres,  EventWeight_);    
+            FillTH1FAll(h1_mjOverPt1,   NFJbin, mj_thres_sorted.at(0)/FatjetPt_->at(mj_thres_sorted_index.at(0)),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi1,  NFJbin, FatjetPhi_->at(mj_thres_sorted_index.at(0)),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta1,  NFJbin, FatjetEta_->at(mj_thres_sorted_index.at(0)),      EventWeight_); 
+//            FillTH1FAll(h1_N1,          NFJbin, FatjetN_->at(0),        EventWeight_); 
         }
         if(Nfatjet_thres>1) 
         {
-            FillTH1FAll(h1_FatjetPt2,   NFJbin, FatjetPt_->at(1),       EventWeight_);   
+            FillTH1FAll(h1_FatjetPt2,   NFJbin, FatjetPt_->at(mj_thres_sorted_index.at(1)),       EventWeight_);   
             FillTH1FAll(h1_mj2,         NFJbin, mj_thres_sorted.at(1),  EventWeight_);    
+            FillTH1FAll(h1_mj2OverMJ,   NFJbin, mj_thres_sorted.at(1)/MJ_thres,  EventWeight_);    
+            FillTH1FAll(h1_mjOverPt2,   NFJbin, mj_thres_sorted.at(1)/FatjetPt_->at(mj_thres_sorted_index.at(1)),  EventWeight_);    
             FillTH1FAll(h1_mj2overmj1,  NFJbin, mj_thres_sorted.at(1)/mj_thres_sorted.at(0), EventWeight_);   
-            FillTH1FAll(h1_FatjetPhi2,  NFJbin, FatjetPhi_->at(1),      EventWeight_);  
-            FillTH1FAll(h1_FatjetEta2,  NFJbin, FatjetEta_->at(1),      EventWeight_);  
+            FillTH1FAll(h1_FatjetPhi2,  NFJbin, FatjetPhi_->at(mj_thres_sorted_index.at(1)),      EventWeight_);  
+            FillTH1FAll(h1_FatjetEta2,  NFJbin, FatjetEta_->at(mj_thres_sorted_index.at(1)),      EventWeight_);  
+//            FillTH1FAll(h1_N2,          NFJbin, FatjetN_->at(1),      EventWeight_); 
         }
         if(Nfatjet_thres>2) 
         {
-            FillTH1FAll(h1_FatjetPt3,   NFJbin, FatjetPt_->at(2),       EventWeight_);   
+            FillTH1FAll(h1_FatjetPt3,   NFJbin, FatjetPt_->at(mj_thres_sorted_index.at(2)),       EventWeight_);   
             FillTH1FAll(h1_mj3,         NFJbin, mj_thres_sorted.at(2),  EventWeight_);    
+            FillTH1FAll(h1_mj3OverMJ,   NFJbin, mj_thres_sorted.at(2)/MJ_thres,  EventWeight_);    
+            FillTH1FAll(h1_mjOverPt3,   NFJbin, mj_thres_sorted.at(2)/FatjetPt_->at(mj_thres_sorted_index.at(2)),  EventWeight_);    
             FillTH1FAll(h1_mj3overmj2,  NFJbin, mj_thres_sorted.at(2)/mj_thres_sorted.at(1), EventWeight_);   
-            FillTH1FAll(h1_FatjetPhi3,  NFJbin, FatjetPhi_->at(2),      EventWeight_); 
-            FillTH1FAll(h1_FatjetEta3,  NFJbin, FatjetEta_->at(2),      EventWeight_); 
+            FillTH1FAll(h1_FatjetPhi3,  NFJbin, FatjetPhi_->at(mj_thres_sorted_index.at(2)),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta3,  NFJbin, FatjetEta_->at(mj_thres_sorted_index.at(2)),      EventWeight_); 
+//            FillTH1FAll(h1_N3,          NFJbin, FatjetN_->at(2),      EventWeight_); 
         }
         if(Nfatjet_thres>3) 
         {
-            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(3),       EventWeight_);   
+            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(mj_thres_sorted_index.at(3)),       EventWeight_);   
             FillTH1FAll(h1_mj4,         NFJbin, mj_thres_sorted.at(3),  EventWeight_);    
-            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(3),      EventWeight_); 
-            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(3),      EventWeight_); 
+            FillTH1FAll(h1_mj4OverMJ,   NFJbin, mj_thres_sorted.at(3)/MJ_thres,  EventWeight_);    
+            FillTH1FAll(h1_mjOverPt4,   NFJbin, mj_thres_sorted.at(3)/FatjetPt_->at(mj_thres_sorted_index.at(3)),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(mj_thres_sorted_index.at(3)),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(mj_thres_sorted_index.at(3)),      EventWeight_); 
+//            FillTH1FAll(h1_N4,          NFJbin, FatjetN_->at(3),      EventWeight_); 
         }
         if(Nfatjet_thres>4) 
         {
             // add 5th jet to h1_FatjetPt4
-            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(4),       EventWeight_);   
+            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(mj_thres_sorted_index.at(4)),       EventWeight_);   
             FillTH1FAll(h1_mj4,         NFJbin, mj_thres_sorted.at(4),  EventWeight_);    
-            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(4),      EventWeight_); 
-            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(4),      EventWeight_); 
+            FillTH1FAll(h1_mj4OverMJ,   NFJbin, mj_thres_sorted.at(4)/MJ_thres,  EventWeight_);    
+            FillTH1FAll(h1_mjOverPt4,   NFJbin, mj_thres_sorted.at(4)/FatjetPt_->at(mj_thres_sorted_index.at(4)),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(mj_thres_sorted_index.at(4)),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(mj_thres_sorted_index.at(4)),      EventWeight_); 
+//            FillTH1FAll(h1_N4,          NFJbin, FatjetN_->at(4),      EventWeight_); 
         }
         if(Nfatjet_thres>5) 
         {
             // add 6th jet to h1_FatjetPt4
-            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(5),       EventWeight_);   
+            FillTH1FAll(h1_FatjetPt4,   NFJbin, FatjetPt_->at(mj_thres_sorted_index.at(5)),       EventWeight_);   
             FillTH1FAll(h1_mj4,         NFJbin, mj_thres_sorted.at(5),  EventWeight_);    
-            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(5),      EventWeight_); 
-            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(5),      EventWeight_); 
+            FillTH1FAll(h1_mj4OverMJ,   NFJbin, mj_thres_sorted.at(5)/MJ_thres,  EventWeight_);    
+            FillTH1FAll(h1_mjOverPt4,   NFJbin, mj_thres_sorted.at(5)/FatjetPt_->at(mj_thres_sorted_index.at(5)),  EventWeight_);    
+            FillTH1FAll(h1_FatjetPhi4,  NFJbin, FatjetPhi_->at(mj_thres_sorted_index.at(5)),      EventWeight_); 
+            FillTH1FAll(h1_FatjetEta4,  NFJbin, FatjetEta_->at(mj_thres_sorted_index.at(5)),      EventWeight_); 
+//            FillTH1FAll(h1_N4,          NFJbin, FatjetN_->at(5),      EventWeight_); 
         }
 
         for(int imj=0; imj<(int)mj_->size(); imj++) 
@@ -644,8 +734,9 @@ void MakeHists(TChain *ch, char* Region)
         FillTH1FAll(h1_Ncsvm,       NFJbin, NBtagCSVM_,     EventWeight_);            
             
     } // for(int i = 0; i<nentries; i++)
-    
-    if(ChainName.Contains("TT_ll")) 
+   
+    // 
+    if(false && ChainName.Contains("TT_ll")) 
     { 
         cout << "---------------------------------" << endl;
         cout << "Nll  : " << Nll << endl;
@@ -681,16 +772,29 @@ void MakeHists(TChain *ch, char* Region)
         h1_mj2[i]->SetDirectory(0);                         h1_mj2[i]->Write();
         h1_mj3[i]->SetDirectory(0);                         h1_mj3[i]->Write();
         h1_mj4[i]->SetDirectory(0);                         h1_mj4[i]->Write();
-        h1_mj3overmj2[i]->SetDirectory(0);                   h1_mj3overmj2[i]->Write();
-        h1_mj2overmj1[i]->SetDirectory(0);                   h1_mj2overmj1[i]->Write();
-        h1_FatjetPhi1[i]->SetDirectory(0);                   h1_FatjetPhi1[i]->Write();
-        h1_FatjetPhi2[i]->SetDirectory(0);                   h1_FatjetPhi2[i]->Write();
-        h1_FatjetPhi3[i]->SetDirectory(0);                   h1_FatjetPhi3[i]->Write();
-        h1_FatjetPhi4[i]->SetDirectory(0);                   h1_FatjetPhi4[i]->Write();
-        h1_FatjetEta1[i]->SetDirectory(0);                   h1_FatjetEta1[i]->Write();
-        h1_FatjetEta2[i]->SetDirectory(0);                   h1_FatjetEta2[i]->Write();
-        h1_FatjetEta3[i]->SetDirectory(0);                   h1_FatjetEta3[i]->Write();
-        h1_FatjetEta4[i]->SetDirectory(0);                   h1_FatjetEta4[i]->Write();
+        h1_mj1OverMJ[i]->SetDirectory(0);                   h1_mj1OverMJ[i]->Write();
+        h1_mj2OverMJ[i]->SetDirectory(0);                   h1_mj2OverMJ[i]->Write();
+        h1_mj3OverMJ[i]->SetDirectory(0);                   h1_mj3OverMJ[i]->Write();
+        h1_mj4OverMJ[i]->SetDirectory(0);                   h1_mj4OverMJ[i]->Write();
+        h1_N1[i]->SetDirectory(0);                          h1_N1[i]->Write();
+        h1_N1[i]->SetDirectory(0);                          h1_N1[i]->Write();
+        h1_N2[i]->SetDirectory(0);                          h1_N2[i]->Write();
+        h1_N3[i]->SetDirectory(0);                          h1_N3[i]->Write();
+        h1_N4[i]->SetDirectory(0);                          h1_N4[i]->Write();
+        h1_mjOverPt1[i]->SetDirectory(0);                   h1_mjOverPt1[i]->Write();
+        h1_mjOverPt2[i]->SetDirectory(0);                   h1_mjOverPt2[i]->Write();
+        h1_mjOverPt3[i]->SetDirectory(0);                   h1_mjOverPt3[i]->Write();
+        h1_mjOverPt4[i]->SetDirectory(0);                   h1_mjOverPt4[i]->Write();
+        h1_mj3overmj2[i]->SetDirectory(0);                  h1_mj3overmj2[i]->Write();
+        h1_mj2overmj1[i]->SetDirectory(0);                  h1_mj2overmj1[i]->Write();
+        h1_FatjetPhi1[i]->SetDirectory(0);                  h1_FatjetPhi1[i]->Write();
+        h1_FatjetPhi2[i]->SetDirectory(0);                  h1_FatjetPhi2[i]->Write();
+        h1_FatjetPhi3[i]->SetDirectory(0);                  h1_FatjetPhi3[i]->Write();
+        h1_FatjetPhi4[i]->SetDirectory(0);                  h1_FatjetPhi4[i]->Write();
+        h1_FatjetEta1[i]->SetDirectory(0);                  h1_FatjetEta1[i]->Write();
+        h1_FatjetEta2[i]->SetDirectory(0);                  h1_FatjetEta2[i]->Write();
+        h1_FatjetEta3[i]->SetDirectory(0);                  h1_FatjetEta3[i]->Write();
+        h1_FatjetEta4[i]->SetDirectory(0);                  h1_FatjetEta4[i]->Write();
         h1_dRFJ[i]->SetDirectory(0);                        h1_dRFJ[i]->Write();
         h1_dPhiFJ[i]->SetDirectory(0);                      h1_dPhiFJ[i]->Write();
         h1_dEtaFJ[i]->SetDirectory(0);                      h1_dEtaFJ[i]->Write();

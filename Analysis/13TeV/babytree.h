@@ -17,6 +17,7 @@
     vector<float>   *FatjetPt_;
     vector<float>   *FatjetEta_;
     vector<float>   *FatjetPhi_;
+    vector<float>   *FatjetN_;
     vector<float>   *RA4MusPt_;
     vector<float>   *RA4MusPhi_;
     vector<float>   *RA4MusEta_;
@@ -54,6 +55,7 @@
     TBranch         *b_FatjetPt;   //!
     TBranch         *b_FatjetEta;   //!
     TBranch         *b_FatjetPhi;   //!
+    TBranch         *b_FatjetN;   //!
     TBranch         *b_RA4MusPt;   //!
     TBranch         *b_RA4MusPhi;   //!
     TBranch         *b_RA4MusEta;   //!
@@ -82,6 +84,7 @@ void InitBaby(TChain *ch)
     FatjetPt_  = 0;
     FatjetEta_ = 0;
     FatjetPhi_ = 0;
+    FatjetN_ = 0;
     RA4MusPt_  = 0;
     RA4MusPhi_ = 0;
     RA4MusEta_ = 0;
@@ -113,6 +116,7 @@ void InitBaby(TChain *ch)
     ch->SetBranchAddress("FatjetPt_pT30",   &FatjetPt_,      &b_FatjetPt);
     ch->SetBranchAddress("FatjetEta_pT30",  &FatjetEta_,     &b_FatjetEta);
     ch->SetBranchAddress("FatjetPhi_pT30",  &FatjetPhi_,     &b_FatjetPhi);
+    ch->SetBranchAddress("FatjetN_pT30",    &FatjetN_,       &b_FatjetN);
     ch->SetBranchAddress("RA4MusPt",        &RA4MusPt_,      &b_RA4MusPt);
     ch->SetBranchAddress("RA4MusPhi",       &RA4MusPhi_,     &b_RA4MusPhi);
     ch->SetBranchAddress("RA4MusEta",       &RA4MusEta_,     &b_RA4MusEta);

@@ -72,6 +72,18 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
     if(HistName=="mj2")            	        var=(char*)"mj2 [GeV]";                   
     if(HistName=="mj3")            	        var=(char*)"mj3 [GeV]";                   
     if(HistName=="mj4")            	        var=(char*)"mj4 [GeV]";                   
+    if(HistName=="mj1OverMJ")            	var=(char*)"mj1/MJ";                   
+    if(HistName=="mj2OverMJ")            	var=(char*)"mj2/MJ";                   
+    if(HistName=="mj3OverMJ")            	var=(char*)"mj3/MJ";                   
+    if(HistName=="mj4OverMJ")            	var=(char*)"mj4/MJ";                   
+    if(HistName=="N1")            	        var=(char*)"N(constituents)1";                   
+    if(HistName=="N2")            	        var=(char*)"N(constituents)2";                   
+    if(HistName=="N3")            	        var=(char*)"N(constituents)3";                   
+    if(HistName=="N4")            	        var=(char*)"N(constituents)4";                   
+    if(HistName=="mjOverPt1")            	var=(char*)"mj1/pT1";                   
+    if(HistName=="mjOverPt2")            	var=(char*)"mj2/pT2";                   
+    if(HistName=="mjOverPt3")            	var=(char*)"mj3/pT3";                   
+    if(HistName=="mjOverPt4")            	var=(char*)"mj4/pT4";                   
     if(HistName=="mj3overmj2")     	        var=(char*)"mj3/mj2 [GeV]";                   
     if(HistName=="mj2overmj1")     	        var=(char*)"mj2/mj1 [GeV]";                   
     if(HistName=="FatjetPhi1")            	var=(char*)"#phi(Fatjet1)";                   
