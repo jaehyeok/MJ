@@ -1,6 +1,7 @@
 #!/bin/bash
 
-INPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet
+INPUTDIR=/net/cms2/cms2r0/cfA                   # 13 TeV or 8 TeV official cfA 
+#INPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet     # 8 TeV in cms26/jaehyeok 
 DATASET=$1
 RECOGNIZER=$2
 ISDATA=$3
@@ -19,9 +20,11 @@ rm filenumber.txt filenumbersort.txt
 
 #####
 for NONSLIMFILEPATH in `ls $INPUTDIR/$DATASET/*root`; do
-    NONSLIMFILE="$( cut -d '/' -f 8 <<< "$NONSLIMFILEPATH" )" 
+    NONSLIMFILE="$( cut -d '/' -f 7 <<< "$NONSLIMFILEPATH" )"   # 13 TeV or 8 TeV official cfA 
+#    NONSLIMFILE="$( cut -d '/' -f 8 <<< "$NONSLIMFILEPATH" )"  # 8 TeV in cms26/jaehyeok 
     NONSLIMFILE=`echo $NONSLIMFILE | sed 's/_f/#/g' `
-    #NONSLIMFILE=`echo $NONSLIMFILE | sed 's/s_/s#/g' ` # for non-published cfA sample 
+    NONSLIMFILE=`echo $NONSLIMFILE | sed 's/configurableAnalysis_/configurableAnalysis#/g' ` # non-published samples
+    NONSLIMFILE=`echo $NONSLIMFILE | sed 's/.root/#root/g' `
     NONSLIMINDEX="$( cut -d '#' -f 2 <<< "$NONSLIMFILE" )" 
     NONSLIMINDEX=`echo $NONSLIMINDEX | cut -d "_" -f 1 `
     echo $NONSLIMINDEX >> filenumber.txt

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-INPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet
+INPUTDIR=/net/cms2/cms2r0/cfA              # 13 TeV or official 8 TeV
+#INPUTDIR=/net/cms26/cms26r0/jaehyeok/Fatjet # unofficial 8 TeV
 DATASET=$1
 RECOGNIZER=$2
 ISDATA=$3
@@ -19,12 +20,14 @@ rm filenumber_resubmit.txt filenumbersorted_resubmit.txt
 
 #####
 for NONSLIMFILEPATH in `ls $INPUTDIR/$DATASET/*root`; do
-     NONSLIMFILE="$( cut -d '/' -f 8 <<< "$NONSLIMFILEPATH" )" 
-     NONSLIMFILE=`echo $NONSLIMFILE | sed 's/_f/#/g' `
-#     NONSLIMFILE=`echo $NONSLIMFILE | sed 's/s_/s#/g' ` # for non-published cfA sample
-     NONSLIMINDEX="$( cut -d '#' -f 2 <<< "$NONSLIMFILE" )" 
-     NONSLIMINDEX=`echo $NONSLIMINDEX | cut -d "_" -f 1 `
-     echo $NONSLIMINDEX >> filenumber_resubmit.txt
+    NONSLIMFILE="$( cut -d '/' -f 7 <<< "$NONSLIMFILEPATH" )" # 13 TeV or official 8 TeV 
+#    NONSLIMFILE="$( cut -d '/' -f 8 <<< "$NONSLIMFILEPATH" )"  # unofficial 8 TeV 
+    NONSLIMFILE=`echo $NONSLIMFILE | sed 's/_f/#/g' `
+    NONSLIMFILE=`echo $NONSLIMFILE | sed 's/.root/#root/g' `
+    NONSLIMFILE=`echo $NONSLIMFILE | sed 's/configurableAnalysis_/configurableAnalysis#/g' ` # non-published samples
+    NONSLIMINDEX="$( cut -d '#' -f 2 <<< "$NONSLIMFILE" )" 
+    NONSLIMINDEX=`echo $NONSLIMINDEX | cut -d "_" -f 1 `
+    echo $NONSLIMINDEX >> filenumber_resubmit.txt
 done 
 
 #####
@@ -42,25 +45,28 @@ while [ $COUNTER -lt $(($LASTFILENUM)) ]; do
     then 
         BEGINFILE=$COUNTER
         ENDFILE=$(($LASTFILENUM))
-        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
+        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/13TeV/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
+#        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
         then
-            echo "JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI"
-            JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI
+            echo -e "\033[5;34m JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI \033[0m"
+#            JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI
         fi 
     else  
         BEGINFILE=$COUNTER
         ENDFILE=$(($COUNTER+$NFILEPERJOB-1))
-        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
+        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/13TeV/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
+#        if [ ! -e /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f${BEGINFILE}To${ENDFILE}.root ] 
         then
-            echo "JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI" 
-            JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI 
+            echo -e "\033[5;34m JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI \033[0m" 
+#            JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI 
         fi
     fi
     let NUMOUTPUTFILES=NUMOUTPUTFILES+1
     let COUNTER=COUNTER+$NFILEPERJOB
 done
 
-NUMEXISTOUTPUTFILES=`ls /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f*To*.root | wc -l`
+NUMEXISTOUTPUTFILES=`ls /net/cms26/cms26r0/jaehyeok/baby/Fatjet/13TeV/baby_${RECOGNIZER}_f*To*.root | wc -l`
+#NUMEXISTOUTPUTFILES=`ls /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f*To*.root | wc -l`
 echo "Number of target output files : $NUMOUTPUTFILES"
 echo "Number of existing output files : $NUMEXISTOUTPUTFILES"
 
@@ -70,7 +76,7 @@ echo "Number of existing output files : $NUMEXISTOUTPUTFILES"
 if [ $(($NUMEXISTOUTPUTFILES)) -eq $(($NUMOUTPUTFILES)) ]
 then 
     echo "Babyies for $DATASET are complete" 
-    echo "No need for resubmission."
+    echo -e "\033[5;34m No need for resubmission.\033[0m"
 #    echo "hadd /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}.root /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f*To*.root"
 fi
 
