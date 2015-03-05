@@ -1,0 +1,57 @@
+#
+## [dataset name in /cms2r0/cfA/] [Tagger] [isData] [lumi /pb] [Nfiles] 
+#
+# TTbar
+#
+#TTJets_MSDecaysCKM_central_Tune4C_13TeV-madgraph-tauola-Spring14miniaod-PU20bx25_POSTLS170_V5-v2_MINIAODSIM_UCSB2193_v75    TTJets_MSDecaysCKM_central_Tune4C_13TeV     false 5000 10 
+#TT_Tune4C_13TeV-pythia8-tauola                                                                                              TT_Tune4C_13TeV-pythia8-tauola              false 5000 5    #phys14
+#
+# Single top
+#
+#T_tW-channel-DR_Tune4C_13TeV-CSA14-powheg-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2142_v75           T_tW-channel-DR_Tune4C_13TeV                false 5000 10 
+#TToLeptons_s-channel-CSA14_Tune4C_13TeV-aMCatNLO-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2154_v75    TToLeptons_s-channel-CSA14_Tune4C_13TeV     false 5000 5
+#TToLeptons_t-channel-CSA14_Tune4C_13TeV-aMCatNLO-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v2_MINIAODSIM_UCSB2156_v75    TToLeptons_t-channel-CSA14_Tune4C_13TeV     false 5000 5
+#Tbar_tW-channel-DR_Tune4C_13TeV-CSA14-powheg-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2150_v75        Tbar_tW-channel-DR_Tune4C_13TeV             false 5000 5
+#TBarToLeptons_s-channel-CSA14_Tune4C_13TeV-aMCatNLO-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2146_v75 TBarToLeptons_s-channel-CSA14_Tune4C_13TeV  false 5000 5
+#TBarToLeptons_t-channel_Tune4C_CSA14_13TeV-aMCatNLO-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2148_v75 TBarToLeptons_t-channel_Tune4C_CSA14_13TeV  false 5000 5
+#
+# WJets 
+#
+#WJetsToLNu_HT-100to200_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v2_MINIAODSIM_UCSB2192_v75    WJetsToLNu_HT-100to200_Tune4C_13TeV     false 5000 5
+#WJetsToLNu_HT-200to400_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2190_v75    WJetsToLNu_HT-200to400_Tune4C_13TeV     false 5000 5
+#WJetsToLNu_HT-400to600_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2189_v75    WJetsToLNu_HT-400to600_Tune4C_13TeV     false 5000 5
+#WJetsToLNu_HT-600toInf_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2188_v75    WJetsToLNu_HT-600toInf_Tune4C_13TeV     false 5000 5
+#
+# DYJets 
+#
+#DYJetsToLL_M-50_HT-100to200_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2160_v75   DYJetsToLL_M-50_HT-100to200_Tune4C_13TeV    false 5000 5
+#DYJetsToLL_M-50_HT-200to400_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2161_v75   DYJetsToLL_M-50_HT-200to400_Tune4C_13TeV    false 5000 5
+DYJetsToLL_M-50_HT-400to600_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2206_v75   DYJetsToLL_M-50_HT-400to600_Tune4C_13TeV    false 5000 5 
+DYJetsToLL_M-50_HT-600toInf_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2207_v75   DYJetsToLL_M-50_HT-600toInf_Tune4C_13TeV    false 5000 5
+#
+# QCD
+#
+QCD_Pt-5to10_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2199_v75       QCD_Pt-5to10_Tune4C_13TeV       false 5000 5
+QCD_Pt-10to15_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2163_v75      QCD_Pt-10to15_Tune4C_13TeV      false 5000 5
+QCD_Pt-15to30_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2166_v75      QCD_Pt-15to30_Tune4C_13TeV      false 5000 5
+#QCD_Pt-30to50_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2171_v75     QCD_Pt-15to30_Tune4C_13TeV      false 5000 5
+QCD_Pt-30to50_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2178_v75      QCD_Pt-30to50_Tune4C_13TeV      false 5000 5
+QCD_Pt-50to80_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2200_v75      QCD_Pt-50to80_Tune4C_13TeV      false 5000 5
+QCD_Pt-80to120_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2197_v75     QCD_Pt-80to120_Tune4C_13TeV     false 5000 5
+QCD_Pt-120to170_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2164_v75    QCD_Pt-120to170_Tune4C_13TeV    false 5000 5
+QCD_Pt-170to300_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2174_v75    QCD_Pt-170to300_Tune4C_13TeV    false 5000 5
+QCD_Pt-300to470_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2170_v75    QCD_Pt-300to470_Tune4C_13TeV    false 5000 5
+QCD_Pt-470to600_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2181_v75    QCD_Pt-470to600_Tune4C_13TeV    false 5000 5
+QCD_Pt-600to800_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2183_v75    QCD_Pt-600to800_Tune4C_13TeV    false 5000 5
+QCD_Pt-800to1000_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2198_v75   QCD_Pt-800to1000_Tune4C_13TeV   false 5000 5
+QCD_Pt-1000to1400_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2162_v75  QCD_Pt-1000to1400_Tune4C_13TeV  false 5000 5
+QCD_Pt-1400to1800_Tune4C_13TeV_pythia8_Spring14miniaod-castor_PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2165_v75  QCD_Pt-1400to1800_Tune4C_13TeV  false 5000 5
+QCD_Pt-1800to2400_Tune4C_13TeV_pythia8_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2175_v75         QCD_Pt-1800to2400_Tune4C_13TeV  false 5000 5
+QCD_Pt-2400to3200_Tune4C_13TeV_pythia8_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2169_v75         QCD_Pt-2400to3200_Tune4C_13TeV  false 5000 5
+#QCD_Pt-3200_Tune4C_13TeV_pythia8_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2172_v75              QCD_Pt-3200_Tune4C_13TeV        false 5000 5
+QCD_Pt-3200_Tune4C_13TeV_pythia8_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2179_v75               QCD_Pt-3200_Tune4C_13TeV        false 5000 5
+##
+## T1tttt
+##
+##SMS-T1tttt_2J_mGl-1200_mLSP-800_Tune4C_13TeV-madgraph-tauola-Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2191_v75  
+##SMS-T1tttt_2J_mGl-1500_mLSP-100_Tune4C_13TeV-madgraph-tauola_Spring14miniaod-PU20bx25_POSTLS170_V5-v1_MINIAODSIM_UCSB2194_v75 
