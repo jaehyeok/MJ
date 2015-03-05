@@ -25,7 +25,7 @@ float GetXsec(TString Process)
     // 13 TeV cross section from https://github.com/manuelfs/ra4_code/blob/master/src/utilities.cpp
     float xsec = -999.;
    
-    if(Process.Contains("TTJets"))   xsec = 832; 
+    if(Process.Contains("TTJets"))   xsec = 806.1; // was 832
     
     if(Process.Contains("T_tW-channel-DR"))          xsec = 35.0;
     if(Process.Contains("TToLeptons_t-channel"))     xsec = 45.0;
@@ -61,6 +61,10 @@ float GetXsec(TString Process)
     if(Process.Contains("QCD_Pt-1800to2400"))        xsec = 0.102;
     if(Process.Contains("QCD_Pt-2400to3200"))        xsec = 0.00644;
     if(Process.Contains("QCD_Pt-3200"))              xsec = 0.000163;
+    
+    // Signal
+    if(Process.Contains("mGl-1500"))        xsec = 0.0141903;
+    if(Process.Contains("mGl-1200"))        xsec = 0.0856418;
 
     // Test 
     if(Process=="Test" || Process=="test")  xsec = 1.; 
@@ -81,7 +85,7 @@ int GetNjet(vector<float> *vec_px, vector<float> *vec_py, float pTthres) {
     int Njet=0;
     for(int ifatjet=0; ifatjet<(int)vec_px->size(); ifatjet++) {
         if(TMath::Sqrt(vec_px->at(ifatjet)*vec_px->at(ifatjet)          
-                      +vec_py->at(ifatjet)*vec_py->at(ifatjet)<pTthres) continue;
+                      +vec_py->at(ifatjet)*vec_py->at(ifatjet))<pTthres) continue;
         Njet++;
     }
     return Njet;

@@ -16,13 +16,12 @@
 #include "TSystem.h"
 #include "TLorentzVector.h"
 
-#include "Branch_v71.h"
-#include "ObjectSelector_Sync.h"
-#include "EventSelector.h"
-#include "Utilities.h"
-#include "inJSON2012.h"
-#include "TOBTECFilter.h"
-#include "filters.h"
+#include "Branch/Branch_v71.h"
+#include "core/ObjectSelector_Sync.h"
+#include "core/EventSelector.h"
+#include "core/Utilities.h"
+#include "core/inJSON2012.h"
+#include "core/TOBTECFilter.h"
 
 // include necessary fastjet files
 #include "fastjet/PseudoJet.hh"
@@ -200,7 +199,7 @@ void LoadJetTagEffMaps(string sampleName)
         assert(f_tageff_ ==0);
         TString filename = AssembleBTagEffFilename(sampleName);
         cout << filename << endl;
-        filename.Prepend("btagEffMaps/");
+        filename.Prepend("core/btagEffMaps/");
         f_tageff_ = new TFile(filename,"READ");
         if (f_tageff_->IsZombie()) 
         {

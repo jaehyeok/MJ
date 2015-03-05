@@ -17,9 +17,9 @@
 
 //#include "Branch_v75.h" 
 //#include "ra4_objects_13TeV.h"
-#include "Branch_v77.h" 
-#include "ra4_objects_13TeV_new.h"
-#include "Utilities_13TeV.h"
+#include "Branch/Branch_v77.h" 
+#include "core/ra4_objects_13TeV.h"
+#include "core/Utilities_13TeV.h"
 
 // include necessary fastjet files
 #include "fastjet/PseudoJet.hh"
