@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include "TROOT.h"
 #include "TMath.h"
@@ -20,6 +21,8 @@
 #include "EventSelector.h"
 #include "Utilities.h"
 #include "inJSON2012.h"
+#include "TOBTECFilter.h"
+#include "filters.h"
 
 // include necessary fastjet files
 #include "fastjet/PseudoJet.hh"
@@ -35,6 +38,9 @@ using namespace std;
 
 //
 typedef std::pair<fastjet::PseudoJet,int > FatJetPair;
+
+// Btagging prob map function
+TFile *f_tageff_;
 
 //
 // Make fat jets 
@@ -167,6 +173,267 @@ bool hasGoodVertex(int & firstGoodVertex)
 }
 
 //
+// Btag probability from Jack : https://github.com/jbradmil/csa14/blob/master/src/event_handler.cpp
+//
+string AssembleBTagEffFilename(string sampleName) 
+{
+    cout << sampleName << endl;
+    unsigned found = sampleName.find_last_of("/");
+    cout << found << endl;
+    std::string truncated_name = sampleName.substr(0,found);
+    cout << truncated_name<< endl;
+    found = truncated_name.find_last_of("/");
+    cout << found << endl;
+    truncated_name = truncated_name.substr(found+1);
+    cout << truncated_name<< endl;
+    cout << "histos_btageff_csvm_"+truncated_name+".root" << endl;
+    return "histos_btageff_csvm_"+truncated_name+".root";
+}
+
+void LoadJetTagEffMaps(string sampleName) 
+{
+
+    int cfAVersion = 71;
+
+    if (cfAVersion<=71) 
+    {
+        assert(f_tageff_ ==0);
+        TString filename = AssembleBTagEffFilename(sampleName);
+        cout << filename << endl;
+        filename.Prepend("btagEffMaps/");
+        f_tageff_ = new TFile(filename,"READ");
+        if (f_tageff_->IsZombie()) 
+        {
+            cout<<"Failed to load the b-tag eff map for sample "<<sampleName<<endl;
+            //comment this next line to ALLOW JOBS TO RUN WITHOUT BTAG EFF
+            //if (!isSampleRealData()) assert(0); //it's just too frustrating to let jobs continue in this state
+            delete f_tageff_;
+            f_tageff_=0;
+        }
+        else 
+        {
+            TH1D * h_btageff = static_cast<TH1D*>(f_tageff_->Get("h_btageff"));
+            int nbins=h_btageff->GetNbinsX();
+            if (nbins != 17) 
+            {
+                cout<<" b tag eff map has the wrong number of bins! "<<nbins<<endl;
+                assert(0);
+            }
+            else 
+            {
+                std::cout << "Successfully loaded b-tag eff maps in " << filename << endl;
+            }
+        }
+    }
+}
+
+//get MC btag efficiency
+double GetJetTagEff(unsigned int ijet, TH1D* h_btageff, TH1D* h_ctageff, TH1D* h_ltageff) 
+{
+
+    double tageff=0;
+    const float pt = jets_AK5PF_pt->at(ijet);
+    const float eta = fabs(jets_AK5PF_eta->at(ijet));
+    int flavor = static_cast<int>(jets_AK5PF_partonFlavour->at(ijet));
+
+    //x is the pt value that will be used to evaluate the SF
+    //the max pt depends on flavor, and, for LF jets, eta
+    const double cutoff1=800.; const double cutoff2=700.;
+    double x;
+    //HF or central LF, max is 800
+    if ( abs(flavor)==5 || abs(flavor)==4 || eta<1.5) x = pt > cutoff1 ? cutoff1 : pt;
+    //high eta LF, max is 700
+    else x = pt > cutoff2 ? cutoff2 : pt;
+
+    //  if (theBTagEffType_ == kBTagEff05 || theBTagEffType_ == kBTagEffup5 || theBTagEffType_ == kBTagEffdown5{ //new  BTV-11-004 prescription 
+
+    if (abs(flavor) ==4 || abs(flavor)==5) 
+    { //heavy flavor
+        double errFactor = 1;
+
+        if (pt >cutoff1) 
+        { //use twice the errors
+            errFactor=2;
+        }
+        if (abs(flavor) == 4)  errFactor=2; //charm has double the errors   "SFc = SFb with twice the quoted uncertainty"
+        //not clear to me what to do for charm with pT> cutoff. errFactor of 2 or 4? must be small effect though
+
+        // Tagger: CSVM within 20 < pt < 800 GeV, abs(eta) < 2.4, x = pt
+        double  SFb = 0.726981*((1.+(0.253238*x))/(1.+(0.188389*x)));
+
+        //apply FASTSTIM correction where needed
+        //SFb *= GetbJetFastsimSF("value",flavor,pt);
+
+        // skip syst variations, for now
+
+        // cout<<"jet flavor, pt, SF = "<<abs(flavor)<<" "<<pt<<" "<<SFb<<endl;
+        if      (abs(flavor) == 5) tageff = SFb * h_btageff->GetBinContent( h_btageff->FindBin( pt ) );
+        else if (abs(flavor) == 4) tageff = SFb * h_ctageff->GetBinContent( h_ctageff->FindBin( pt ) );
+        else assert(0);
+    } // if heavy flavor
+    else 
+    { //light flavor [ see https://twiki.cern.ch/twiki/pub/CMS/BtagPOG/SFlightFuncs_Moriond2013.C ]
+        //note that these are valid only to a cutoff value, so use 'x' and not 'pt'
+        double SF=0;
+        double nominalSF=0;
+        if ( eta < 0.8 ) 
+        {
+            nominalSF =  ((1.06238+(0.00198635*x))+(-4.89082e-06*(x*x)))+(3.29312e-09*(x*(x*x))); // SF without + or - variation in mistag rate
+            SF = nominalSF;
+        }
+        else if (eta>=0.8 && eta<1.6) 
+        {
+            nominalSF = ((1.08048+(0.00110831*x))+(-2.96189e-06*(x*x)))+(2.16266e-09*(x*(x*x)));
+            SF = nominalSF;
+        }
+        else if (eta>=1.6 && eta<=2.4) 
+        {
+            nominalSF = ((1.09145+(0.000687171*x))+(-2.45054e-06*(x*x)))+(1.7844e-09*(x*(x*x)));
+            SF = nominalSF;
+        }
+        //design question -- what do to for jets at eta>2.4? assert? or return tageff=0?
+        //i guess tageff 0 makes the most sense, so leave SF = 0
+
+        // double deltaSF = SF - nominalSF; //here is the nominal uncertainty on the fullsim SF
+
+        //5 June 2013 -- new code to apply LF mistags
+        //apply FASTSTIM correction where needed
+        //SF *= GetbJetFastsimSF("value",flavor,pt);
+
+        // now, skip the extra uncertainties for high pT/eta and Fastsim
+
+        tageff = SF * h_ltageff->GetBinContent( h_ltageff->FindBin( pt )); 
+        // cout<<"jet flavor, pt, SF = "<<abs(flavor)<<" "<<pt<<" "<<SF<<endl;
+
+    } // if light flavor
+
+    //    } //if BTV-11-004 prescription
+    //  else {      //no longer support old prescriptions
+    //  assert(0);
+    //    }
+
+
+
+    if (tageff<0) tageff=0;
+    if (tageff>1) tageff=1;
+
+    return tageff;
+}
+
+// This gives you the weight you apply to the MC when you don't cut on b-tags
+void CalculateTagProbs(double &Prob0, double &ProbGEQ1, double &Prob1, double &ProbGEQ2,
+                       double &Prob2, double &ProbGEQ3, double &Prob3, double &ProbGEQ4,
+                       vector<int> GoodJets,  string sampleName) 
+{
+
+    //must initialize correctly
+    Prob2 = 0;
+    Prob1 = 0; ProbGEQ1 = 1; Prob0 = 1; ProbGEQ2 = 0;
+    Prob3 = 0; ProbGEQ4 = 0;
+
+    if(sampleName.find("Run2012")!=std::string::npos) 
+    { // for data, set all to 1--not really needed
+        Prob0=1;
+        ProbGEQ1=1;
+        Prob1=1;
+        ProbGEQ2=1;
+        Prob2=1;
+        ProbGEQ3=1;
+        Prob3=1;
+        ProbGEQ4=1;
+        return;
+    }
+
+    if (f_tageff_ == 0) 
+    { //if the b-tag eff file is not there make sure it will be obvious to the user -- fill all with zero
+        Prob0=0;
+        ProbGEQ1=0;
+        Prob1=0;
+        ProbGEQ2=0;
+        Prob2=0;
+        ProbGEQ3=0;
+        Prob3=0;
+        ProbGEQ4=0;
+        return;
+    }
+
+    char btageffname[200], ctageffname[200], ltageffname[200];
+    std::string sbtageff = "h_btageff";  std::string sctageff = "h_ctageff";  std::string sltageff = "h_ltageff";
+    sprintf(btageffname,"%s",sbtageff.c_str());   
+    sprintf(ctageffname,"%s",sctageff.c_str());   
+    sprintf(ltageffname,"%s",sltageff.c_str());   
+    TH1D * h_btageff  = static_cast<TH1D*>(f_tageff_->Get(btageffname));
+    TH1D * h_ctageff  = static_cast<TH1D*>(f_tageff_->Get(ctageffname));
+    TH1D * h_ltageff  = static_cast<TH1D*>(f_tageff_->Get(ltageffname));
+
+    for(int igoodjet=0; igoodjet<(int)GoodJets.size(); igoodjet++)
+    {
+        int ijet = GoodJets.at(igoodjet);
+
+        double subprob1=0;
+        double subprob2=0;
+
+        double effi = GetJetTagEff(ijet, h_btageff, h_ctageff, h_ltageff);
+        //      cout << "jet: " << ijet << ", effi: " << effi << endl;
+        Prob0 = Prob0* ( 1 - effi);
+
+        double product = 1;
+        for(int kgoodjet=0; kgoodjet<(int)GoodJets.size(); kgoodjet++)
+        {
+            int kjet = GoodJets.at(kgoodjet);
+
+            double effk = GetJetTagEff(kjet, h_btageff, h_ctageff, h_ltageff);
+            if(kjet != ijet) product = product*(1-effk);
+            if(kjet > ijet)
+            {
+                double subproduct = 1;
+                for(int jgoodjet=0; jgoodjet<(int)GoodJets.size(); jgoodjet++)
+                {
+                    int jjet = GoodJets.at(jgoodjet);
+
+                    if(jjet != kjet && jjet != ijet)
+                    {
+                        double effj = GetJetTagEff(jjet, h_btageff, h_ctageff, h_ltageff);
+                        subproduct = subproduct*(1-effj);
+                        if ( jjet > kjet) 
+                        {
+                            double subproduct2 = 1;
+                            for(int lgoodjet=0; lgoodjet<(int)GoodJets.size(); lgoodjet++)
+                            {
+                                int ljet = GoodJets.at(lgoodjet);
+
+                                if(ljet != kjet && ljet != ijet && ljet != jjet)
+                                {
+                                    double effl = GetJetTagEff(ljet, h_btageff, h_ctageff, h_ltageff);
+                                    subproduct2 = subproduct2*(1-effl);
+                                }
+                            } //ljet loop
+                            subprob2 += effk*effj*subproduct2;
+                        }
+                    }
+                }//j loop
+                subprob1 += effk*subproduct;
+            }
+        }//k loop
+
+        Prob1 += effi*product;
+        Prob2 += effi*subprob1;
+        Prob3 += effi*subprob2; 
+
+    }
+
+    //  std::cout << "prob0 = " << Prob0 << ", prob1 = " << Prob1 << ", prob2 = " << Prob2 << std::endl;  
+
+    ProbGEQ1 = 1 - Prob0;
+    ProbGEQ2 = 1 - Prob1 - Prob0;
+    ProbGEQ3 = 1 - Prob2 - Prob1 - Prob0;
+    ProbGEQ4 = 1 - Prob3 - Prob2 - Prob1 - Prob0;
+
+    return;
+
+}
+
+//
 // main function
 //
 void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, bool isData, float Lumi) 
@@ -204,6 +471,7 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     // Get total number of events of a sample 
     int TotalNEntries=1;
     
+    //if(!isData && !ProcessName.Contains("Test"))
     if(!isData)
     { 
         TChain * chainATotal = new TChain("/configurableAnalysis/eventA");  
@@ -252,11 +520,16 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     float top2pT_;  
     float top2Eta_;  
     float top2Phi_;  
+    float Prob0_;  
+    float Prob1_;  
+    float Prob2_;  
+    float Prob3_;  
     vector<float> mj_pT20_;
     vector<float> mj_pT30_;
     vector<float> mjCHS_pT20_;
     vector<float> mjCHS_pT30_;
     vector<float> mjLep_pT30_;
+    vector<float> mjCHSLep_pT30_;
     vector<float> FatjetPt_pT20_;
     vector<float> FatjetEta_pT20_;
     vector<float> FatjetPhi_pT20_;
@@ -277,6 +550,10 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     vector<float> FatjetLepEta_pT30_;
     vector<float> FatjetLepPhi_pT30_;
     vector<float> FatjetLepN_pT30_;
+    vector<float> FatjetCHSLepPt_pT30_;
+    vector<float> FatjetCHSLepEta_pT30_;
+    vector<float> FatjetCHSLepPhi_pT30_;
+    vector<float> FatjetCHSLepN_pT30_;
     vector<float> RA4ElsPt_;
     vector<float> RA4ElsEta_;
     vector<float> RA4ElsPhi_;
@@ -305,6 +582,8 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     vector<float> JetCHSE_;
     vector<float> JetCHSCSV_;
     vector<float> JetCHSMCId_;
+    vector<float> JetCHSNCh_;
+    vector<float> JetCHSNNeu_;
     vector<float> GenPt_;
     vector<float> GenEta_;
     vector<float> GenPhi_;
@@ -351,11 +630,16 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("top2pT",          	&top2pT_);        
     babyTree_->Branch("top2Eta",          	&top2Eta_);        
     babyTree_->Branch("top2Phi",          	&top2Phi_);        
+    babyTree_->Branch("Prob0",          	&Prob0_);        
+    babyTree_->Branch("Prob1",          	&Prob1_);        
+    babyTree_->Branch("Prob2",          	&Prob2_);        
+    babyTree_->Branch("Prob3",          	&Prob3_);        
     babyTree_->Branch("mj_pT20",        	&mj_pT20_);     
     babyTree_->Branch("mj_pT30",        	&mj_pT30_);     
     babyTree_->Branch("mjCHS_pT20",        	&mjCHS_pT20_);     
     babyTree_->Branch("mjCHS_pT30",        	&mjCHS_pT30_);     
     babyTree_->Branch("mjLep_pT30",        	&mjLep_pT30_);     
+    babyTree_->Branch("mjCHSLep_pT30",        	&mjCHSLep_pT30_);     
     babyTree_->Branch("FatjetPt_pT20",  	&FatjetPt_pT20_); 
     babyTree_->Branch("FatjetEta_pT20", 	&FatjetEta_pT20_);
     babyTree_->Branch("FatjetPhi_pT20",     &FatjetPhi_pT20_);
@@ -376,6 +660,10 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("FatjetLepEta_pT30",  &FatjetLepEta_pT30_);
     babyTree_->Branch("FatjetLepPhi_pT30",  &FatjetLepPhi_pT30_);
     babyTree_->Branch("FatjetLepN_pT30",    &FatjetLepN_pT30_);
+    babyTree_->Branch("FatjetCHSLepPt_pT30",   &FatjetCHSLepPt_pT30_); 
+    babyTree_->Branch("FatjetCHSLepEta_pT30",  &FatjetCHSLepEta_pT30_);
+    babyTree_->Branch("FatjetCHSLepPhi_pT30",  &FatjetCHSLepPhi_pT30_);
+    babyTree_->Branch("FatjetCHSLepN_pT30",    &FatjetCHSLepN_pT30_);
     babyTree_->Branch("RA4ElsPt",           &RA4ElsPt_);
     babyTree_->Branch("RA4ElsEta",          &RA4ElsEta_);
     babyTree_->Branch("RA4ElsPhi",          &RA4ElsPhi_);
@@ -404,6 +692,8 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     babyTree_->Branch("JetCHSE",            &JetCHSE_);
     babyTree_->Branch("JetCHSCSV",          &JetCHSCSV_);
     babyTree_->Branch("JetCHSMCId",         &JetCHSMCId_);
+    babyTree_->Branch("JetCHSNCh",          &JetCHSNCh_);
+    babyTree_->Branch("JetCHSNNeu",         &JetCHSNNeu_);
     babyTree_->Branch("GenPt",              &GenPt_);
     babyTree_->Branch("GenEta",             &GenEta_);
     babyTree_->Branch("GenPhi",             &GenPhi_);
@@ -460,6 +750,9 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
     {
         cout << "[MJ Analysis] No JSON files applied because it is MC" << endl;
     }
+
+    //LoadJetTagEffMaps((InputName+"/").Data());
+    LoadJetTagEffMaps((InputName).Data());
 
     //
     // main event loop
@@ -542,14 +835,19 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         top1Phi_            =-999.;
         top1Eta_            =-999.;
         top2pT_             =-999.;
-        top2Phi_            =-999.;
         top2Eta_            =-999.;
+        top2Phi_            =-999.;
+        Prob0_              =-999.;
+        Prob1_              =-999.;
+        Prob2_              =-999.;
+        Prob3_              =-999.;
         filter_.clear(); 
         mj_pT20_.clear();
         mj_pT30_.clear();
         mjCHS_pT20_.clear();
         mjCHS_pT30_.clear();
         mjLep_pT30_.clear();
+        mjCHSLep_pT30_.clear();
         FatjetPt_pT20_.clear();
         FatjetEta_pT20_.clear();
         FatjetPhi_pT20_.clear();
@@ -570,6 +868,10 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         FatjetLepEta_pT30_.clear();
         FatjetLepPhi_pT30_.clear();
         FatjetLepN_pT30_.clear();
+        FatjetCHSLepPt_pT30_.clear();
+        FatjetCHSLepEta_pT30_.clear();
+        FatjetCHSLepPhi_pT30_.clear();
+        FatjetCHSLepN_pT30_.clear();
         RA4ElsPt_.clear();
         RA4ElsEta_.clear();
         RA4ElsPhi_.clear();
@@ -598,6 +900,8 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         JetCHSE_.clear();
         JetCHSCSV_.clear();
         JetCHSMCId_.clear();
+        JetCHSNCh_.clear();
+        JetCHSNNeu_.clear();
         GenPt_.clear();
         GenEta_.clear();
         GenPhi_.clear();
@@ -646,6 +950,13 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
             filter_.push_back(eenoisefilter_decision);
             filter_.push_back(trackercoherentnoisefilter1_decision);
             filter_.push_back(trackercoherentnoisefilter2_decision);
+            filter_.push_back(TOBTEC_ok());
+            
+            //filters filterList("Filter/AllBad_HCAL_ECAL_Laser.dat");
+            //bool BadHCALECALfilter = filterList.inFilterList(run,lumiblock,event);
+            //filter_.push_back(BadHCALECALfilter);
+            //cout << TOBTEC_ok() << " " << BadHCALECALfilter << endl;
+            //cout << event << " " << TOBTEC_ok() << endl;
         }
 
         // Get good RA4 muons
@@ -671,11 +982,25 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
         // Skim : HT>500 && MET>100 OR dilepton
         //
         // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv  
+        if( (RA4Muon.size()+RA4Elec.size())==0) continue;
         bool Skim = ((HT>500 || HTCHS>500) && pfTypeImets_et->at(0)>100) || (RA4Muon.size()+RA4Elec.size())>1;
         if(!Skim) continue;
         // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
 
-/*
+        double Prob0, ProbGEQ1, Prob1, ProbGEQ2,
+               Prob2, ProbGEQ3, Prob3, ProbGEQ4;
+        CalculateTagProbs(Prob0, ProbGEQ1, Prob1, ProbGEQ2,
+                          Prob2, ProbGEQ3, Prob3, ProbGEQ4,
+                          GoodJets_AK5PF, InputName.Data());
+        //cout << Prob0<< " " << ProbGEQ1<< " " << Prob1<< " " << ProbGEQ2 << " " // DEBUG
+        //     << Prob2<< " " << ProbGEQ3<< " " << Prob3<< " " << ProbGEQ4 << " "
+        //     << endl; 
+        Prob0_ = Prob0;
+        Prob1_ = Prob1;
+        Prob2_ = Prob2;
+        Prob3_ = Prob3;
+        
+        /*
         // 
         // pT(R=0.5) > 20 GeV
         // 
@@ -834,6 +1159,7 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
             if(jets_AK5PF_pt->at(ijet)<30) continue;
             FatJetConstituentCHS_pT30.push_back(tmp);
         }
+
         // make vector of contituents adding RA4 leptons  
         double HT_dummy=-999.; 
         vector<int> LooseBJet_dummy; 
@@ -879,11 +1205,59 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
                                els_pz->at(iel), els_energy->at(iel));
             FatJetConstituent_pT30_PlusRA4Lep.push_back(tmp);
         }
-        std::vector<FatJetPair> FatJet_R1p2_pT20_Eta5    = makeFatJet(FatJetConstituent_pT20, 1.2, 20, 5);
-        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5    = makeFatJet(FatJetConstituent_pT30, 1.2, 30, 5);
-        std::vector<FatJetPair> FatJetCHS_R1p2_pT20_Eta5 = makeFatJet(FatJetConstituentCHS_pT20, 1.2, 20, 5);
-        std::vector<FatJetPair> FatJetCHS_R1p2_pT30_Eta5 = makeFatJet(FatJetConstituentCHS_pT30, 1.2, 30, 5);
-        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5_PlusRA4Lep    = makeFatJet(FatJetConstituent_pT30_PlusRA4Lep, 1.2, 30, 5);
+
+        //
+        double HTCHS_dummy=-999.; 
+        vector<int> LooseBJetCHS_dummy; 
+        vector<int> MediumBJetCHS_dummy; 
+        vector<int> GoodJets_AK5PF_PlusRA4Lep = GetJetsCHS(RA4Muon,RA4Elec,RA4MuonVeto,RA4ElecVeto,
+                                                        HTCHS_dummy,LooseBJetCHS_dummy,MediumBJetCHS_dummy, 
+                                                        5, 30, 0.3); 
+
+        vector<TLorentzVector> FatJetConstituentCHS_pT30_PlusRA4Lep; 
+        for(int igoodjet=0; igoodjet<(int)GoodJets_AK5PF_PlusRA4Lep.size(); igoodjet++) 
+        {
+            int ijet = GoodJets_AK5PF_PlusRA4Lep.at(igoodjet); 
+            TLorentzVector tmp(jets_AK5PF_px->at(ijet), jets_AK5PF_py->at(ijet),
+                               jets_AK5PF_pz->at(ijet), jets_AK5PF_energy->at(ijet));
+            FatJetConstituentCHS_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int igoodmus=0; igoodmus<RA4Muon.size(); igoodmus++) 
+        {
+            int imu = RA4Muon.at(igoodmus); 
+            TLorentzVector tmp(mus_px->at(imu), mus_py->at(imu),
+                               mus_pz->at(imu), mus_energy->at(imu));
+            FatJetConstituentCHS_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int ivetomus=0; ivetomus<RA4MuonVeto.size(); ivetomus++) 
+        {
+            int imu = RA4MuonVeto.at(ivetomus); 
+            TLorentzVector tmp(mus_px->at(imu), mus_py->at(imu),
+                               mus_pz->at(imu), mus_energy->at(imu));
+            FatJetConstituentCHS_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int igoodels=0; igoodels<RA4Elec.size(); igoodels++) 
+        {
+            int iel = RA4Elec.at(igoodels); 
+            TLorentzVector tmp(els_px->at(iel), els_py->at(iel),
+                               els_pz->at(iel), els_energy->at(iel));
+            //cout << tmp.Px() << " " << tmp.Py() << " " << tmp.Pz() << " " << tmp.E() << " " << tmp.M() << endl; 
+            FatJetConstituentCHS_pT30_PlusRA4Lep.push_back(tmp);
+        }
+        for(int ivetoels=0; ivetoels<RA4ElecVeto.size(); ivetoels++) 
+        {
+            int iel = RA4ElecVeto.at(ivetoels); 
+            TLorentzVector tmp(els_px->at(iel), els_py->at(iel),
+                               els_pz->at(iel), els_energy->at(iel));
+            FatJetConstituentCHS_pT30_PlusRA4Lep.push_back(tmp);
+        }
+
+        std::vector<FatJetPair> FatJet_R1p2_pT20_Eta5                   = makeFatJet(FatJetConstituent_pT20,                1.2, 20, 5);
+        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5                   = makeFatJet(FatJetConstituent_pT30,                1.2, 30, 5);
+        std::vector<FatJetPair> FatJetCHS_R1p2_pT20_Eta5                = makeFatJet(FatJetConstituentCHS_pT20,             1.2, 20, 5);
+        std::vector<FatJetPair> FatJetCHS_R1p2_pT30_Eta5                = makeFatJet(FatJetConstituentCHS_pT30,             1.2, 30, 5);
+        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5_PlusRA4Lep        = makeFatJet(FatJetConstituent_pT30_PlusRA4Lep,     1.2, 30, 5);
+        std::vector<FatJetPair> FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep     = makeFatJet(FatJetConstituentCHS_pT30_PlusRA4Lep,  1.2, 30, 5);
 
         for(unsigned int ifj=0; ifj<FatJet_R1p2_pT20_Eta5.size();ifj++)
         {
@@ -929,6 +1303,15 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
             FatjetLepEta_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.eta());
             FatjetLepPhi_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi()<3.141592?FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi():FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi()-2*3.141592);
             FatjetLepN_pT30_.push_back(FatJet_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).second);
+        }
+        for(unsigned int ifj=0; ifj<FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.size();ifj++)
+        {
+            if(FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.pt()<50) continue;
+            mjCHSLep_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.m());
+            FatjetCHSLepPt_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.pt());
+            FatjetCHSLepEta_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.eta());
+            FatjetCHSLepPhi_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi()<3.141592?FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi():FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).first.phi()-2*3.141592);
+            FatjetCHSLepN_pT30_.push_back(FatJetCHS_R1p2_pT30_Eta5_PlusRA4Lep.at(ifj).second);
         }
 
         //
@@ -1051,6 +1434,8 @@ void DoOneProcess(TString InputName, TString ProcessName, int ibegin, int iend, 
           JetCHSE_.push_back(jets_AK5PF_energy->at(ijet)); 
           JetCHSCSV_.push_back(jets_AK5PF_btag_secVertexCombined->at(ijet)); 
           JetCHSMCId_.push_back(jets_AK5PF_partonFlavour->at(ijet)); 
+          JetCHSNCh_.push_back(jets_AK5PF_chg_Mult->at(ijet)); 
+          JetCHSNNeu_.push_back(jets_AK5PF_neutral_Mult->at(ijet)); 
         }
 
         // gen top pT for TTbar samples  
