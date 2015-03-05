@@ -15,11 +15,102 @@
 #include "TSystem.h"
 #include "TLorentzVector.h"
 
-#include "Branch_v75.h" 
-#include "ra4_objects_13TeV.h"
+//#include "Branch_v75.h" 
+//#include "ra4_objects_13TeV.h"
+#include "Branch_v77.h" 
+#include "ra4_objects_13TeV_new.h"
 #include "Utilities_13TeV.h"
 
+// include necessary fastjet files
+#include "fastjet/PseudoJet.hh"
+#include "fastjet/ClusterSequence.hh"
+
+//
+#ifdef __MAKECINT__
+#pragma link C++ class std::vector < std::vector<float> >+;
+#endif
+
 using namespace std;
+
+//
+// Make fat jets 
+//
+vector<TLorentzVector> makeFatJet( vector<TLorentzVector> FatJetConstituent, 
+                                   double Rparam=1.2, 
+                                   int ConstituentpTcut=30, 
+                                   float ConstituentEtacut=100) 
+{
+    vector<TLorentzVector> FatJets;
+
+    // Loop over R=0.5 jets, form into PseudoJets vector
+    vector<fastjet::PseudoJet> input_particles;
+    double FatjetConstituent_px_tmp, FatjetConstituent_py_tmp, FatjetConstituent_pz_tmp, FatjetConstituent_energy_tmp;
+
+    for(int ijet = 0; ijet<(int)FatJetConstituent.size(); ijet++) 
+    { 
+
+        FatjetConstituent_px_tmp        = FatJetConstituent.at(ijet).Px();
+        FatjetConstituent_py_tmp        = FatJetConstituent.at(ijet).Py();
+        FatjetConstituent_pz_tmp        = FatJetConstituent.at(ijet).Pz();
+        FatjetConstituent_energy_tmp    = FatJetConstituent.at(ijet).E();	  
+    
+//        cout << ijet << " :: " 
+//             << FatjetConstituent_px_tmp << " " 
+//             << FatjetConstituent_py_tmp << " " 
+//             << FatjetConstituent_pz_tmp << " " 
+//             << FatjetConstituent_energy_tmp << " " 
+//             << endl;
+
+        if(TMath::Sqrt( FatjetConstituent_px_tmp*FatjetConstituent_px_tmp
+                       +FatjetConstituent_py_tmp*FatjetConstituent_py_tmp)<ConstituentpTcut) continue;
+
+        if(TMath::Abs(FatJetConstituent.at(ijet).Eta())>ConstituentEtacut) continue;
+
+        input_particles.push_back(fastjet::PseudoJet( FatjetConstituent_px_tmp, FatjetConstituent_py_tmp,
+                                                      FatjetConstituent_pz_tmp, FatjetConstituent_energy_tmp));
+    }
+    
+    //
+    // Run Fastjet to reconstuct jets 
+    //
+
+    // Create an object that represents your choice of jet algorithm and the associated parameters
+    fastjet::Strategy strategy = fastjet::Best;
+    fastjet::RecombinationScheme recomb_scheme = fastjet::E_scheme;
+    fastjet::JetDefinition jet_def(fastjet::antikt_algorithm, Rparam, recomb_scheme, strategy);
+
+    // run the jet clustering with the above jet definition
+    fastjet::ClusterSequence clust_seq(input_particles, jet_def);
+
+    // 
+    // Get p4 of the reconstructed jets  
+    //
+    double ptmin = 0.0; // could use 3.0 here, instead of applying later
+    vector<fastjet::PseudoJet> inclusive_jets = clust_seq.inclusive_jets(ptmin);
+    //Sort by pt
+    vector<fastjet::PseudoJet> sorted_jets = sorted_by_pt(inclusive_jets);
+    //fill fastjet output into vectors, continue as original code
+    for(int isortjets = 0; isortjets< (int)sorted_jets.size(); isortjets++)
+    {
+        //store only if pt >3 GeV to match CMS jets
+        if(TMath::Sqrt( sorted_jets[isortjets].px()*sorted_jets[isortjets].px()
+                       +sorted_jets[isortjets].py()*sorted_jets[isortjets].py())>50) 
+        {
+            TLorentzVector FatJet_tmp( sorted_jets[isortjets].px(), sorted_jets[isortjets].py(), 
+                                       sorted_jets[isortjets].pz(), sorted_jets[isortjets].E());
+            FatJets.push_back(FatJet_tmp);
+
+//            cout << isortjets << " :: "  
+//                 << sorted_jets[isortjets].px() << " " 
+//                 << sorted_jets[isortjets].py() << " " 
+//                 << sorted_jets[isortjets].pz() << " " 
+//                 << sorted_jets[isortjets].E() << " " 
+//                 << endl;
+        }
+    }
+
+    return FatJets;
+}
 
 //
 // Get mj 
@@ -67,20 +158,14 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     // 
     // Get tree 
     // 
-    TChain * chainA = new TChain("/configurableAnalysis/eventA");   
-    TChain * chainB = new TChain("/configurableAnalysis/eventB");  
+    TChain * chainA = new TChain("/cfA/eventA");   
+    TChain * chainB = new TChain("/cfA/eventB");  
     
     for(int i=ibegin; i<=iend; i++)  
     {
         gSystem->Exec(Form("ls %s/*_f%i.root", InputName.Data(), i));
         chainA->Add(Form("%s/*_f%i.root", InputName.Data(), i));
         chainB->Add(Form("%s/*_f%i.root", InputName.Data(), i));
-        gSystem->Exec(Form("ls %s/*_f%i_*.root", InputName.Data(), i));
-        chainA->Add(Form("%s/*_f%i_*.root", InputName.Data(), i));
-        chainB->Add(Form("%s/*_f%i_*.root", InputName.Data(), i));
-        //gSystem->Exec(Form("ls %s/configurableAnalysis_%i_*.root", InputName.Data(), i)); // for non-published cfA samples 
-        //chainA->Add(Form("%s/configurableAnalysis_%i_*.root", InputName.Data(), i));
-        //chainB->Add(Form("%s/configurableAnalysis_%i_*.root", InputName.Data(), i));
     } 
     TList *l = (TList*)chainA->GetListOfFiles();
     l->Print();
@@ -93,7 +178,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     
     if(!isData)
     { 
-        TChain * chainATotal = new TChain("/configurableAnalysis/eventA");  
+        TChain * chainATotal = new TChain("/cfA/eventA");  
         chainATotal->Add(Form("%s/*.root", InputName.Data()));
         TotalNEntries = (int)chainATotal->GetEntries();
     }
@@ -111,6 +196,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     int Nfatjet_pT30_; 
     int Nskinnyjet_; 
     int NBtagCSVM_; 
+    int NBtagCSVL_; 
     int Npv_; 
     int Npuminusone_; 
     int Npuplusone_; 
@@ -132,6 +218,84 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     vector<float> FatjetEta_pT30_;
     vector<float> FatjetPhi_pT30_;
     vector<float> FatjetN_pT30_;
+    vector<float> mj_R0p8_pT30_Eta5_;
+    vector<float> FatjetPt_R0p8_pT30_Eta5_;
+    vector<float> FatjetEta_R0p8_pT30_Eta5_;
+    vector<float> FatjetPhi_R0p8_pT30_Eta5_;
+    vector<float> mj_R0p9_pT30_Eta5_;
+    vector<float> FatjetPt_R0p9_pT30_Eta5_;
+    vector<float> FatjetEta_R0p9_pT30_Eta5_;
+    vector<float> FatjetPhi_R0p9_pT30_Eta5_;
+    vector<float> mj_R1p0_pT30_Eta5_;
+    vector<float> FatjetPt_R1p0_pT30_Eta5_;
+    vector<float> FatjetEta_R1p0_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p0_pT30_Eta5_;
+    vector<float> mj_R1p1_pT30_Eta5_;
+    vector<float> FatjetPt_R1p1_pT30_Eta5_;
+    vector<float> FatjetEta_R1p1_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p1_pT30_Eta5_;
+    vector<float> mj_R1p2_pT30_Eta5_;
+    vector<float> FatjetPt_R1p2_pT30_Eta5_;
+    vector<float> FatjetEta_R1p2_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p2_pT30_Eta5_;
+    vector<float> mj_R1p3_pT30_Eta5_;
+    vector<float> FatjetPt_R1p3_pT30_Eta5_;
+    vector<float> FatjetEta_R1p3_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p3_pT30_Eta5_;
+    vector<float> mj_R1p4_pT30_Eta5_;
+    vector<float> FatjetPt_R1p4_pT30_Eta5_;
+    vector<float> FatjetEta_R1p4_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p4_pT30_Eta5_;
+    vector<float> mj_R1p5_pT30_Eta5_;
+    vector<float> FatjetPt_R1p5_pT30_Eta5_;
+    vector<float> FatjetEta_R1p5_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p5_pT30_Eta5_;
+    /*
+    vector<float> mj_R1p6_pT30_Eta5_;
+    vector<float> FatjetPt_R1p6_pT30_Eta5_;
+    vector<float> FatjetEta_R1p6_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p6_pT30_Eta5_;
+    vector<float> mj_R1p7_pT30_Eta5_;
+    vector<float> FatjetPt_R1p7_pT30_Eta5_;
+    vector<float> FatjetEta_R1p7_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p7_pT30_Eta5_;
+    vector<float> mj_R1p8_pT30_Eta5_;
+    vector<float> FatjetPt_R1p8_pT30_Eta5_;
+    vector<float> FatjetEta_R1p8_pT30_Eta5_;
+    vector<float> FatjetPhi_R1p8_pT30_Eta5_;
+    */
+    vector<float> mj_R0p8_pT30_Eta2p5_;
+    vector<float> FatjetPt_R0p8_pT30_Eta2p5_;
+    vector<float> FatjetEta_R0p8_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R0p8_pT30_Eta2p5_;
+    vector<float> mj_R0p9_pT30_Eta2p5_;
+    vector<float> FatjetPt_R0p9_pT30_Eta2p5_;
+    vector<float> FatjetEta_R0p9_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R0p9_pT30_Eta2p5_;
+    vector<float> mj_R1p0_pT30_Eta2p5_;
+    vector<float> FatjetPt_R1p0_pT30_Eta2p5_;
+    vector<float> FatjetEta_R1p0_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R1p0_pT30_Eta2p5_;
+    vector<float> mj_R1p1_pT30_Eta2p5_;
+    vector<float> FatjetPt_R1p1_pT30_Eta2p5_;
+    vector<float> FatjetEta_R1p1_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R1p1_pT30_Eta2p5_;
+    vector<float> mj_R1p2_pT30_Eta2p5_;
+    vector<float> FatjetPt_R1p2_pT30_Eta2p5_;
+    vector<float> FatjetEta_R1p2_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R1p2_pT30_Eta2p5_;
+    vector<float> mj_R1p3_pT30_Eta2p5_;
+    vector<float> FatjetPt_R1p3_pT30_Eta2p5_;
+    vector<float> FatjetEta_R1p3_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R1p3_pT30_Eta2p5_;
+    vector<float> mj_R1p4_pT30_Eta2p5_;
+    vector<float> FatjetPt_R1p4_pT30_Eta2p5_;
+    vector<float> FatjetEta_R1p4_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R1p4_pT30_Eta2p5_;
+    vector<float> mj_R1p5_pT30_Eta2p5_;
+    vector<float> FatjetPt_R1p5_pT30_Eta2p5_;
+    vector<float> FatjetEta_R1p5_pT30_Eta2p5_;
+    vector<float> FatjetPhi_R1p5_pT30_Eta2p5_;
     vector<float> RA4ElsPt_;
     vector<float> RA4ElsEta_;
     vector<float> RA4ElsPhi_;
@@ -171,6 +335,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("Nfatjet_pT30",   	&Nfatjet_pT30_);   
     babyTree_->Branch("Nskinnyjet",     	&Nskinnyjet_);
     babyTree_->Branch("NBtagCSVM",     	    &NBtagCSVM_);
+    babyTree_->Branch("NBtagCSVL",     	    &NBtagCSVL_);
     babyTree_->Branch("Npv",            	&Npv_);       
     babyTree_->Branch("Npuminusone",       	&Npuminusone_);       
     babyTree_->Branch("Npuplusone",        	&Npuplusone_);       
@@ -178,8 +343,8 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("EventWeight",    	&EventWeight_);
     babyTree_->Branch("MJ_pT30",        	&MJ_pT30_);        
     babyTree_->Branch("MET",            	&MET_);        
-    babyTree_->Branch("GenMET",            	&GenMET_);        
     babyTree_->Branch("METPhi",            	&METPhi_);        
+    babyTree_->Branch("GenMET",            	&GenMET_);        
     babyTree_->Branch("HT",             	&HT_);        
     babyTree_->Branch("top1pT",          	&top1pT_);        
     babyTree_->Branch("top1Eta",          	&top1Eta_);        
@@ -192,6 +357,84 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("FatjetEta_pT30", 	&FatjetEta_pT30_);
     babyTree_->Branch("FatjetPhi_pT30",     &FatjetPhi_pT30_);
     babyTree_->Branch("FatjetN_pT30",       &FatjetN_pT30_);
+    babyTree_->Branch("mj_R0p8_pT30_Eta5",        	&mj_R0p8_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R0p8_pT30_Eta5",  	&FatjetPt_R0p8_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R0p8_pT30_Eta5", 	&FatjetEta_R0p8_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R0p8_pT30_Eta5",     &FatjetPhi_R0p8_pT30_Eta5_);
+    babyTree_->Branch("mj_R0p9_pT30_Eta5",        	&mj_R0p9_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R0p9_pT30_Eta5",  	&FatjetPt_R0p9_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R0p9_pT30_Eta5", 	&FatjetEta_R0p9_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R0p9_pT30_Eta5",     &FatjetPhi_R0p9_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p0_pT30_Eta5",        	&mj_R1p0_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p0_pT30_Eta5",  	&FatjetPt_R1p0_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p0_pT30_Eta5", 	&FatjetEta_R1p0_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p0_pT30_Eta5",     &FatjetPhi_R1p0_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p1_pT30_Eta5",        	&mj_R1p1_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p1_pT30_Eta5",  	&FatjetPt_R1p1_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p1_pT30_Eta5", 	&FatjetEta_R1p1_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p1_pT30_Eta5",     &FatjetPhi_R1p1_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p2_pT30_Eta5",        	&mj_R1p2_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT30_Eta5",  	&FatjetPt_R1p2_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT30_Eta5", 	&FatjetEta_R1p2_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT30_Eta5",     &FatjetPhi_R1p2_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p3_pT30_Eta5",        	&mj_R1p3_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p3_pT30_Eta5",  	&FatjetPt_R1p3_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p3_pT30_Eta5", 	&FatjetEta_R1p3_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p3_pT30_Eta5",     &FatjetPhi_R1p3_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p4_pT30_Eta5",        	&mj_R1p4_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p4_pT30_Eta5",  	&FatjetPt_R1p4_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p4_pT30_Eta5", 	&FatjetEta_R1p4_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p4_pT30_Eta5",     &FatjetPhi_R1p4_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p5_pT30_Eta5",        	&mj_R1p5_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p5_pT30_Eta5",  	&FatjetPt_R1p5_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p5_pT30_Eta5", 	&FatjetEta_R1p5_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p5_pT30_Eta5",     &FatjetPhi_R1p5_pT30_Eta5_);
+    /*
+    babyTree_->Branch("mj_R1p6_pT30_Eta5",        	&mj_R1p6_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p6_pT30_Eta5",  	&FatjetPt_R1p6_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p6_pT30_Eta5", 	&FatjetEta_R1p6_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p6_pT30_Eta5",     &FatjetPhi_R1p6_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p7_pT30_Eta5",        	&mj_R1p7_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p7_pT30_Eta5",  	&FatjetPt_R1p7_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p7_pT30_Eta5", 	&FatjetEta_R1p7_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p7_pT30_Eta5",     &FatjetPhi_R1p7_pT30_Eta5_);
+    babyTree_->Branch("mj_R1p8_pT30_Eta5",        	&mj_R1p8_pT30_Eta5_);     
+    babyTree_->Branch("FatjetPt_R1p8_pT30_Eta5",  	&FatjetPt_R1p8_pT30_Eta5_); 
+    babyTree_->Branch("FatjetEta_R1p8_pT30_Eta5", 	&FatjetEta_R1p8_pT30_Eta5_);
+    babyTree_->Branch("FatjetPhi_R1p8_pT30_Eta5",     &FatjetPhi_R1p8_pT30_Eta5_);
+    */
+    babyTree_->Branch("mj_R0p8_pT30_Eta2p5",        	&mj_R0p8_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R0p8_pT30_Eta2p5",  	&FatjetPt_R0p8_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R0p8_pT30_Eta2p5", 	&FatjetEta_R0p8_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R0p8_pT30_Eta2p5",     &FatjetPhi_R0p8_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R0p9_pT30_Eta2p5",        	&mj_R0p9_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R0p9_pT30_Eta2p5",  	&FatjetPt_R0p9_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R0p9_pT30_Eta2p5", 	&FatjetEta_R0p9_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R0p9_pT30_Eta2p5",     &FatjetPhi_R0p9_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p0_pT30_Eta2p5",        	&mj_R1p0_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p0_pT30_Eta2p5",  	&FatjetPt_R1p0_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p0_pT30_Eta2p5", 	&FatjetEta_R1p0_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p0_pT30_Eta2p5",     &FatjetPhi_R1p0_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p1_pT30_Eta2p5",        	&mj_R1p1_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p1_pT30_Eta2p5",  	&FatjetPt_R1p1_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p1_pT30_Eta2p5", 	&FatjetEta_R1p1_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p1_pT30_Eta2p5",     &FatjetPhi_R1p1_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p2_pT30_Eta2p5",        	&mj_R1p2_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT30_Eta2p5",  	&FatjetPt_R1p2_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT30_Eta2p5", 	&FatjetEta_R1p2_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT30_Eta2p5",     &FatjetPhi_R1p2_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p3_pT30_Eta2p5",        	&mj_R1p3_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p3_pT30_Eta2p5",  	&FatjetPt_R1p3_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p3_pT30_Eta2p5", 	&FatjetEta_R1p3_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p3_pT30_Eta2p5",     &FatjetPhi_R1p3_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p4_pT30_Eta2p5",        	&mj_R1p4_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p4_pT30_Eta2p5",  	&FatjetPt_R1p4_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p4_pT30_Eta2p5", 	&FatjetEta_R1p4_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p4_pT30_Eta2p5",     &FatjetPhi_R1p4_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p5_pT30_Eta2p5",        	&mj_R1p5_pT30_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p5_pT30_Eta2p5",  	&FatjetPt_R1p5_pT30_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p5_pT30_Eta2p5", 	&FatjetEta_R1p5_pT30_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p5_pT30_Eta2p5",     &FatjetPhi_R1p5_pT30_Eta2p5_);
     babyTree_->Branch("RA4ElsPt",           &RA4ElsPt_);
     babyTree_->Branch("RA4ElsEta",          &RA4ElsEta_);
     babyTree_->Branch("RA4ElsPhi",          &RA4ElsPhi_);
@@ -214,13 +457,13 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("GenId",              &GenId_);
     babyTree_->Branch("GenMId",             &GenMId_);
     babyTree_->Branch("GenGMId",            &GenGMId_);
-    babyTree_->Branch("GenJetPt",           &GenJetPt_);
-    babyTree_->Branch("GenJetEta",          &GenJetEta_);
-    babyTree_->Branch("GenJetPhi",          &GenJetPhi_);
-    babyTree_->Branch("MCJetPt",            &MCJetPt_);
-    babyTree_->Branch("MCJetEta",           &MCJetEta_);
-    babyTree_->Branch("MCJetPhi",           &MCJetPhi_);
-  
+    babyTree_->Branch("GenJetPt",              &GenJetPt_);
+    babyTree_->Branch("GenJetEta",             &GenJetEta_);
+    babyTree_->Branch("GenJetPhi",             &GenJetPhi_);
+    babyTree_->Branch("MCJetPt",              &MCJetPt_);
+    babyTree_->Branch("MCJetEta",             &MCJetEta_);
+    babyTree_->Branch("MCJetPhi",             &MCJetPhi_);
+   
     // 
     // Event weights
     //
@@ -253,7 +496,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         int CurrentDate = DTCurrent.GetDate();
         int CurrentTime = DTCurrent.GetTime();
         int TimeLaps = (CurrentDate-StartDate)*1000000+(CurrentTime-StartTime);
-        int TimeToRun = (int)((float)nentries/(float)i)*TimeLaps;
+//        int TimeToRun = (int)((float)nentries/(float)i)*TimeLaps;
         if (i_permille != i_permille_old) 
         {
             // xterm magic from L. Vacavant and A. Cerri
@@ -285,6 +528,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         Nfatjet_pT30_       =   -1;
         Nskinnyjet_         =   -1;
         NBtagCSVM_          =   -1;
+        NBtagCSVL_          =   -1;
         Npv_                =   -1;
         Npuminusone_        =   -1;
         Npuplusone_         =   -1;
@@ -307,6 +551,84 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         FatjetEta_pT30_.clear();
         FatjetPhi_pT30_.clear();
         FatjetN_pT30_.clear();
+        mj_R0p8_pT30_Eta5_.clear();
+        FatjetPt_R0p8_pT30_Eta5_.clear();
+        FatjetEta_R0p8_pT30_Eta5_.clear();
+        FatjetPhi_R0p8_pT30_Eta5_.clear();
+        mj_R0p9_pT30_Eta5_.clear();
+        FatjetPt_R0p9_pT30_Eta5_.clear();
+        FatjetEta_R0p9_pT30_Eta5_.clear();
+        FatjetPhi_R0p9_pT30_Eta5_.clear();
+        mj_R1p0_pT30_Eta5_.clear();
+        FatjetPt_R1p0_pT30_Eta5_.clear();
+        FatjetEta_R1p0_pT30_Eta5_.clear();
+        FatjetPhi_R1p0_pT30_Eta5_.clear();
+        mj_R1p1_pT30_Eta5_.clear();
+        FatjetPt_R1p1_pT30_Eta5_.clear();
+        FatjetEta_R1p1_pT30_Eta5_.clear();
+        FatjetPhi_R1p1_pT30_Eta5_.clear();
+        mj_R1p2_pT30_Eta5_.clear();
+        FatjetPt_R1p2_pT30_Eta5_.clear();
+        FatjetEta_R1p2_pT30_Eta5_.clear();
+        FatjetPhi_R1p2_pT30_Eta5_.clear();
+        mj_R1p3_pT30_Eta5_.clear();
+        FatjetPt_R1p3_pT30_Eta5_.clear();
+        FatjetEta_R1p3_pT30_Eta5_.clear();
+        FatjetPhi_R1p3_pT30_Eta5_.clear();
+        mj_R1p4_pT30_Eta5_.clear();
+        FatjetPt_R1p4_pT30_Eta5_.clear();
+        FatjetEta_R1p4_pT30_Eta5_.clear();
+        FatjetPhi_R1p4_pT30_Eta5_.clear();
+        mj_R1p5_pT30_Eta5_.clear();
+        FatjetPt_R1p5_pT30_Eta5_.clear();
+        FatjetEta_R1p5_pT30_Eta5_.clear();
+        FatjetPhi_R1p5_pT30_Eta5_.clear();
+        /*
+        mj_R1p6_pT30_Eta5_.clear();
+        FatjetPt_R1p6_pT30_Eta5_.clear();
+        FatjetEta_R1p6_pT30_Eta5_.clear();
+        FatjetPhi_R1p6_pT30_Eta5_.clear();
+        mj_R1p7_pT30_Eta5_.clear();
+        FatjetPt_R1p7_pT30_Eta5_.clear();
+        FatjetEta_R1p7_pT30_Eta5_.clear();
+        FatjetPhi_R1p7_pT30_Eta5_.clear();
+        mj_R1p8_pT30_Eta5_.clear();
+        FatjetPt_R1p8_pT30_Eta5_.clear();
+        FatjetEta_R1p8_pT30_Eta5_.clear();
+        FatjetPhi_R1p8_pT30_Eta5_.clear();
+        */
+        mj_R0p8_pT30_Eta2p5_.clear();
+        FatjetPt_R0p8_pT30_Eta2p5_.clear();
+        FatjetEta_R0p8_pT30_Eta2p5_.clear();
+        FatjetPhi_R0p8_pT30_Eta2p5_.clear();
+        mj_R0p9_pT30_Eta2p5_.clear();
+        FatjetPt_R0p9_pT30_Eta2p5_.clear();
+        FatjetEta_R0p9_pT30_Eta2p5_.clear();
+        FatjetPhi_R0p9_pT30_Eta2p5_.clear();
+        mj_R1p0_pT30_Eta2p5_.clear();
+        FatjetPt_R1p0_pT30_Eta2p5_.clear();
+        FatjetEta_R1p0_pT30_Eta2p5_.clear();
+        FatjetPhi_R1p0_pT30_Eta2p5_.clear();
+        mj_R1p1_pT30_Eta2p5_.clear();
+        FatjetPt_R1p1_pT30_Eta2p5_.clear();
+        FatjetEta_R1p1_pT30_Eta2p5_.clear();
+        FatjetPhi_R1p1_pT30_Eta2p5_.clear();
+        mj_R1p2_pT30_Eta2p5_.clear();
+        FatjetPt_R1p2_pT30_Eta2p5_.clear();
+        FatjetEta_R1p2_pT30_Eta2p5_.clear();
+        FatjetPhi_R1p2_pT30_Eta2p5_.clear();
+        mj_R1p3_pT30_Eta2p5_.clear();
+        FatjetPt_R1p3_pT30_Eta2p5_.clear();
+        FatjetEta_R1p3_pT30_Eta2p5_.clear();
+        FatjetPhi_R1p3_pT30_Eta2p5_.clear();
+        mj_R1p4_pT30_Eta2p5_.clear();
+        FatjetPt_R1p4_pT30_Eta2p5_.clear();
+        FatjetEta_R1p4_pT30_Eta2p5_.clear();
+        FatjetPhi_R1p4_pT30_Eta2p5_.clear();
+        mj_R1p5_pT30_Eta2p5_.clear();
+        FatjetPt_R1p5_pT30_Eta2p5_.clear();
+        FatjetEta_R1p5_pT30_Eta2p5_.clear();
+        FatjetPhi_R1p5_pT30_Eta2p5_.clear();
         RA4ElsPt_.clear();
         RA4ElsEta_.clear();
         RA4ElsPhi_.clear();
@@ -347,6 +669,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             // need more weights if needed 
         } 
 
+
         // Get good RA4 muons
         vector<int> RA4MuonVeto = GetMuons(false);
         vector<int> RA4Muon     = GetMuons(true);
@@ -357,22 +680,30 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         float HT=-999.; 
         vector<int> GoodJets_AK4 = GetJets(RA4Elec,RA4Muon,RA4ElecVeto,RA4MuonVeto, HT);
 
+
+        // Skim : HT>750 MET>250
+        //if(HT<500) continue;
+        //if(pfType1mets_et->at(0)<100) continue;
+
         // Nbtag 
         int Ncsvm=0;
-        for(int j=0; j<GoodJets_AK4.size(); j++)
+        int Ncsvl=0;
+        for(int j=0; j<(int)GoodJets_AK4.size(); j++)
         { 
-            if(jets_AK4_btag_secVertexCombined->at(GoodJets_AK4.at(j)) > 0.679) Ncsvm++; 
+            if(jets_AK4_btag_inc_secVertexCombined->at(GoodJets_AK4.at(j)) > 0.814/*0.679*/) Ncsvm++; 
+            if(jets_AK4_btag_inc_secVertexCombined->at(GoodJets_AK4.at(j)) > 0.423/*0.244*/) Ncsvl++; 
         }
         
         // 
         // pT(R=0.5) > 30 GeV
         // 
-        
+
         // Regular jets
         double MJ_pT30=-999.; 
         // first, select good fat jets 
         vector<TLorentzVector> Vector_GoodFatjet_pT30; 
         vector<int> Vector_GoodFatjet_pT30_Index; 
+        /*
         for(int ifatjet=0; ifatjet<(int)fastjets_AK4_R1p2_R0p5pT30_px->size(); ifatjet++) 
         {
             float temp_pT_pT30 = TMath::Sqrt(fastjets_AK4_R1p2_R0p5pT30_px->at(ifatjet)*fastjets_AK4_R1p2_R0p5pT30_px->at(ifatjet)
@@ -385,19 +716,187 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             Vector_GoodFatjet_pT30.push_back(temp_GoodFatjet_pT30);
             Vector_GoodFatjet_pT30_Index.push_back(ifatjet);
         } 
-       
+        */
+
         vector<float> Vector_mj_pT30;   // mj
-        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT30.size(); igoodfatjet++) 
+        for(int ifj=0; ifj<fjets30_m->size(); ifj++) 
         {
-            float temp_mj_pT30 = Getmj(Vector_GoodFatjet_pT30.at(igoodfatjet).Px(), 
-                                       Vector_GoodFatjet_pT30.at(igoodfatjet).Py(),
-                                       Vector_GoodFatjet_pT30.at(igoodfatjet).Pz(),
-                                       Vector_GoodFatjet_pT30.at(igoodfatjet).E());
-            Vector_mj_pT30.push_back(temp_mj_pT30);
+            Vector_mj_pT30.push_back(fjets30_m->at(ifj));
         }
         MJ_pT30 = GetMJ(Vector_mj_pT30);
 
-        int Nfatjet_pT30 = Vector_GoodFatjet_pT30.size(); 
+        int Nfatjet_pT30 = fjets30_m->size(); 
+        
+        // 
+        // Fat jets on-the-fly vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv 
+        // 
+        vector<TLorentzVector> FatJetConstituent; 
+        for(unsigned int ijet=0;ijet<jets_AK4_pt->size();ijet++)
+        {
+            TLorentzVector tmp(jets_AK4_px->at(ijet),jets_AK4_py->at(ijet),
+                               jets_AK4_pz->at(ijet), jets_AK4_energy->at(ijet));
+            FatJetConstituent.push_back(tmp);
+        }
+
+        //  R=0.8-1.5  pT(SJ)>30  |eta|<5
+        vector<TLorentzVector>  FatJet_R0p8_pT30_Eta5 = makeFatJet(FatJetConstituent, 0.8, 30, 5);
+        vector<TLorentzVector>  FatJet_R0p9_pT30_Eta5 = makeFatJet(FatJetConstituent, 0.9, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p0_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.0, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p1_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.1, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p2_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.2, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p3_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.3, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p4_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.4, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p5_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.5, 30, 5);
+/*
+        vector<TLorentzVector>  FatJet_R1p6_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.6, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p7_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.7, 30, 5);
+        vector<TLorentzVector>  FatJet_R1p8_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.8, 30, 5);
+*/
+        for(unsigned int ifj=0; ifj<FatJet_R0p8_pT30_Eta5.size();ifj++)
+        {
+            mj_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).M());
+            FatjetPt_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R0p9_pT30_Eta5.size();ifj++)
+        {
+            mj_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).M());
+            FatjetPt_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p0_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p1_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p3_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p4_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p5_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).Phi());
+        }
+/*
+        for(unsigned int ifj=0; ifj<FatJet_R1p6_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p6_pT30_Eta5_.push_back(FatJet_R1p6_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p6_pT30_Eta5_.push_back(FatJet_R1p6_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p6_pT30_Eta5_.push_back(FatJet_R1p6_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p6_pT30_Eta5_.push_back(FatJet_R1p6_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p7_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p7_pT30_Eta5_.push_back(FatJet_R1p7_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p7_pT30_Eta5_.push_back(FatJet_R1p7_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p7_pT30_Eta5_.push_back(FatJet_R1p7_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p7_pT30_Eta5_.push_back(FatJet_R1p7_pT30_Eta5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p8_pT30_Eta5.size();ifj++)
+        {
+            mj_R1p8_pT30_Eta5_.push_back(FatJet_R1p8_pT30_Eta5.at(ifj).M());
+            FatjetPt_R1p8_pT30_Eta5_.push_back(FatJet_R1p8_pT30_Eta5.at(ifj).Pt());
+            FatjetEta_R1p8_pT30_Eta5_.push_back(FatJet_R1p8_pT30_Eta5.at(ifj).Eta());
+            FatjetPhi_R1p8_pT30_Eta5_.push_back(FatJet_R1p8_pT30_Eta5.at(ifj).Phi());
+        }
+*/
+        //  R=0.8-1.5  pT(SJ)>30  |eta|<2.5
+        vector<TLorentzVector>  FatJet_R0p8_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 0.8, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R0p9_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 0.9, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R1p0_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.0, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R1p1_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.1, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R1p2_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R1p3_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.3, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R1p4_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.4, 30, 2.5);
+        vector<TLorentzVector>  FatJet_R1p5_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.5, 30, 2.5);
+        for(unsigned int ifj=0; ifj<FatJet_R0p8_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R0p9_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p0_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p1_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p3_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p4_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p5_pT30_Eta2p5.size();ifj++)
+        {
+            mj_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).M());
+            FatjetPt_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Phi());
+        }
+        // Fat jets on-the-fly ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
        
         //
         // Fill the baby variables 
@@ -411,29 +910,30 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         Nfatjet_pT30_       =   Nfatjet_pT30;
         Nskinnyjet_         =   GoodJets_AK4.size();
         NBtagCSVM_          =   Ncsvm;
+        NBtagCSVL_          =   Ncsvl;
         EventWeight_        =   EventWeight;
         MJ_pT30_            =   MJ_pT30;
-        MET_                =   mets_et->at(0);
-        METPhi_             =   mets_phi->at(0);
+        MET_                =   pfType1mets_et->at(0);
+        METPhi_             =   pfType1mets_phi->at(0);
         HT_                 =   HT;
         Npv_                =   Npv;
         for(unsigned int bc(0); bc<PU_bunchCrossing->size(); ++bc)
         {
-            if(PU_bunchCrossing->at(bc)==-1)
+            if(PU_bunchCrossing->at(bc)==-1) 
                 Npuminusone_ = PU_NumInteractions->at(bc);
-            if(PU_bunchCrossing->at(bc)==1)
-                Npuplusone_ = PU_NumInteractions->at(bc);
-
+            if(PU_bunchCrossing->at(bc)==1) 
+                Npuplusone_  = PU_NumInteractions->at(bc);
+            
             if(PU_bunchCrossing->at(bc)==0)
                 Npu_ = PU_NumInteractions->at(bc);
         }
-        for(int igoodfatjet=0; igoodfatjet<(int)Vector_GoodFatjet_pT30.size(); igoodfatjet++) 
+        for(int ifj=0; ifj<(int)fjets30_m->size(); ifj++) 
         { 
-            mj_pT30_.push_back(Vector_mj_pT30.at(igoodfatjet));
-            FatjetPt_pT30_.push_back(Vector_GoodFatjet_pT30.at(igoodfatjet).Pt());
-            FatjetEta_pT30_.push_back(Vector_GoodFatjet_pT30.at(igoodfatjet).Eta());
-            FatjetPhi_pT30_.push_back(Vector_GoodFatjet_pT30.at(igoodfatjet).Phi());
-            FatjetN_pT30_.push_back(fastjets_AK4_R1p2_R0p5pT30_nconstituents->at(Vector_GoodFatjet_pT30_Index.at(igoodfatjet)));
+            mj_pT30_.push_back(fjets30_m->at(ifj));
+            FatjetPt_pT30_.push_back(fjets30_pt->at(ifj));
+            FatjetEta_pT30_.push_back(fjets30_eta->at(ifj));
+            FatjetPhi_pT30_.push_back(fjets30_phi->at(ifj));
+            //FatjetN_pT30_.push_back(fastjets_AK4_R1p2_R0p5pT30_nconstituents->at(Vector_GoodFatjet_pT30_Index.at(igoodfatjet)));
         }
 
         for(unsigned int imus=0; imus<RA4Muon.size(); imus++) 
@@ -467,10 +967,10 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
           JetPt_.push_back(jets_AK4_pt->at(ijet)); 
           JetEta_.push_back(jets_AK4_eta->at(ijet)); 
           JetPhi_.push_back(jets_AK4_phi->at(ijet)); 
-          JetCSV_.push_back(jets_AK4_btag_secVertexCombined->at(ijet)); 
+          JetCSV_.push_back(jets_AK4_btag_inc_secVertexCombined->at(ijet)); 
         }
         // gen top pT for TTbar samples  
-        for(int igen=0; igen<mc_doc_id->size(); igen++) 
+        for(int igen=0; igen<(int)mc_doc_id->size(); igen++) 
         { 
             GenPt_.push_back(   mc_doc_pt->at(igen));  
             GenPhi_.push_back(  mc_doc_phi->at(igen));  
@@ -497,16 +997,16 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         }
         for(int igenjet=0; igenjet<jets_AK4_gen_pt->size(); igenjet++) 
         { 
-          GenJetPt_.push_back(jets_AK4_gen_pt->at(igenjet)); 
-          GenJetEta_.push_back(jets_AK4_gen_eta->at(igenjet)); 
-          GenJetPhi_.push_back(jets_AK4_gen_phi->at(igenjet)); 
+            GenJetPt_.push_back(jets_AK4_gen_pt->at(igenjet)); 
+            //GenJetEta_.push_back(jets_AK4_gen_eta->at(igenjet)); 
+            //GenJetPhi_.push_back(jets_AK4_gen_phi->at(igenjet)); 
         }
-        GenMET_                =   mets_gen_et->at(0);
+        GenMET_                =   pfType1mets_gen_et->at(0);
         for(int imcjet=0; imcjet<mc_jets_pt->size(); imcjet++) 
         { 
-          MCJetPt_.push_back(mc_jets_pt->at(imcjet)); 
-          MCJetEta_.push_back(mc_jets_eta->at(imcjet)); 
-          MCJetPhi_.push_back(mc_jets_phi->at(imcjet)); 
+            MCJetPt_.push_back(mc_jets_pt->at(imcjet)); 
+            MCJetEta_.push_back(mc_jets_eta->at(imcjet)); 
+            MCJetPhi_.push_back(mc_jets_phi->at(imcjet)); 
         }
 
         babyTree_->Fill(); // Fill all events
