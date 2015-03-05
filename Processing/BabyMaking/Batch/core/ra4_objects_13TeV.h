@@ -22,7 +22,7 @@ double getDZ(double vx, double vy, double vz, double px, double py, double pz, i
 /////////////////////////////////////////////////////////////////////////
 float GetMuonIsolation(int imu)
 {
-    if(imu >= mus_pt->size()) return -999;
+    if(imu >= (int)mus_pt->size()) return -999;
     double sumEt = mus_pfIsolationR03_sumNeutralHadronEt->at(imu) + mus_pfIsolationR03_sumPhotonEt->at(imu) 
         - 0.5*mus_pfIsolationR03_sumPUPt->at(imu);
     if(sumEt<0.0) sumEt=0.0;
@@ -31,7 +31,7 @@ float GetMuonIsolation(int imu)
 
 bool IsBasicMuon(int imu)
 {
-    if(imu >= mus_pt->size()) return false;
+    if(imu >= (int)mus_pt->size()) return false;
 
     float d0PV = mus_tk_d0dum->at(imu)-pv_x->at(0)*sin(mus_tk_phi->at(imu))+pv_y->at(0)*cos(mus_tk_phi->at(imu));
 
@@ -51,7 +51,7 @@ bool IsBasicMuon(int imu)
 
 bool IsSignalMuon(int imu)
 {
-    if(imu >= mus_pt->size()) return false;
+    if(imu >= (int)mus_pt->size()) return false;
 
     float relIso = GetMuonIsolation(imu);  
     return (IsBasicMuon(imu) && relIso < 0.12); 
@@ -59,7 +59,7 @@ bool IsSignalMuon(int imu)
 
 bool IsVetoMuon(int imu)
 {
-    if(imu >= mus_pt->size()) return false;
+    if(imu >= (int)mus_pt->size()) return false;
     if(IsSignalMuon(imu)) return false; // not signal muon
 
     float relIso = GetMuonIsolation(imu);
@@ -77,7 +77,7 @@ bool IsVetoMuon(int imu)
 vector<int> GetMuons(bool doSignal)
 {
     vector<int> muons;
-    for(int index=0; index<mus_pt->size(); index++)
+    for(int index=0; index<(int)mus_pt->size(); index++)
         if(doSignal)
         {
             if(IsSignalMuon(index)) muons.push_back(index);
@@ -100,14 +100,14 @@ float GetElectronIsolation(int iel)
 
 bool IsBasicElectron(int iel)
 {
-    if(iel >= els_pt->size()) return false;
+    if(iel >= (int)els_pt->size()) return false;
 
     float d0PV = els_d0dum->at(iel)-pv_x->at(0)*sin(els_tk_phi->at(iel))+pv_y->at(0)*cos(els_tk_phi->at(iel));
 
     return (els_pt->at(iel) > MinSignalLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
-            //&& !els_hasMatchedConversion->at(iel)
-            && els_n_inner_layer->at(iel) <= 1
+            && !els_hasMatchedConversion->at(iel)
+            && els_n_inner_layer->at(iel) <= 1 // FIXME why this does not exist in PHYS14? 
             && fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
                     sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.1
             && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.05 
@@ -127,7 +127,7 @@ bool IsBasicElectron(int iel)
 
 bool IsSignalElectron(int iel)
 {
-    if(iel >= els_pt->size()) return false;
+    if(iel >= (int)els_pt->size()) return false;
 
     double relIso = GetElectronIsolation(iel);
     return (IsBasicElectron(iel) && relIso < 0.15);
@@ -135,7 +135,7 @@ bool IsSignalElectron(int iel)
 
 bool IsVetoElectron(int iel)
 {
-    if(iel >= els_pt->size()) return false;
+    if(iel >= (int)els_pt->size()) return false;
     if(IsSignalElectron(iel)) return false; // not signal electron 
 
     float d0PV = els_d0dum->at(iel)-pv_x->at(0)*sin(els_tk_phi->at(iel))+pv_y->at(0)*cos(els_tk_phi->at(iel));
@@ -162,7 +162,7 @@ bool IsVetoElectron(int iel)
 vector<int> GetElectrons(bool doSignal)
 {
     vector<int> electrons;
-    for(int index=0; index<els_pt->size(); index++)
+    for(int index=0; index<(int)els_pt->size(); index++)
         if(doSignal)
         {
             if(IsSignalElectron(index)) electrons.push_back(index);
@@ -212,7 +212,7 @@ vector<int> GetJets(vector<int> SigEl, vector<int> SigMu, vector<int> VetoEl, ve
     HT = SigEl.size()+VetoEl.size()+SigMu.size()+VetoMu.size(); // To avoid warnings
     HT = 0;
     // Finding jets that contain good leptons
-    for(int index = 0; index < SigEl.size(); index++) 
+    for(int index = 0; index < (int)SigEl.size(); index++) 
     {
         int ijet = els_jet_ind->at(SigEl[index]);
         if(ijet >= 0) 
@@ -220,13 +220,13 @@ vector<int> GetJets(vector<int> SigEl, vector<int> SigMu, vector<int> VetoEl, ve
             jet_is_lepton[ijet] = true;
         }
     }
-    for(int index = 0; index < VetoEl.size(); index++) 
+    for(int index = 0; index < (int)VetoEl.size(); index++) 
     {
         int ijet = els_jet_ind->at(VetoEl[index]);
         if(ijet >= 0) jet_is_lepton[ijet] = true;
     }
 
-    for(int index = 0; index < SigMu.size(); index++) 
+    for(int index = 0; index < (int)SigMu.size(); index++) 
     {
         int ijet = mus_jet_ind->at(SigMu[index]);
         if(ijet >= 0) 
@@ -234,14 +234,14 @@ vector<int> GetJets(vector<int> SigEl, vector<int> SigMu, vector<int> VetoEl, ve
             jet_is_lepton[ijet] = true;
         }
     }
-    for(int index = 0; index < VetoMu.size(); index++) 
+    for(int index = 0; index < (int)VetoMu.size(); index++) 
     {
         int ijet = mus_jet_ind->at(VetoMu[index]);
         if(ijet >= 0) jet_is_lepton[ijet] = true;
     }
 
     // Tau/photon cleaning, and calculation of HT
-    for(int ijet = 0; ijet<jets_AK4_pt->size(); ijet++) 
+    for(int ijet = 0; ijet<(int)jets_AK4_pt->size(); ijet++) 
     {
         if(!IsGoodJet(ijet, MinJetPt, 2.4) || jet_is_lepton[ijet]) continue;
 
@@ -284,7 +284,7 @@ int GetTrueParticle(double RecEta, double RecPhi, double &closest_dR)
     int closest_imc = -1; 
     double dR = 9999.; closest_dR = 9999.;
     double MCEta, MCPhi;
-    for(unsigned int imc=0; imc < mc_doc_id->size(); imc++)
+    for(int imc=0; imc < (int)mc_doc_id->size(); imc++)
     {
         MCEta = mc_doc_eta->at(imc); MCPhi = mc_doc_phi->at(imc);
         dR = sqrt(pow(RecEta-MCEta,2) + pow(RecPhi-MCPhi,2));
@@ -297,6 +297,7 @@ int GetTrueParticle(double RecEta, double RecPhi, double &closest_dR)
     return closest_imc;
 }
 
+/*
 int GetTrueMuon(int index, int &momID, double &closest_dR)
 {
     if(index < 0 || index >= static_cast<int>(mus_eta->size())) return -1;
@@ -305,7 +306,7 @@ int GetTrueMuon(int index, int &momID, double &closest_dR)
     double dR = 9999.; closest_dR = 9999.;
     double MCEta, MCPhi;
     double RecEta = mus_eta->at(index), RecPhi = mus_phi->at(index);
-    for(unsigned int imc=0; imc < mc_mus_id->size(); imc++)
+    for(int imc=0; imc < (int)mc_mus_id->size(); imc++)
     {
         MCEta = mc_mus_eta->at(imc); MCPhi = mc_mus_phi->at(imc);
         dR = sqrt(pow(RecEta-MCEta,2) + pow(RecPhi-MCPhi,2));
@@ -337,7 +338,8 @@ int GetTrueMuon(int index, int &momID, double &closest_dR)
     }
     return idLepton;
 }
-
+*/
+/*
 int GetTrueElectron(int index, int &momID, double &closest_dR)
 {
     if(index < 0 || index >= static_cast<int>(els_eta->size())) return -1;
@@ -346,7 +348,7 @@ int GetTrueElectron(int index, int &momID, double &closest_dR)
     double dR = 9999.; closest_dR = 9999.;
     double MCEta, MCPhi;
     double RecEta = els_eta->at(index), RecPhi = els_phi->at(index);
-    for(unsigned int imc=0; imc < mc_electrons_id->size(); imc++)
+    for(int imc=0; imc < (int)mc_electrons_id->size(); imc++)
     {
         MCEta = mc_electrons_eta->at(imc); MCPhi = mc_electrons_phi->at(imc);
         dR = sqrt(pow(RecEta-MCEta,2) + pow(RecPhi-MCPhi,2));
@@ -378,7 +380,7 @@ int GetTrueElectron(int index, int &momID, double &closest_dR)
     }
     return idLepton;
 }
-
+*/
 
 /////////////////////////////////////////////////////////////////////////
 ////////////////////////////  EVENT CLEANING  ///////////////////////////

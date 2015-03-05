@@ -25,21 +25,30 @@
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/ClusterSequence.hh"
 
+// For local execution 
+//ln -sf ../../../../../../../fastjet-install/include/fastjet
+//ln -sf ../../../../../../../fastjet-install/lib/libfastjet.so
+
 //
 #ifdef __MAKECINT__
 #pragma link C++ class std::vector < std::vector<float> >+;
 #endif
 
+//
 using namespace std;
+
+//
+typedef std::pair<fastjet::PseudoJet,std::vector<float> > FatJetPair;
 
 //
 // Make fat jets 
 //
-vector<TLorentzVector> makeFatJet( vector<TLorentzVector> FatJetConstituent, 
+std::vector<FatJetPair> makeFatJet( vector<TLorentzVector> FatJetConstituent, 
                                    double Rparam=1.2, 
                                    int ConstituentpTcut=30, 
                                    float ConstituentEtacut=100) 
 {
+    std::vector<FatJetPair> FatJets_sjmj; 
     vector<TLorentzVector> FatJets;
 
     // Loop over R=0.5 jets, form into PseudoJets vector
@@ -89,6 +98,33 @@ vector<TLorentzVector> makeFatJet( vector<TLorentzVector> FatJetConstituent,
     vector<fastjet::PseudoJet> inclusive_jets = clust_seq.inclusive_jets(ptmin);
     //Sort by pt
     vector<fastjet::PseudoJet> sorted_jets = sorted_by_pt(inclusive_jets);
+
+    // store mj(sj) of skinny jets
+    vector<vector<float> > vecvec_constituents_m;
+    vecvec_constituents_m.clear();
+    for(int isortjets = 0; isortjets< (int)sorted_jets.size(); isortjets++)
+    {
+        vector<float> vec_constituents_m;
+        vec_constituents_m.clear();
+        
+        vector<fastjet::PseudoJet> constituents = sorted_jets.at(isortjets).constituents();
+        for(int iconstituent = 0; iconstituent < (int)constituents.size(); iconstituent++)
+        {
+            vec_constituents_m.push_back(constituents.at(iconstituent).m()); 
+            //cout << isortjets << " " << iconstituent << " " << constituents.at(iconstituent).m() << endl; 
+        }
+        
+        // sort vec_constituents_m
+        sort(vec_constituents_m.begin(), vec_constituents_m.end());
+        reverse(vec_constituents_m.begin(), vec_constituents_m.end());
+        for(int i = 0; i < (int)vec_constituents_m.size(); i++)
+            //cout << "sorted :: " << isortjets << " " << i << " " << vec_constituents_m.at(i)<< endl; 
+    
+        vecvec_constituents_m.push_back(vec_constituents_m);
+        FatJets_sjmj.push_back(std::make_pair(sorted_jets.at(isortjets),vec_constituents_m));
+    }
+
+    /*
     //fill fastjet output into vectors, continue as original code
     for(int isortjets = 0; isortjets< (int)sorted_jets.size(); isortjets++)
     {
@@ -110,6 +146,9 @@ vector<TLorentzVector> makeFatJet( vector<TLorentzVector> FatJetConstituent,
     }
 
     return FatJets;
+    */
+    //return sorted_jets;
+    return FatJets_sjmj; 
 }
 
 //
@@ -241,7 +280,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     vector<float> FatjetPt_R1p2_pT30_Eta5_;
     vector<float> FatjetEta_R1p2_pT30_Eta5_;
     vector<float> FatjetPhi_R1p2_pT30_Eta5_;
-    vector<vector<float> >   *Fatjet_sjmj_R1p2_pT30_Eta5_ = 0;
+    vector<vector<float> >   Fatjet_sjmj_R1p2_pT30_Eta5_; 
     vector<float> mj_R1p3_pT30_Eta5_;
     vector<float> FatjetPt_R1p3_pT30_Eta5_;
     vector<float> FatjetEta_R1p3_pT30_Eta5_;
@@ -473,7 +512,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             }
             i_permille_old = i_permille;
         }
-        if(i%10000==0) cout << "Progress : " << i << "/" << nentries << endl;
+        if(i%2000==0) cout << "Progress : " << i << "/" << nentries << endl;
         // Progress indicator end ----------------------------------
         
         // Access to the event  
@@ -680,136 +719,177 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             FatJetConstituent.push_back(tmp);
         }
 
+        std::vector<FatJetPair> FatJet_R1p2_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.2, 30, 5);
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta5.size();ifj++)
+        {
+            if(FatJet_R1p2_pT30_Eta5.at(ifj).first.pt()<50) continue;
+            mj_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.m());
+            FatjetPt_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.pt());
+            FatjetEta_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.eta());
+            FatjetPhi_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).first.phi());
+            Fatjet_sjmj_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).second);
+           /* 
+            cout << ifj << " " 
+                 << FatJet_R1p2_pT30_Eta5.at(ifj).first.m() << " "
+                 << FatJet_R1p2_pT30_Eta5.at(ifj).first.pt() << " "
+                 << FatJet_R1p2_pT30_Eta5.at(ifj).first.eta() << " "
+                 << FatJet_R1p2_pT30_Eta5.at(ifj).first.phi() << " "
+                 << FatJet_R1p2_pT30_Eta5.at(ifj).second.size() <<  " " 
+                 << endl; 
+                 for(int j=0; j<FatJet_R1p2_pT30_Eta5.at(ifj).second.size(); j++)  
+                    cout << "sjmj of " << j << " " << FatJet_R1p2_pT30_Eta5.at(ifj).second.at(j) <<  " "; 
+            cout << endl; 
+            */
+        }
+        /*
         //  R=0.8-1.5  pT(SJ)>30  |eta|<5
-        vector<TLorentzVector>  FatJet_R0p8_pT30_Eta5 = makeFatJet(FatJetConstituent, 0.8, 30, 5);
-        vector<TLorentzVector>  FatJet_R0p9_pT30_Eta5 = makeFatJet(FatJetConstituent, 0.9, 30, 5);
-        vector<TLorentzVector>  FatJet_R1p0_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.0, 30, 5);
-        vector<TLorentzVector>  FatJet_R1p1_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.1, 30, 5);
-        vector<TLorentzVector>  FatJet_R1p2_pT30_Eta5 = makeFatJet(FatJetConstituent, FatJet_sjmj_R1p2_pT30_Eta5_, 1.2, 30, 5);
-        vector<TLorentzVector>  FatJet_R1p3_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.3, 30, 5);
-        vector<TLorentzVector>  FatJet_R1p4_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.4, 30, 5);
-        vector<TLorentzVector>  FatJet_R1p5_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.5, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R0p8_pT30_Eta5 = makeFatJet(FatJetConstituent, 0.8, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R0p9_pT30_Eta5 = makeFatJet(FatJetConstituent, 0.9, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R1p0_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.0, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R1p1_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.1, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R1p2_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.2, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R1p3_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.3, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R1p4_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.4, 30, 5);
+        vector<fastjet::PseudoJet>  FatJet_R1p5_pT30_Eta5 = makeFatJet(FatJetConstituent, 1.5, 30, 5);
         for(unsigned int ifj=0; ifj<FatJet_R0p8_pT30_Eta5.size();ifj++)
         {
-            mj_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).M());
-            FatjetPt_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R0p8_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).m());
+            FatjetPt_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R0p8_pT30_Eta5_.push_back(FatJet_R0p8_pT30_Eta5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R0p9_pT30_Eta5.size();ifj++)
         {
-            mj_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).M());
-            FatjetPt_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R0p9_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).m());
+            FatjetPt_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R0p9_pT30_Eta5_.push_back(FatJet_R0p9_pT30_Eta5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p0_pT30_Eta5.size();ifj++)
         {
-            mj_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).M());
-            FatjetPt_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R1p0_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).m());
+            FatjetPt_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R1p0_pT30_Eta5_.push_back(FatJet_R1p0_pT30_Eta5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p1_pT30_Eta5.size();ifj++)
         {
-            mj_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).M());
-            FatjetPt_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R1p1_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).m());
+            FatjetPt_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R1p1_pT30_Eta5_.push_back(FatJet_R1p1_pT30_Eta5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta5.size();ifj++)
         {
-            mj_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).M());
-            FatjetPt_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R1p2_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).m());
+            FatjetPt_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R1p2_pT30_Eta5_.push_back(FatJet_R1p2_pT30_Eta5.at(ifj).phi());
+            //Fatjet_sjmj_R1p2_pT30_Eta5_.push_back(vec_constituents_m);
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p3_pT30_Eta5.size();ifj++)
         {
-            mj_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).M());
-            FatjetPt_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R1p3_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).m());
+            FatjetPt_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R1p3_pT30_Eta5_.push_back(FatJet_R1p3_pT30_Eta5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p4_pT30_Eta5.size();ifj++)
         {
-            mj_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).M());
-            FatjetPt_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R1p4_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).m());
+            FatjetPt_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R1p4_pT30_Eta5_.push_back(FatJet_R1p4_pT30_Eta5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p5_pT30_Eta5.size();ifj++)
         {
-            mj_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).M());
-            FatjetPt_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).Pt());
-            FatjetEta_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).Eta());
-            FatjetPhi_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).Phi());
+            if(FatJet_R1p5_pT30_Eta5.at(ifj).pt()<50) continue;
+            mj_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).m());
+            FatjetPt_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).pt());
+            FatjetEta_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).eta());
+            FatjetPhi_R1p5_pT30_Eta5_.push_back(FatJet_R1p5_pT30_Eta5.at(ifj).phi());
         }
         //  R=0.8-1.5  pT(SJ)>30  |eta|<2.5
-        vector<TLorentzVector>  FatJet_R0p8_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 0.8, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R0p9_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 0.9, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R1p0_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.0, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R1p1_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.1, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R1p2_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R1p3_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.3, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R1p4_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.4, 30, 2.5);
-        vector<TLorentzVector>  FatJet_R1p5_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.5, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R0p8_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 0.8, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R0p9_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 0.9, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R1p0_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.0, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R1p1_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.1, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R1p2_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R1p3_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.3, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R1p4_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.4, 30, 2.5);
+        vector<fastjet::PseudoJet>  FatJet_R1p5_pT30_Eta2p5 = makeFatJet(FatJetConstituent, 1.5, 30, 2.5);
         for(unsigned int ifj=0; ifj<FatJet_R0p8_pT30_Eta2p5.size();ifj++)
         {
-            mj_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R0p8_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R0p8_pT30_Eta2p5_.push_back(FatJet_R0p8_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R0p9_pT30_Eta2p5.size();ifj++)
         {
-            mj_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R0p9_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R0p9_pT30_Eta2p5_.push_back(FatJet_R0p9_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p0_pT30_Eta2p5.size();ifj++)
         {
-            mj_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R1p0_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R1p0_pT30_Eta2p5_.push_back(FatJet_R1p0_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p1_pT30_Eta2p5.size();ifj++)
         {
-            mj_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R1p1_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R1p1_pT30_Eta2p5_.push_back(FatJet_R1p1_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p2_pT30_Eta2p5.size();ifj++)
         {
-            mj_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R1p2_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R1p2_pT30_Eta2p5_.push_back(FatJet_R1p2_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p3_pT30_Eta2p5.size();ifj++)
         {
-            mj_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R1p3_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R1p3_pT30_Eta2p5_.push_back(FatJet_R1p3_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p4_pT30_Eta2p5.size();ifj++)
         {
-            mj_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R1p4_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R1p4_pT30_Eta2p5_.push_back(FatJet_R1p4_pT30_Eta2p5.at(ifj).phi());
         }
         for(unsigned int ifj=0; ifj<FatJet_R1p5_pT30_Eta2p5.size();ifj++)
         {
-            mj_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).M());
-            FatjetPt_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Pt());
-            FatjetEta_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Eta());
-            FatjetPhi_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Phi());
+            if(FatJet_R1p5_pT30_Eta2p5.at(ifj).pt()<50) continue;
+            mj_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).m());
+            FatjetPt_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).pt());
+            FatjetEta_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).eta());
+            FatjetPhi_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).phi());
         }
+        */
         // Fat jets on-the-fly ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
        
         //
