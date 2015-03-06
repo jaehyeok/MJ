@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-cat dataset.txt | grep -v "\#" | while read line  
+cat dataset/dataset.txt | grep -v "\#" | while read line  
 do 
     
     echo "./RunOneDataset.sh $line"

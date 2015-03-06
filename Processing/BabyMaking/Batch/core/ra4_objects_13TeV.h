@@ -20,13 +20,20 @@ double getDZ(double vx, double vy, double vz, double px, double py, double pz, i
 /////////////////////////////////////////////////////////////////////////
 ////////////////////////////////  MUONS  ////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
+// Ref : https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Tight_Muon
+// The veto muon Id is the same as the tight but with lower pT cut. 
+// The signal muon isolation is R= 0.4, iso < 0.12 
+// The veto muon isolation is R= 0.4, iso < 0.2
 float GetMuonIsolation(int imu)
 {
     if(imu >= (int)mus_pt->size()) return -999;
-    double sumEt = mus_pfIsolationR03_sumNeutralHadronEt->at(imu) + mus_pfIsolationR03_sumPhotonEt->at(imu) 
-        - 0.5*mus_pfIsolationR03_sumPUPt->at(imu);
+    //double sumEt = mus_pfIsolationR03_sumNeutralHadronEt->at(imu) + mus_pfIsolationR03_sumPhotonEt->at(imu) 
+    //    - 0.5*mus_pfIsolationR03_sumPUPt->at(imu);
+    double sumEt = mus_pfIsolationR04_sumNeutralHadronEt->at(imu) + mus_pfIsolationR04_sumPhotonEt->at(imu) 
+        - 0.5*mus_pfIsolationR04_sumPUPt->at(imu);
     if(sumEt<0.0) sumEt=0.0;
-    return (mus_pfIsolationR03_sumChargedHadronPt->at(imu) + sumEt)/mus_pt->at(imu);
+    //return (mus_pfIsolationR03_sumChargedHadronPt->at(imu) + sumEt)/mus_pt->at(imu);
+    return (mus_pfIsolationR04_sumChargedHadronPt->at(imu) + sumEt)/mus_pt->at(imu);
 }
 
 bool IsBasicMuon(int imu)
@@ -35,16 +42,20 @@ bool IsBasicMuon(int imu)
 
     float d0PV = mus_tk_d0dum->at(imu)-pv_x->at(0)*sin(mus_tk_phi->at(imu))+pv_y->at(0)*cos(mus_tk_phi->at(imu));
 
-    return (mus_isGlobalMuon->at(imu) > 0
-            && mus_isPF->at(imu)
-            && mus_id_GlobalMuonPromptTight->at(imu)> 0 
-            && mus_tk_LayersWithMeasurement->at(imu) > 5
-            && mus_tk_numvalPixelhits->at(imu) > 0
+    return ( //mus_isGlobalMuon->at(imu) > 0
+            mus_isPF->at(imu)
+            // recoMu.globalTrack()->normalizedChi2() < 10.
+            // recoMu.globalTrack()->hitPattern().numberOfValidMuonHits() > 0
+            && mus_id_GlobalMuonPromptTight->at(imu)> 0  // this includes above two and isGlobalMuon 
             && mus_numberOfMatchedStations->at(imu) > 1
             //&& fabs(mus_dB->at(imu)) < 0.02
-            && fabs(d0PV) < 0.02
-            && fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
-                    mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5
+            && fabs(d0PV) < 0.2/*0.02*/
+            //&& fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
+            //        mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5
+            && fabs(mus_tk_vz->at(imu)-pv_z->at(0))<0.5
+            && mus_tk_numvalPixelhits->at(imu) > 0
+            && mus_tk_LayersWithMeasurement->at(imu) > 5
+            
             && mus_pt->at(imu) >= MinSignalLeptonPt
             && fabs(mus_eta->at(imu)) <= 2.4);
 }
@@ -62,14 +73,32 @@ bool IsVetoMuon(int imu)
     if(imu >= (int)mus_pt->size()) return false;
     if(IsSignalMuon(imu)) return false; // not signal muon
 
+    float d0PV = mus_tk_d0dum->at(imu)-pv_x->at(0)*sin(mus_tk_phi->at(imu))+pv_y->at(0)*cos(mus_tk_phi->at(imu));
     float relIso = GetMuonIsolation(imu);
-
+/*
     return ((mus_isGlobalMuon->at(imu) >0 || mus_isTrackerMuon->at(imu) >0)
             && mus_isPF->at(imu) 
             && fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
                     mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5 
             && mus_pt->at(imu) >= MinVetoLeptonPt
             && fabs(mus_eta->at(imu)) <= 2.5
+*/
+    return (//mus_isGlobalMuon->at(imu) > 0
+            mus_isPF->at(imu)
+            // recoMu.globalTrack()->normalizedChi2() < 10.
+            // recoMu.globalTrack()->hitPattern().numberOfValidMuonHits() > 0
+            && mus_id_GlobalMuonPromptTight->at(imu) > 0   // this includes above two and isGlobalMuon
+            && mus_numberOfMatchedStations->at(imu) > 1
+            //&& fabs(mus_dB->at(imu)) < 0.02
+            && fabs(d0PV) < 0.2/*0.02*/
+            //&& fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
+            //        mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5
+            && fabs(mus_tk_vz->at(imu)-pv_z->at(0))<0.5
+            && mus_tk_numvalPixelhits->at(imu) > 0
+            && mus_tk_LayersWithMeasurement->at(imu) > 5
+            
+            && mus_pt->at(imu) >= MinVetoLeptonPt
+            && fabs(mus_eta->at(imu)) <= 2.4
             && relIso < 0.2);
 }
 
@@ -92,45 +121,60 @@ vector<int> GetMuons(bool doSignal)
 /////////////////////////////////////////////////////////////////////////
 //////////////////////////////  ELECTRONS  //////////////////////////////
 /////////////////////////////////////////////////////////////////////////
+// Ref : https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedElectronIdentificationRun2#CSA14_selection_conditions_25ns
+
 float GetElectronIsolation(int iel)
 {
     float absiso = els_pfIsolationR03_sumChargedHadronPt->at(iel) + std::max(0.0 , els_pfIsolationR03_sumNeutralHadronEt->at(iel) + els_pfIsolationR03_sumPhotonEt->at(iel) - 0.5 * els_pfIsolationR03_sumPUPt->at(iel) );
     return absiso/els_pt->at(iel);
 }
 
-bool IsBasicElectron(int iel)
+bool IsBasicElectron(int iel) // Medium working point 
 {
     if(iel >= (int)els_pt->size()) return false;
 
     float d0PV = els_d0dum->at(iel)-pv_x->at(0)*sin(els_tk_phi->at(iel))+pv_y->at(0)*cos(els_tk_phi->at(iel));
-
+    
     return (els_pt->at(iel) > MinSignalLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
-            && !els_hasMatchedConversion->at(iel)
-            && els_n_inner_layer->at(iel) <= 1 // FIXME why this does not exist in PHYS14? 
-            && fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                    sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.1
-            && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.05 
-            && fabs(d0PV) < 0.02 
-            && ((els_isEB->at(iel) // Endcap selection
-                    && fabs(els_dEtaIn->at(iel)) < 0.004
-                    && fabs(els_dPhiIn->at(iel)) < 0.06
-                    && els_sigmaIEtaIEta->at(iel) < 0.01
-                    && els_hadOverEm->at(iel) < 0.12 ) ||
-                (els_isEE->at(iel)  // Barrel selection
-                 && fabs(els_dEtaIn->at(iel)) < 0.007
-                 && fabs(els_dPhiIn->at(iel)) < 0.03
-                 && els_sigmaIEtaIEta->at(iel) < 0.03
-                 && els_hadOverEm->at(iel) < 0.10 ))
+            && ((els_isEB->at(iel) // Barrel selection
+                 && fabs(els_dEtaIn->at(iel)) < 0.0106/*0.004*/
+                 && fabs(els_dPhiIn->at(iel)) < 0.0323/*0.06*/
+                 && els_full5x5_sigmaIetaIeta->at(iel) < 0.0107/*0.01*/
+                 && els_hadOverEm->at(iel) < 0.067/*0.12*/
+                 && fabs(d0PV) < 0.0131/*0.02*/
+                 //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
+                 //        sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.2231/*0.1*/
+                 && fabs(els_vz->at(iel) - pv_z->at(0))<0.2231
+                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1043/*0.05*/
+                && els_PATpassConversionVeto->at(iel)             // was !els_hasMatchedConversion->at(iel)
+                && els_expectedMissingInnerHits->at(iel) <= 1     // was els_n_inner_layer->at(iel) <= 1 
+                ) ||
+                (els_isEE->at(iel)  // Endcap selection
+                 && fabs(els_dEtaIn->at(iel)) < 0.0108/* 0.007*/
+                 && fabs(els_dPhiIn->at(iel)) < 0.0455/*0.03*/
+                 && els_full5x5_sigmaIetaIeta->at(iel) < 0.0318/*0.03*/
+                 && els_hadOverEm->at(iel) < 0.097/*0.10*/ 
+                 && fabs(d0PV) < 0.0845/*0.02*/ 
+                 //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
+                 //        sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.7523/*0.1*/
+                 && fabs(els_vz->at(iel) - pv_z->at(0))<0.7523
+                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1201/*0.05*/ 
+                 && els_PATpassConversionVeto->at(iel)            // was !els_hasMatchedConversion->at(iel)
+                 && els_expectedMissingInnerHits->at(iel) <= 1    // was els_n_inner_layer->at(iel) <= 1 
+                ))
            );
 }
 
 bool IsSignalElectron(int iel)
 {
     if(iel >= (int)els_pt->size()) return false;
+    
+    float isocut = 0.2179;  // Medium working point 
+    if(els_isEE->at(iel)) isocut = 0.254;
 
     double relIso = GetElectronIsolation(iel);
-    return (IsBasicElectron(iel) && relIso < 0.15);
+    return (IsBasicElectron(iel) && relIso < isocut);
 }
 
 bool IsVetoElectron(int iel)
@@ -143,19 +187,34 @@ bool IsVetoElectron(int iel)
 
     return (els_pt->at(iel) > MinVetoLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
-            && relIso < 0.15
-            && fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                    sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.2
-            && fabs(d0PV) < 0.04 
             && ((els_isEB->at(iel) // Endcap selection
-                    && fabs(els_dEtaIn->at(iel)) < 0.007
-                    && fabs(els_dPhiIn->at(iel)) < 0.8
-                    && els_sigmaIEtaIEta->at(iel) < 0.01
-                    && els_hadOverEm->at(iel) < 0.15) ||
+                    && fabs(els_dEtaIn->at(iel)) < 0.02/*0.007*/
+                    && fabs(els_dPhiIn->at(iel)) < 0.2579/*0.8*/
+                    && els_full5x5_sigmaIetaIeta->at(iel) < 0.0125/*0.01*/
+                    && els_hadOverEm->at(iel) < 0.2564/*0.15*/
+                    && fabs(d0PV) < 0.025/*0.04*/ 
+                    //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
+                    //              sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.5863/*0.2*/
+                    && fabs(els_vz->at(iel) - pv_z->at(0))<0.5863
+                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1508 
+                    && relIso < 0.3313 /*0.15*/
+                    && els_PATpassConversionVeto->at(iel)             // was !els_hasMatchedConversion->at(iel)
+                    && els_expectedMissingInnerHits->at(iel) <= 2     // was els_n_inner_layer->at(iel) <= 2  
+                    ) ||
                 (els_isEE->at(iel)  // Barrel selection
-                 && fabs(els_dEtaIn->at(iel)) < 0.01
-                 && fabs(els_dPhiIn->at(iel)) < 0.7
-                 && els_sigmaIEtaIEta->at(iel) < 0.03))
+                    && fabs(els_dEtaIn->at(iel)) < 0.0141/*0.01*/
+                    && fabs(els_dPhiIn->at(iel)) < 0.2591/*0.7*/
+                    && els_full5x5_sigmaIetaIeta->at(iel) < 0.0371/*0.03*/
+                    && els_hadOverEm->at(iel) < 0.1335/*0.15*/
+                    && fabs(d0PV) < 0.2232/*0.04*/ 
+                    //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
+                    //           sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.9513/*0.2*/
+                    && fabs(els_vz->at(iel) - pv_z->at(0))<0.9513
+                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1542 
+                    && relIso < 0.3816 /*0.15*/
+                    && els_PATpassConversionVeto->at(iel)             // was !els_hasMatchedConversion->at(iel)
+                    && els_expectedMissingInnerHits->at(iel) <= 3     // was els_n_inner_layer->at(iel) <= 3 
+                 ))
            );  
 }
 
@@ -296,7 +355,6 @@ int GetTrueParticle(double RecEta, double RecPhi, double &closest_dR)
     }
     return closest_imc;
 }
-
 /*
 int GetTrueMuon(int index, int &momID, double &closest_dR)
 {

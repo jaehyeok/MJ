@@ -43,10 +43,10 @@ while [ $COUNTER -lt $(($LASTFILENUM)) ]; do
     if [ $(($LASTFILENUM-$COUNTER)) -lt $(($NFILEPERJOB)) ] 
     then 
         echo "JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI"
-        JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI
+#        JobSubmit.csh ./RunOneJob.sh  $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($LASTFILENUM)) $ISDATA $LUMI
     else  
         echo "JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI" 
-        JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI 
+#        JobSubmit.csh ./RunOneJob.sh $INPUTDIR/$DATASET/ $RECOGNIZER $COUNTER $(($COUNTER+$NFILEPERJOB-1)) $ISDATA $LUMI 
     fi
 
     let COUNTER=COUNTER+$NFILEPERJOB
