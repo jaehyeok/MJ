@@ -58,7 +58,7 @@ float getDR(float eta1, float eta2, float phi1, float phi2)
     return getDR(getDPhi(phi1, phi2), eta1-eta2);
 }
 
-void EventDisplayForBaby(bool sig=false, bool truth=true, bool fatjet=true, char* Region="SR0p2")
+void EventDisplayForBaby(bool sig=false, bool truth=true, bool fatjet=true, const char* Region="SR0")
 {
 
     gInterpreter->ExecuteMacro("~/macros/rootlogon.C");
@@ -199,7 +199,7 @@ void EventDisplayForBaby(bool sig=false, bool truth=true, bool fatjet=true, char
     {
         ch->GetEntry(i); 
 
-        if( event__!=111296860) continue; // FIXME   
+        if( event_!=111296860) continue; // FIXME   
 
         //if(!PassNLep(1))  continue; // need this upfront because of mT calculation
         
@@ -230,6 +230,7 @@ void EventDisplayForBaby(bool sig=false, bool truth=true, bool fatjet=true, char
         // print out mc doc
         if(0)
         {  
+            cout << "Gen Block" << endl;
             for(int igen=0; igen<(int)GenPt_->size(); igen++)
             { 
                 cout << igen << " \t" 
@@ -259,9 +260,10 @@ void EventDisplayForBaby(bool sig=false, bool truth=true, bool fatjet=true, char
         TEllipse *cone[FatjetPt_->size()]; 
         TH2F *h_fatjets = new TH2F("h_fatjets","h_fatjets", 230, -5.0, 5.0, 144, -3.141592, 3.141592);
         for(int ifj = 0; ifj< (int)FatjetPt_->size(); ifj++)
-        {
+        {   if(ifj==0) cout << "... Fatjets info(pT eta phi mj)" << endl;
             h_fatjets->Fill(FatjetEta_->at(ifj),FatjetPhi_->at(ifj), mj_->at(ifj));
-            cout << FatjetEta_->at(ifj) << " " <<  FatjetPhi_->at(ifj) << " " << mj_->at(ifj) << " "<< Npu_ << endl;
+            cout << FatjetPt_->at(ifj) << " " << FatjetEta_->at(ifj) << " " 
+                 <<  FatjetPhi_->at(ifj) << " " << mj_->at(ifj) << endl;
         }
 
         TString cname = Form("Event_%i_",event_);
@@ -369,6 +371,7 @@ void EventDisplayForBaby(bool sig=false, bool truth=true, bool fatjet=true, char
 
         for(int ij=0;ij<(int)JetPt_->size();ij++)
         {
+            if(ij==0) cout << "... skinny jet info (pT eta phi)" << endl;
             cout << JetPt_->at(ij) << " " << JetEta_->at(ij) << " " <<  JetPhi_->at(ij) << endl;
                 TMarker jet = TMarker(JetEta_->at(ij),JetPhi_->at(ij),20);
                 jet.SetMarkerSize(1.2);

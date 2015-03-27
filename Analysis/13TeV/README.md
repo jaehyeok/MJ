@@ -14,6 +14,7 @@ The codes are composed of several ROOT macros and a couple header files. The ROO
     Make1DPlots.C : makes 1D plots from the histrogram file genereated by MakeHists.C 
     Make2DPlots.C : makes 2D plots from the histrogram file genereated by MakeHists.C 
     MakeTables.C : makes table of yields from the histrogram file genereated by MakeHists.C. It can print out in two formats, plain text or Latex. 
+    MakeCards.C : makes cards for combine tool. It generates cards for electron, muon and inclusive channel. [* Right now, it is in a very preliminary form, but once we have real systematics, then more realistic cards will be made.]    
 
 
 #### How to run the code  
@@ -30,6 +31,7 @@ In addition, make sure you have following directories
 HistFiles
 Figures
 Tables
+Cards
 ```
 
 If not, please make them. 
@@ -43,4 +45,5 @@ root -q -b DoAnalysis.C
 Then, you will have histogram files in `HistFiles`, plots in pdf format in `Figures` and tables of yields in Latex format in `Tables`.  
 
 #### Possible improvements 
+
 
