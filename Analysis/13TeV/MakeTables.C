@@ -129,7 +129,7 @@ void PrintTableOneLine(TString Process, TH1F* h1[7], int lepflav=0, bool doLatex
     }
 }
 
-void MakeTables(int lepflav=0, char* Region="", bool doLatex=false)
+void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
 { 
     if(lepflav==0)  cout << "[MJ Table] Yields for Electron+Muon" << endl;
     if(lepflav==11) cout << "[MJ Table] Yields for Electron" << endl;
@@ -294,3 +294,4 @@ void MakeTables(int lepflav=0, char* Region="", bool doLatex=false)
     fout << "\\end{table}" << endl;
     fout.close();
 }
+

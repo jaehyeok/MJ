@@ -11,6 +11,7 @@ void DoAnalysis(bool OnlyDraw=false)
     gROOT->LoadMacro("Make1DPlots.C+");
     gROOT->LoadMacro("Make2DPlots.C+");
     gROOT->LoadMacro("MakeTables.C+");
+    gROOT->LoadMacro("MakeCards.C+");
 
     // ----------------------------------------
     //  Define chains  
@@ -24,8 +25,8 @@ void DoAnalysis(bool OnlyDraw=false)
     TChain *ch_f1500_100    = new TChain("tree", "T1tttt_f1500_100");
     TChain *ch_f1200_800    = new TChain("tree", "T1tttt_f1200_800");
   
-    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/HT750MET250/";
     TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14/HT750MET250/";
+    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14_JetPt20_16Mar2015_HT750MET250/";
     
     // Data
     //ch_data->Add(BabyDir+"baby_MuHad_*.root");                            
@@ -63,15 +64,19 @@ void DoAnalysis(bool OnlyDraw=false)
     //
     // Loop over SR and CR : make sure that these regions exist in "PassSelection.h"
     //
-    //char* Region[11] = {"Baseline","SR0", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SR9"}; 
-    char* Region[1] = {"SR20p1"}; 
+    //char* Region[] = {"Baseline","SR0", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SR9"}; 
+    char* Region[] = {"Baseline"}; 
+    int NRegion = sizeof(Region)/sizeof(Region[0]);
 
-    for(int iregion=0; iregion<1; iregion++)
+    for(int iregion=0; iregion<NRegion; iregion++)
     {
         cout << endl;
         cout << "[MJ Analysis] Analyzing " << Region[iregion] << endl;
         cout << endl;
-        
+        cout << "[MJ Analysis] Making directory for figures : Figures/" << Region[iregion] << endl;
+        gSystem->mkdir(Form("Figures/%s",Region[iregion])); 
+
+
         if(!OnlyDraw) 
         {
             // ----------------------------------------
@@ -100,6 +105,10 @@ void DoAnalysis(bool OnlyDraw=false)
         // ----------------------------------------
         //  Draw histograms 
         // ---------------------------------------- 
+        Make1DPlots("dRlep",        Region[iregion]);
+        Make1DPlots("dPhiMET",      Region[iregion]);
+        Make1DPlots("dRbmin",       Region[iregion]);
+        Make1DPlots("dPhiMETlep",   Region[iregion]);
         Make1DPlots("muspT",        Region[iregion]);
         Make1DPlots("musPhi",       Region[iregion]);
         Make1DPlots("musEta",       Region[iregion]);
@@ -109,6 +118,7 @@ void DoAnalysis(bool OnlyDraw=false)
         Make1DPlots("mT",           Region[iregion]);
         Make1DPlots("mj",           Region[iregion]);
         Make1DPlots("MJ",           Region[iregion]);
+        Make1DPlots("MJ_ISR",       Region[iregion]);
         Make1DPlots("HT",           Region[iregion]);
         Make1DPlots("Nfatjet",      Region[iregion]);
         Make1DPlots("Nskinnyjet",   Region[iregion]);
@@ -154,6 +164,12 @@ void DoAnalysis(bool OnlyDraw=false)
         MakeTables(11,  Region[iregion], false);
         MakeTables(13,  Region[iregion], false);
         
+        // ----------------------------------------
+        //  Make cards for combine/LandS 
+        // ---------------------------------------- 
+        MakeCards(0,   Region[iregion]);
+        MakeCards(11,  Region[iregion]);
+        MakeCards(13,  Region[iregion]);
     } //for(int iregion=0; iregion<2; iregion++)
 
 }

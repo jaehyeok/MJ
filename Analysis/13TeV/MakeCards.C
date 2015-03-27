@@ -2,126 +2,55 @@
 #include <fstream>
 #include <iomanip> // for setw()
 
+#include "TROOT.h"
+#include "TChain.h"
 #include "TString.h"
 #include "TH1F.h"
+#include "TH2F.h"
+#include "THStack.h"
+#include "TSystem.h"
 #include "TFile.h"
+#include "TDatime.h"
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "TLorentzVector.h"
+#include "TInterpreter.h"
+#include "TLatex.h"
+#include "TMath.h"
 
 ofstream fout;
 
 //
 // Print A line of table
 //
-void PrintTableOneLine(TString Process, TH1F* h1[7], int lepflav=0, bool doLatex=true, bool PrintFile=true)
+void PrintCardOneLine(std::vector<TString> col1to2, std::vector<TString> col3to)
 {
-    // Print out on file 
-    if(PrintFile) 
-    {
-        if(lepflav!=11 && lepflav!=13)
-        {
-            Double_t error[7];
-            for(int i=2; i<7; i++) h1[i]->IntegralAndError(1,10000,error[i]);
-            fout << Process << " & " 
-                 << Form("$%.2f \\pm %.2f$",h1[2]->Integral(),error[2]) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[3]->Integral(),error[3]) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[4]->Integral(),error[4]) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[5]->Integral(),error[5]) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[6]->Integral(),error[6]) << "\t\\\\" 
-                 << endl; 
-        }
-        else 
-        {   
-            int bin = (lepflav-9)/2;
-            fout << Process << " & " 
-                 << Form("$%.2f \\pm %.2f$",h1[2]->GetBinContent(bin),h1[2]->GetBinError(bin)) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[3]->GetBinContent(bin),h1[3]->GetBinError(bin)) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[4]->GetBinContent(bin),h1[4]->GetBinError(bin)) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[5]->GetBinContent(bin),h1[5]->GetBinError(bin)) << "\t&" 
-                 << Form("$%.2f \\pm %.2f$",h1[6]->GetBinContent(bin),h1[6]->GetBinError(bin)) << "\t\\\\" 
-                 << endl; 
-        }
-        if(Process.Contains("Bkg")) fout << "\\hline \\hline" << endl;  
-    }
-    else 
-    {
-        // Print out on screen  
-        if(doLatex)
-        {
-            if(lepflav!=11 && lepflav!=13)
-            {
-                Double_t error[7];
-                for(int i=2; i<7; i++) h1[i]->IntegralAndError(1,10000,error[i]);
-                cout << Process << " & " 
-                     << Form("$%.2f \\pm %.2f$",h1[2]->Integral(),error[2]) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[3]->Integral(),error[3]) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[4]->Integral(),error[4]) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[5]->Integral(),error[5]) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[6]->Integral(),error[6]) << "\t\\\\" 
-                     << endl; 
-            }
-            else 
-            {   
-                int bin = (lepflav-9)/2;
-                cout << Process << " & " 
-                     << Form("$%.2f \\pm %.2f$",h1[2]->GetBinContent(bin),h1[2]->GetBinError(bin)) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[3]->GetBinContent(bin),h1[3]->GetBinError(bin)) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[4]->GetBinContent(bin),h1[4]->GetBinError(bin)) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[5]->GetBinContent(bin),h1[5]->GetBinError(bin)) << "\t&" 
-                     << Form("$%.2f \\pm %.2f$",h1[6]->GetBinContent(bin),h1[6]->GetBinError(bin)) << "\t\\\\" 
-                     << endl; 
-            }
-        }
-        else 
-        {   
-            if(lepflav!=11 && lepflav!=13)
-            {
-                Double_t error[7];
-                for(int i=2; i<7; i++) h1[i]->IntegralAndError(1,10000,error[i]);
-                cout << "|" << 
-                    setw(20) << Process << " |"  <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[2]->Integral(), error[2]) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[3]->Integral(), error[3]) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[4]->Integral(), error[4]) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[5]->Integral(), error[5]) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[6]->Integral(), error[6]) << " |" << endl; 
-            }
-            else 
-            {   
-                int bin = (lepflav-9)/2;
-                cout << "|" << 
-                    setw(20) << Process << " |"  <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[2]->GetBinContent(bin), h1[2]->GetBinError(bin)) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[3]->GetBinContent(bin), h1[3]->GetBinError(bin)) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[4]->GetBinContent(bin), h1[4]->GetBinError(bin)) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[5]->GetBinContent(bin), h1[5]->GetBinError(bin)) << " |" <<
-                    setw(20) << Form("%.2f +/- %.2f", h1[6]->GetBinContent(bin), h1[6]->GetBinError(bin)) << " |" << endl; 
-            }
-        }
-        // Print out on screen  
-        if(Process.Contains("Bkg")) 
-        { 
-            if(doLatex) 
-            {   
-                cout << "\\hline \\hline" << endl;  
-            }
-            else 
-            { 
-                cout << "|" << 
-                    setw(20) << Form("--------------------") << "--" <<
-                    setw(20) << Form("--------------------") << "--" <<
-                    setw(20) << Form("--------------------") << "--" <<
-                    setw(20) << Form("--------------------") << "--" <<
-                    setw(20) << Form("--------------------") << "--" <<
-                    setw(20) << Form("--------------------") << "-|" << endl;
-            }
-        }
-    }
+    TString line1to2 = Form("%20s%7s",col1to2.at(0).Data(),col1to2.at(1).Data()); 
+    TString line3to=line1to2; 
+    for(int i=0; i<(int)col3to.size(); i++) line3to = line3to+Form("%10s",col3to.at(i).Data()); 
+    cout << line3to << endl;   
+}
+const char* PrintCardOneLine(const char* col1, const char* col2, const char* col3, const char* col4, const char* col5, const char* col6, const char* col7)
+{
+    const char* line = Form("%20s%7s%10s%10s%10s%10s%10s", col1,col2,col3,col4,col5,col6,col7); 
+    return line;
+}
+const char* PrintCardOneLine(const char* col1, const char* col2, float col3, float col4, float col5, float col6, float col7)
+{
+    const char* line = Form("%20s%7s%7.3f%7.3f%7.3f%7.3f%7.3f", col1,col2,col3,col4,col5,col6,col7); 
+    return line;
 }
 
-void MakeCards(int lepflav=0, char* Region="", bool doLatex=false)
+void MakeCards(int lepflav=0, const char* Region="")
 { 
-    if(lepflav==0)  cout << "[MJ Table] Yields for Electron+Muon" << endl;
-    if(lepflav==11) cout << "[MJ Table] Yields for Electron" << endl;
-    if(lepflav==13) cout << "[MJ Table] Yields for Muon" << endl;
+    cout << "[MJ Analysis] Make cards for " << Region << endl; 
+    TString lepflavname = "all"; 
+    if(lepflav==11) lepflavname = "e"; 
+    if(lepflav==13) lepflavname = "m"; 
+
+    if(lepflav==0)  cout << "[MJ Analysis] Card for Electron+Muon" << endl;
+    if(lepflav==11) cout << "[MJ Analysis] Card for Electron" << endl;
+    if(lepflav==13) cout << "[MJ Analysis] Card for Muon" << endl;
 
     TString HistName="yields";
 
@@ -147,138 +76,51 @@ void MakeCards(int lepflav=0, char* Region="", bool doLatex=false)
         h1_MC[i]->Add(h1_DY[i]);
     }   
 
-    // -------------------------------------
-    // Print out on screen 
-    // -------------------------------------
-    if(doLatex)
+    //
+    // yields in string format 
+    //
+    const char* Ndata;          
+    const char* Nsig;          
+    const char* Nttbar;        
+    const char* Nsingletop;    
+    const char* Nwjets;       
+    const char* Ndy;           
+    if(lepflav!=11 && lepflav!=13)
     {
-        cout << "\\begin{table}[!htb]" << endl;
-        cout << "\\centering" << endl;
-        cout << "\\begin{tabular}{c | c c c c | c }" << endl;
-        cout << "\\hline \\hline" << endl;
-        cout << "Process  & " 
-             << "$N_{FJ}=2$ \t&" 
-             << "$N_{FJ}=3$ \t&" 
-             << "$N_{FJ}=4$ \t&" 
-             << "$N_{FJ}\\ge 5$ \t&" 
-             << "$N_{FJ}\\ge 2$ \t\\\\" 
-             << endl; 
-        cout << "\\hline" << endl;
+        Ndata         = Form("%i",   (int)(h1_MC[6]->Integral(0,1000)+h1_f1500_100[6]->Integral(0,1000))); 
+        Nsig          = Form("%.3f", h1_f1500_100[6]->Integral(0,1000)); 
+        Nttbar        = Form("%.3f", h1_TT_ll[6]->Integral(0,1000)+h1_TT_sl[6]->Integral(0,1000)); 
+        Nsingletop    = Form("%.3f", h1_T[6]->Integral(0,1000)); 
+        Nwjets        = Form("%.3f", h1_WJets[6]->Integral(0,1000)); 
+        Ndy           = Form("%.3f", h1_DY[6]->Integral(0,1000)); 
     }
     else 
     { 
-        cout << "|" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "-|" << endl;
-        cout << "|" << 
-            setw(20) << "Process" << " |"  <<
-            setw(20) << "N_FJ=2" << " |" <<
-            setw(20) << "N_FJ=3" << " |" <<
-            setw(20) << "N_FJ=4" << " |" <<
-            setw(20) << "N_FJ>=5" << " |" <<
-            setw(20) << "N_FJ>=2" << " |" << endl;
-        cout << "|" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "-|" << endl;
+        int bin = (lepflav-9)/2;
+        Ndata         = Form("%i",   (int)(h1_MC[6]->GetBinContent(bin)+h1_f1500_100[6]->GetBinContent(bin))); 
+        Nsig          = Form("%.3f", h1_f1500_100[6]->GetBinContent(bin)); 
+        Nttbar        = Form("%.3f", h1_TT_ll[6]->GetBinContent(bin)+h1_TT_sl[6]->GetBinContent(bin)); 
+        Nsingletop    = Form("%.3f", h1_T[6]->GetBinContent(bin)); 
+        Nwjets        = Form("%.3f", h1_WJets[6]->GetBinContent(bin)); 
+        Ndy           = Form("%.3f", h1_DY[6]->GetBinContent(bin)); 
     }
 
-    PrintTableOneLine("TT(l)",              h1_TT_sl,       lepflav,	doLatex, false);
-    PrintTableOneLine("TT(ll)",             h1_TT_ll,       lepflav,	doLatex, false);
-    PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, false);
-    PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, false);
-    PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, false);
-    PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, false);
-    PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, false);
-    PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, false);
-        
-    if(doLatex)
-    {
-        cout << "\\hline \\hline" << endl;
-        cout << "\\end{tabular}" << endl;
-        cout << "\\label{tab:"<< Region <<"}" << endl;
-        cout << "\\caption{" << Region << "}" << endl;
-        cout << "\\end{table}" << endl;
-    }
-    else 
-    { 
-        cout << "|" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "--" <<
-            setw(20) << Form("--------------------") << "-|" << endl;
-    }
-    cout << endl;
-    
     // -------------------------------------
     // Print out on file  
     // -------------------------------------
-    fout.open(Form("Tables/TableOfYields_%s.tex", Region));
+    fout.open(Form("Cards/%s_%s.dat", Region, lepflavname.Data()));
 
-    fout << "\\begin{table}[!htb]" << endl;
-    fout << "\\centering" << endl;
-    fout << "\\begin{tabular}{c | c c c c | c }" << endl;
-    fout << "\\hline \\hline" << endl;
-    fout << "Process  & " 
-         << "$N_{FJ}=2$ \t&" 
-         << "$N_{FJ}=3$ \t&" 
-         << "$N_{FJ}=4$ \t&" 
-         << "$N_{FJ}\\ge 5$ \t&" 
-         << "$N_{FJ}\\ge 2$ \t\\\\" 
-         << endl; 
-    fout << "\\hline" << endl;
-    fout << "\\multicolumn{6}{c}{Electron + muon channel} \\\\" << endl; 
-    fout << "\\hline" << endl;
-    lepflav=0;
-    PrintTableOneLine("TT(l)",              h1_TT_sl,       lepflav,	doLatex, true);
-    PrintTableOneLine("TT(ll)",             h1_TT_ll,       lepflav,	doLatex, true);
-    PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
-    PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
-    PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
-    PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
-    PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
-    PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
-    fout << "\\hline \\hline" << endl;
-    
-    lepflav=11;
-    fout << "\\multicolumn{6}{c}{Electron channel} \\\\" << endl; 
-    fout << "\\hline" << endl;
-    PrintTableOneLine("TT(l)",              h1_TT_sl,       lepflav,	doLatex, true);
-    PrintTableOneLine("TT(ll)",             h1_TT_ll,       lepflav,	doLatex, true);
-    PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
-    PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
-    PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
-    PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
-    PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
-    PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
-    fout << "\\hline \\hline" << endl;
-    
-    lepflav=13;
-    fout << "\\multicolumn{6}{c}{Muon channel} \\\\" << endl; 
-    fout << "\\hline" << endl;
-    PrintTableOneLine("TT(l)",              h1_TT_sl,       lepflav,	doLatex, true);
-    PrintTableOneLine("TT(ll)",             h1_TT_ll,       lepflav,	doLatex, true);
-    PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
-    PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
-    PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
-    PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
-    PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
-    PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
+    fout << "imax 1 number of channels" << endl;
+    fout << "jmax * number of background" << endl;
+    fout << "kmax * number of nuisance parameters" << endl;
+    fout << "Observation " << Ndata << endl;
+    fout << PrintCardOneLine("bin",                         "",     Region,     Region,     Region,         Region,     Region  ) << endl;
+    fout << PrintCardOneLine("process",                     "",     "T1tttt",   "ttbar",    "singletop",    "DY",       "Wjets" ) << endl;
+    fout << PrintCardOneLine("process",                     "",     "0",        "1",        "2",            "3",        "4"     ) << endl;
+    fout << PrintCardOneLine("rate",                        "",     Nsig,       Nttbar,     Nsingletop,     Nwjets,     Ndy     ) << endl;
+    fout << PrintCardOneLine(Form("ttbar_SF_%s",Region),    "lnN",  "-",       "1.5",       "-",            "-",        "-"     ) << endl;
 
-    // Print out on file  
-    fout << "\\hline \\hline" << endl;
-    fout << "\\end{tabular}" << endl;
-    fout << "\\label{tab:"<< Region << "}" << endl;
-    fout << "\\caption{Table of yields in " << Region << ". From top to bottom, electon+muon, electron and muon channels}" << endl;
-    fout << "\\end{table}" << endl;
     fout.close();
+
 }
+
