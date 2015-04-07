@@ -1,8 +1,6 @@
 #!/bin/bash
 
-#for ARG in `less dataset.txt | grep -v "#"`; do
-    
-cat dataset.txt | grep -v "\#" | while read line  
+cat dataset/datasetPhys14.txt | grep -v "\#" | while read line  
 do 
 
     echo "-----------------------------------------------------------------------------"

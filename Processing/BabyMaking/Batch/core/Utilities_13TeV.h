@@ -27,12 +27,14 @@ float GetXsec(TString Process)
    
     if(Process.Contains("TTJets"))   xsec = 806.1; // was 832
     
-    if(Process.Contains("T_tW-channel-DR"))          xsec = 35.0;
-    if(Process.Contains("TToLeptons_t-channel"))     xsec = 45.0;
-    if(Process.Contains("TToLeptons_s-channel"))     xsec = 2.0;
-    if(Process.Contains("Tbar_tW-channel-DR"))       xsec = 35.0;
-    if(Process.Contains("TBarToLeptons_t-channel"))  xsec = 16.9;
-    if(Process.Contains("TBarToLeptons_s-channel"))  xsec = 1.0;
+    float wToLeptonsBR=3*0.1086;
+    // from https://twiki.cern.ch/twiki/bin/viewauth/CMS/SingleTopSigma
+    if(Process.Contains("T_tW-channel-DR"))          xsec = 35.6;
+    if(Process.Contains("TToLeptons_t-channel"))     xsec = 136.02*wToLeptonsBR;
+    if(Process.Contains("TToLeptons_s-channel"))     xsec = 7.20*wToLeptonsBR;
+    if(Process.Contains("Tbar_tW-channel-DR"))       xsec = 35.6;
+    if(Process.Contains("TBarToLeptons_t-channel"))  xsec = 80.95*wToLeptonsBR;
+    if(Process.Contains("TBarToLeptons_s-channel"))  xsec = 4.16*wToLeptonsBR;
 
     if(Process.Contains("WJetsToLNu_HT-100to200"))   xsec = 1817.0;
     if(Process.Contains("WJetsToLNu_HT-200to400"))   xsec = 471.6;
@@ -61,6 +63,11 @@ float GetXsec(TString Process)
     if(Process.Contains("QCD_Pt-1800to2400"))        xsec = 0.102;
     if(Process.Contains("QCD_Pt-2400to3200"))        xsec = 0.00644;
     if(Process.Contains("QCD_Pt-3200"))              xsec = 0.000163;
+    
+    // from https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt1314TeV#s_13_0_TeV
+    if(Process.Contains("TTH"))  xsec = 0.5085;
+    if(Process.Contains("TTZJets_Tune4C_13TeV"))  xsec = 0.86/*MCM 2.232*/;
+    if(Process.Contains("TTWJets_Tune4C_13TeV"))  xsec = 0.66/*MCM 1.152*/;
     
     // Signal
     if(Process.Contains("mGl-1500"))        xsec = 0.0141903;
