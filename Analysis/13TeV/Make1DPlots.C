@@ -59,6 +59,10 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
     TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Region));
    
     char *var; 
+    if(HistName=="dRlep")                 	var=(char*)"dR(lepton,FJ)";
+    if(HistName=="dPhiMET")                	var=(char*)"dPhi(MET,FJ)";
+    if(HistName=="dPhiMETlep")             	var=(char*)"dPhi(MET,lep)";
+    if(HistName=="dRbmin")                	var=(char*)"min dR(bjet,FJ)";
     if(HistName=="MET")                 	var=(char*)"MET [GeV]";
     if(HistName=="METPhi")              	var=(char*)"#phi(MET)";
     if(HistName=="METx")              	    var=(char*)"METx [GeV]";
@@ -263,7 +267,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
 
     // 
     if(HistName=="mj") HistName="JetMass";
-    c->Print( Form("Figures/CompareDataMC_%s_%s%s.pdf", HistName.Data(), Region, DoLog?"_log":"") ); 
+    c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
     
     // 
     HistFile->Close();

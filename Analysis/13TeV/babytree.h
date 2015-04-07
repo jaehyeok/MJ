@@ -30,6 +30,9 @@
     vector<float>   *JetCSV_;
     vector<float>   *RA4MusVetoPt_;
     vector<float>   *RA4ElsVetoPt_;
+    vector<float>   *GenPt_;
+    vector<float>   *GenEta_;
+    vector<float>   *GenPhi_;
     vector<float>   *GenId_;
     vector<float>   *GenMId_;
     vector<float>   *GenGMId_;
@@ -68,6 +71,9 @@
     TBranch         *b_JetCSV;   //!
     TBranch         *b_RA4MusVetoPt;   //!
     TBranch         *b_RA4ElsVetoPt;   //!
+    TBranch         *b_GenPt;   //!
+    TBranch         *b_GenEta;   //!
+    TBranch         *b_GenPhi;   //!
     TBranch         *b_GenId;   //!
     TBranch         *b_GenMId;   //!
     TBranch         *b_GenGMId;   //!
@@ -97,6 +103,9 @@ void InitBaby(TChain *ch)
     JetCSV_ = 0;
     RA4MusVetoPt_  = 0;
     RA4ElsVetoPt_  = 0;
+    GenPt_  = 0;
+    GenEta_  = 0;
+    GenPhi_  = 0;
     GenId_  = 0;
     GenMId_  = 0;
     GenGMId_  = 0;
@@ -112,11 +121,17 @@ void InitBaby(TChain *ch)
     ch->SetBranchAddress("MET",             &MET_,           &b_MET);
     ch->SetBranchAddress("HT",              &HT_,            &b_HT);
     ch->SetBranchAddress("METPhi",          &METPhi_,        &b_METPhi);
-    ch->SetBranchAddress("mj_pT30",         &mj_,            &b_mj);
-    ch->SetBranchAddress("FatjetPt_pT30",   &FatjetPt_,      &b_FatjetPt);
-    ch->SetBranchAddress("FatjetEta_pT30",  &FatjetEta_,     &b_FatjetEta);
-    ch->SetBranchAddress("FatjetPhi_pT30",  &FatjetPhi_,     &b_FatjetPhi);
-    ch->SetBranchAddress("FatjetN_pT30",    &FatjetN_,       &b_FatjetN);
+    //ch->SetBranchAddress("mj_pT30",         &mj_,            &b_mj);
+    //ch->SetBranchAddress("FatjetPt_pT30",   &FatjetPt_,      &b_FatjetPt);
+    //ch->SetBranchAddress("FatjetEta_pT30",  &FatjetEta_,     &b_FatjetEta);
+    //ch->SetBranchAddress("FatjetPhi_pT30",  &FatjetPhi_,     &b_FatjetPhi);
+    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvv for different R(FJ) vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    ch->SetBranchAddress("mj_R1p2_pT30_Eta2p5",         &mj_,            &b_mj);
+    ch->SetBranchAddress("FatjetPt_R1p2_pT30_Eta2p5",   &FatjetPt_,      &b_FatjetPt);
+    ch->SetBranchAddress("FatjetEta_R1p2_pT30_Eta2p5",  &FatjetEta_,     &b_FatjetEta);
+    ch->SetBranchAddress("FatjetPhi_R1p2_pT30_Eta2p5",  &FatjetPhi_,     &b_FatjetPhi);
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ for different R(FJ) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    //ch->SetBranchAddress("FatjetN_pT30",    &FatjetN_,       &b_FatjetN);
     ch->SetBranchAddress("RA4MusPt",        &RA4MusPt_,      &b_RA4MusPt);
     ch->SetBranchAddress("RA4MusPhi",       &RA4MusPhi_,     &b_RA4MusPhi);
     ch->SetBranchAddress("RA4MusEta",       &RA4MusEta_,     &b_RA4MusEta);
@@ -127,8 +142,11 @@ void InitBaby(TChain *ch)
     ch->SetBranchAddress("JetPhi",          &JetPhi_,        &b_JetPhi);
     ch->SetBranchAddress("JetEta",          &JetEta_,        &b_JetEta);
     ch->SetBranchAddress("JetCSV",          &JetCSV_,        &b_JetCSV);
-    ch->SetBranchAddress("RA4MusVetoPt",    &RA4MusVetoPt_, &b_RA4MusVetoPt);
-    ch->SetBranchAddress("RA4ElsVetoPt",    &RA4ElsVetoPt_, &b_RA4ElsVetoPt);
+    ch->SetBranchAddress("RA4MusVetoPt",    &RA4MusVetoPt_,  &b_RA4MusVetoPt);
+    ch->SetBranchAddress("RA4ElsVetoPt",    &RA4ElsVetoPt_,  &b_RA4ElsVetoPt);
+    ch->SetBranchAddress("GenPt",           &GenPt_,         &b_GenPt);
+    ch->SetBranchAddress("GenEta",          &GenEta_,        &b_GenEta);
+    ch->SetBranchAddress("GenPhi",          &GenPhi_,        &b_GenPhi);
     ch->SetBranchAddress("GenId",           &GenId_,         &b_GenId);
     ch->SetBranchAddress("GenMId",          &GenMId_,        &b_GenMId);
     ch->SetBranchAddress("GenGMId",         &GenGMId_,       &b_GenGMId);

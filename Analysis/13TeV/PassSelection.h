@@ -10,9 +10,9 @@ bool PassNLep(unsigned int Nlep)
 }
 
 // 
-bool PassBaselineSelection()
+bool PassBaselineSelection(float HT, float MET, int Ncsvm, int Nskinny)
 {
-   return  (HT_>750 && MET_>250 && NBtagCSVM_>1 && Nskinnyjet_>5); 
+   return  (HT>750 && MET>250 && Ncsvm>1 && Nskinny>5); 
 }
 
 // 
@@ -39,6 +39,24 @@ bool PassSelection(TString Region,
         && MJ   > 600 
     )  passed = true;
     
+    if(Region=="SR0p1" 
+        && HT   > -1 
+        && MET  > 400
+        && Nb   > -1 
+        && Njet > -1 
+        && mT   > 150 
+        && MJ   > 500 
+    )  passed = true;
+    
+    if(Region=="SR0p2" 
+        && HT   > -1 
+        && MET  > 400
+        && Nb   > -1 
+        && Njet > -1 
+        && mT   > 150 
+        && MJ   > 400 
+    )  passed = true;
+    
     if(Region=="SR1" 
         && HT   > -1 
         && MET  > -1 
@@ -54,6 +72,33 @@ bool PassSelection(TString Region,
         && Nb   > -1 
         && Njet > -1 
         && mT   > 150 
+        && MJ   > -1 
+    )  passed = true;
+    
+    if(Region=="SR2p1" 
+        && HT   > -1 
+        && MET  > -1 
+        && Nb   > -1 
+        && Njet > -1 
+        && mT   > -1 
+        && MJ   > 400 
+    )  passed = true;
+    
+    if(Region=="SR2p2" 
+        && HT   > -1 
+        && MET  > -1 
+        && Nb   > -1 
+        && Njet > -1 
+        && mT   > 100 
+        && MJ   > -1 
+    )  passed = true;
+    
+    if(Region=="SR2p3" 
+        && HT   > -1 
+        && MET  > -1 
+        && Nb   > -1 
+        && Njet > -1 
+        && mT   > 200 
         && MJ   > -1 
     )  passed = true;
     
@@ -262,6 +307,15 @@ bool PassSelection(TString Region,
         && Njet > 8 
         && mT   > 150 
         && MJ   > -1 
+    )  passed = true;
+    
+    if(Region=="SR25" 
+        && HT   > -1 
+        && MET  > -1 
+        && Nb   > -1 
+        && Njet > -1 
+        && mT   > 150 
+        && MJ   > 300 
     )  passed = true;
    
    return passed;
