@@ -267,7 +267,7 @@ vector<int> GetMuons(bool doSignal, bool doMiniIso)
 /////////////////////////////////////////////////////////////////////////
 //////////////////////////////  ELECTRONS  //////////////////////////////
 /////////////////////////////////////////////////////////////////////////
-// Ref : https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedElectronIdentificationRun2#CSA14_selection_conditions_25ns
+// Ref : https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedElectronIdentificationRun2#Working_points_for_PHYS14_sample
 
 float GetElectronIsolation(int iel)
 {
@@ -284,30 +284,26 @@ bool IsBasicElectron(int iel) // Medium working point
     return (els_pt->at(iel) > MinSignalLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
             && ((els_isEB->at(iel) // Barrel selection
-                 && fabs(els_dEtaIn->at(iel)) < 0.0106/*0.004*/
-                 && fabs(els_dPhiIn->at(iel)) < 0.0323/*0.06*/
-                 && els_full5x5_sigmaIetaIeta->at(iel) < 0.0107/*0.01*/
-                 && els_hadOverEm->at(iel) < 0.067/*0.12*/
-                 && fabs(d0PV) < 0.0131/*0.02*/
-                 //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                 //        sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.2231/*0.1*/
-                 && fabs(els_vz->at(iel) - pv_z->at(0))<0.2231
-                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1043/*0.05*/
-                && els_PATpassConversionVeto->at(iel)             // was !els_hasMatchedConversion->at(iel)
-                && els_expectedMissingInnerHits->at(iel) <= 1     // was els_n_inner_layer->at(iel) <= 1 
+                 && els_full5x5_sigmaIetaIeta->at(iel)  < 0.010399
+                 && fabs(els_dEtaIn->at(iel))           < 0.007641
+                 && fabs(els_dPhiIn->at(iel))           < 0.032643
+                 && els_hadOverEm->at(iel)              < 0.060662
+                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.153897
+                 && fabs(d0PV)                          < 0.011811
+                 && fabs(els_vz->at(iel) - pv_z->at(0)) < 0.070775
+                && els_expectedMissingInnerHits->at(iel) <= 1     
+                && els_PATpassConversionVeto->at(iel)             
                 ) ||
                 (els_isEE->at(iel)  // Endcap selection
-                 && fabs(els_dEtaIn->at(iel)) < 0.0108/* 0.007*/
-                 && fabs(els_dPhiIn->at(iel)) < 0.0455/*0.03*/
-                 && els_full5x5_sigmaIetaIeta->at(iel) < 0.0318/*0.03*/
-                 && els_hadOverEm->at(iel) < 0.097/*0.10*/ 
-                 && fabs(d0PV) < 0.0845/*0.02*/ 
-                 //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                 //        sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.7523/*0.1*/
-                 && fabs(els_vz->at(iel) - pv_z->at(0))<0.7523
-                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1201/*0.05*/ 
-                 && els_PATpassConversionVeto->at(iel)            // was !els_hasMatchedConversion->at(iel)
-                 && els_expectedMissingInnerHits->at(iel) <= 1    // was els_n_inner_layer->at(iel) <= 1 
+                 && els_full5x5_sigmaIetaIeta->at(iel)  < 0.029524
+                 && fabs(els_dEtaIn->at(iel))           < 0.009285
+                 && fabs(els_dPhiIn->at(iel))           < 0.042447
+                 && els_hadOverEm->at(iel)              < 0.104263
+                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.137468
+                 && fabs(d0PV)                          < 0.051682
+                 && fabs(els_vz->at(iel) - pv_z->at(0)) < 0.180720
+                 && els_expectedMissingInnerHits->at(iel) <= 1    
+                 && els_PATpassConversionVeto->at(iel)            
                 ))
            );
 }
@@ -341,31 +337,27 @@ bool IsVetoElectron(int iel, bool doMiniIso)
     return (els_pt->at(iel) > MinVetoLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
             && ((els_isEB->at(iel) // Endcap selection
-                    && fabs(els_dEtaIn->at(iel)) < 0.02/*0.007*/
-                    && fabs(els_dPhiIn->at(iel)) < 0.2579/*0.8*/
-                    && els_full5x5_sigmaIetaIeta->at(iel) < 0.0125/*0.01*/
-                    && els_hadOverEm->at(iel) < 0.2564/*0.15*/
-                    && fabs(d0PV) < 0.025/*0.04*/ 
-                    //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                    //              sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.5863/*0.2*/
-                    && fabs(els_vz->at(iel) - pv_z->at(0))<0.5863
-                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1508 
-                    && els_PATpassConversionVeto->at(iel)             // was !els_hasMatchedConversion->at(iel)
-                    && els_expectedMissingInnerHits->at(iel) <= 2     // was els_n_inner_layer->at(iel) <= 2  
+                    && els_full5x5_sigmaIetaIeta->at(iel)   < 0.011100
+                    && fabs(els_dEtaIn->at(iel))            < 0.016315
+                    && fabs(els_dPhiIn->at(iel))            < 0.252044
+                    && els_hadOverEm->at(iel)               < 0.345843
+                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.248070
+                    && fabs(d0PV)                           < 0.060279
+                    && fabs(els_vz->at(iel) - pv_z->at(0))  < 0.800538
+                    && els_expectedMissingInnerHits->at(iel) <= 2     
+                    && els_PATpassConversionVeto->at(iel)             
                     && passIso
                     ) ||
                 (els_isEE->at(iel)  // Barrel selection
-                    && fabs(els_dEtaIn->at(iel)) < 0.0141/*0.01*/
-                    && fabs(els_dPhiIn->at(iel)) < 0.2591/*0.7*/
-                    && els_full5x5_sigmaIetaIeta->at(iel) < 0.0371/*0.03*/
-                    && els_hadOverEm->at(iel) < 0.1335/*0.15*/
-                    && fabs(d0PV) < 0.2232/*0.04*/ 
-                    //&& fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                    //           sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.9513/*0.2*/
-                    && fabs(els_vz->at(iel) - pv_z->at(0))<0.9513
-                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.1542 
-                    && els_PATpassConversionVeto->at(iel)             // was !els_hasMatchedConversion->at(iel)
-                    && els_expectedMissingInnerHits->at(iel) <= 3     // was els_n_inner_layer->at(iel) <= 3 
+                    && els_full5x5_sigmaIetaIeta->at(iel)   < 0.033987
+                    && fabs(els_dEtaIn->at(iel))            < 0.010671
+                    && fabs(els_dPhiIn->at(iel))            < 0.245263
+                    && els_hadOverEm->at(iel)               < 0.134691
+                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.157160
+                    && fabs(d0PV)                           < 0.273097
+                    && fabs(els_vz->at(iel) - pv_z->at(0))  < 0.885860
+                    && els_expectedMissingInnerHits->at(iel) <= 3     
+                    && els_PATpassConversionVeto->at(iel)             
                     && passIso
                  ))
            );  
