@@ -78,5 +78,8 @@ then
     echo "Babyies for $DATASET are complete" 
     echo -e "\033[5;34m No need for resubmission.\033[0m"
 #    echo "hadd /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}.root /net/cms26/cms26r0/jaehyeok/baby/Fatjet/baby_${RECOGNIZER}_f*To*.root"
+else 
+    echo "Babyies for $DATASET are NOT complete" 
+    echo -e "\033[5;31m Need for resubmission.\033[0m"
 fi
 

@@ -1012,8 +1012,9 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         GetIsoTracks(eCands,muCands,hadCands);
 
         // Skim : HT>500 MET>250
-        if(HT<500) continue;
-        if(pfType1mets_et->at(0)<250) continue;
+        if( HT<500 ) continue;
+        //if(pfType1mets_et->at(0)<200) continue;
+        if( (RA4Muon_mini.size()+RA4Elec_mini.size())<2 && (RA4Muon.size()+RA4Elec.size())<2 ) continue;
 
         // 
         // pT(R=0.5) > 30 GeV
