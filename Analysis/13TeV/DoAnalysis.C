@@ -6,6 +6,7 @@ void DoAnalysis(bool OnlyDraw=false)
 {
     // Style
     gROOT->ProcessLine(".L /Users/jaehyeok/macros/rootlogon.C");
+    
     // Load macros 
     gROOT->LoadMacro("MakeHists.C+");
     gROOT->LoadMacro("Make1DPlots.C+");
@@ -26,9 +27,7 @@ void DoAnalysis(bool OnlyDraw=false)
     TChain *ch_f1500_100    = new TChain("tree", "T1tttt_f1500_100");
     TChain *ch_f1200_800    = new TChain("tree", "T1tttt_f1200_800");
   
-    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14/HT750MET250/";
-    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14_JetPt20_16Mar2015/"/*_HT750MET250/"*/;
-    TString BabyDir = "/Users/jaehyeok/scratch/2015_05_25/skim/"/*_HT750MET250/"*/;
+    TString BabyDir = "/Users/jaehyeok/scratch/2015_05_25/skim/";
     
     // Data
     //ch_data->Add(BabyDir+"baby_MuHad_*.root");                            
@@ -69,7 +68,7 @@ void DoAnalysis(bool OnlyDraw=false)
     // Loop over SR and CR : make sure that these regions exist in "PassSelection.h"
     //
     //char* Region[] = {"Baseline","SR0", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SR9"}; 
-    char* Region[] = {"TEST"}; 
+    char* Region[] = {"SR0"}; 
     int NRegion = sizeof(Region)/sizeof(Region[0]);
 
     for(int iregion=0; iregion<NRegion; iregion++)
@@ -110,11 +109,8 @@ void DoAnalysis(bool OnlyDraw=false)
         // ----------------------------------------
         //  Draw histograms 
         // ---------------------------------------- 
-/*
-        Make1DPlots("dRlep",        Region[iregion]);
-        Make1DPlots("dPhiMET",      Region[iregion]);
-        Make1DPlots("dRbmin",       Region[iregion]);
-        Make1DPlots("dPhiMETlep",   Region[iregion]);
+
+        // basic kinematic variables
         Make1DPlots("muspT",        Region[iregion]);
         Make1DPlots("musPhi",       Region[iregion]);
         Make1DPlots("musEta",       Region[iregion]);
@@ -124,63 +120,36 @@ void DoAnalysis(bool OnlyDraw=false)
         Make1DPlots("mT",           Region[iregion]);
         Make1DPlots("mj",           Region[iregion]);
         Make1DPlots("MJ",           Region[iregion]);
-        Make1DPlots("MJ_ISR",       Region[iregion]);
         Make1DPlots("HT",           Region[iregion]);
         Make1DPlots("Nfatjet",      Region[iregion]);
         Make1DPlots("Nskinnyjet",   Region[iregion]);
         Make1DPlots("Ncsvm",        Region[iregion]);
         Make1DPlots("MET",          Region[iregion]);
-        Make1DPlots("METPhi",       Region[iregion]);
-        Make1DPlots("WpT",          Region[iregion]);
-        Make1DPlots("FatjetPt1",    Region[iregion]);
-        Make1DPlots("FatjetPt2",    Region[iregion]);
-        Make1DPlots("FatjetPt3",    Region[iregion]);
-        Make1DPlots("FatjetPt4",    Region[iregion]);
-        Make1DPlots("FatjetPhi1",   Region[iregion]);
-        Make1DPlots("FatjetPhi2",   Region[iregion]);
-        Make1DPlots("FatjetPhi3",   Region[iregion]);
-        Make1DPlots("FatjetPhi4",   Region[iregion]);
-        Make1DPlots("FatjetEta1",   Region[iregion]);
-        Make1DPlots("FatjetEta2",   Region[iregion]);
-        Make1DPlots("FatjetEta3",   Region[iregion]);
-        Make1DPlots("FatjetEta4",   Region[iregion]);
         Make1DPlots("mj1",          Region[iregion]);
         Make1DPlots("mj2",          Region[iregion]);
         Make1DPlots("mj3",          Region[iregion]);
         Make1DPlots("mj4",          Region[iregion]);
-        Make1DPlots("mj1OverMJ",    Region[iregion]);
-        Make1DPlots("mj2OverMJ",    Region[iregion]);
-        Make1DPlots("mj3OverMJ",    Region[iregion]);
-        Make1DPlots("mj4OverMJ",    Region[iregion]);
-        Make1DPlots("N1",           Region[iregion]);
-        Make1DPlots("N2",           Region[iregion]);
-        Make1DPlots("N3",           Region[iregion]);
-        Make1DPlots("N4",           Region[iregion]);
-        Make1DPlots("mjOverPt1",    Region[iregion]);
-        Make1DPlots("mjOverPt2",    Region[iregion]);
-        Make1DPlots("mjOverPt3",    Region[iregion]);
-        Make1DPlots("mjOverPt4",    Region[iregion]);
-        Make1DPlots("mj3overmj2",   Region[iregion]);
-        Make1DPlots("mj2overmj1",   Region[iregion]);
-*/
+        
+        // Corroborators
         Make1DPlots("mj08_1",        Region[iregion]);
         Make1DPlots("mj08_2",        Region[iregion]);
         Make1DPlots("mj08_3",        Region[iregion]);
         Make1DPlots("mj08_4",        Region[iregion]);
         Make1DPlots("mindPhibb",     Region[iregion]);
+        
         // ----------------------------------------
         //  Make table of yields 
         // ---------------------------------------- 
         MakeTables(0,   Region[iregion], false);
-        MakeTables(11,  Region[iregion], false);
-        MakeTables(13,  Region[iregion], false);
+        //MakeTables(11,  Region[iregion], false);
+        //MakeTables(13,  Region[iregion], false);
         
         // ----------------------------------------
         //  Make cards for combine/LandS 
         // ---------------------------------------- 
-        //MakeCards(0,   Region[iregion]);
+        MakeCards(0,   Region[iregion]);
         //MakeCards(11,  Region[iregion]);
         //MakeCards(13,  Region[iregion]);
-    } //for(int iregion=0; iregion<2; iregion++)
+    } //for(int iregion=0; iregion<NRegion; iregion++)
 
 }

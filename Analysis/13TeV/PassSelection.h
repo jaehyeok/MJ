@@ -320,7 +320,7 @@ bool PassSelection(TString Region,
     
     if(Region=="TEST" 
         && HT   > 500 
-        && MET  > 300 
+        && MET  > 400 
         && Nb   > 1 
         && Njet > 6 
         && mT   > 140 

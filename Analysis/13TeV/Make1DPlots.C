@@ -22,6 +22,7 @@ using namespace std;
 bool DoLog          = 0;
 bool doData         = 0;
 bool SignalScale    = 1;
+bool DrawOnlyAllFJ  = 1;
 
 //
 // UCSB RA4 Color scheme
@@ -79,7 +80,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
     if(HistName=="dPhiMET")                	var=(char*)"dPhi(MET,FJ)";
     if(HistName=="dPhiMETlep")             	var=(char*)"dPhi(MET,lep)";
     if(HistName=="dRbmin")                	var=(char*)"min dR(bjet,FJ)";
-    if(HistName=="mindPhibb")            	var=(char*)"min dPhi(b,b)";
+    if(HistName=="mindPhibb")            	var=(char*)"minimum #Delta#phi(b,b)";
     if(HistName=="MET")                 	var=(char*)"MET [GeV]";
     if(HistName=="METPhi")              	var=(char*)"#phi(MET)";
     if(HistName=="METx")              	    var=(char*)"METx [GeV]";
@@ -148,8 +149,11 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
     //c->Divide(5,1);
     TCanvas *c = new TCanvas("c","c",1200,800);  
     c->Divide(3,2);
+    TCanvas *c_AllFJ = new TCanvas("c_AllFJ","c_AllFJ",400,300);
     for(int i=2; i<7; i++) 
     {
+        if(i!=6 && DrawOnlyAllFJ)  continue;
+
         h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i)); 
         h1_T[i]         = (TH1F*)HistFile->Get(Form("h1_T_%s_%ifatjet", HistName.Data(), i));
         h1_TT_sl[i]     = (TH1F*)HistFile->Get(Form("h1_TT_sl_%s_%ifatjet", HistName.Data(), i));
@@ -178,19 +182,23 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         h1_MC[i]->Add(h1_DY[i]);
         h1_MC[i]->Add(h1_TTV[i]);
 
-        h1cosmetic(h1_DATA[i],          Form("DATA %ifatjet", i),               kBlack, 1, 0,           var);
-        h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),              kBlack, 1, 1000,        var);
-        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 1, 1006,        var);
-        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 1, kGreen+3,    var);
-        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 1, 1001,        var);
-        h1cosmetic(h1_DY[i],            Form("DYJets %ifatjet", i),             kBlack, 1, kBlue+4,     var);
-        h1cosmetic(h1_TTV[i],           Form("TTV %ifatjet", i),                kBlack, 1, 1002,        var);
-        h1cosmetic(h1_f1500_100[i],     Form("T1tttt(1500,100) %ifatjet", i),   kRed,   1, 0,           var);
-        h1cosmetic(h1_f1200_800[i],     Form("T1tttt(1200,800) %ifatjet", i),   kBlue,  1, 0,           var);
+        h1cosmetic(h1_DATA[i],          Form("DATA %ifatjet", i),               kBlack, 2, 0,           var);
+        h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),              kBlack, 2, 1000,        var);
+        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 2, 1006,        var);
+        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 2, kGreen+3,    var);
+        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 2, 1002,        var);
+        h1cosmetic(h1_DY[i],            Form("DYJets %ifatjet", i),             kBlack, 2, kBlue+4,     var);
+        h1cosmetic(h1_TTV[i],           Form("TTV %ifatjet", i),                kBlack, 2, 1002,        var);
+        h1cosmetic(h1_f1500_100[i],     Form("T1tttt(1500,100) %ifatjet", i),   kRed,   2, 0,           var);
+        h1cosmetic(h1_f1200_800[i],     Form("T1tttt(1200,800) %ifatjet", i),   kBlue,  2, 0,           var);
 
         bool DoLogOne = (DoLog && h1_MC[i]->Integral()>0);
-        c->cd(i-1);
-        if(DoLogOne) c->cd(i-1)->SetLogy(1);
+        if(DrawOnlyAllFJ) c_AllFJ->cd();
+        else 
+        {
+            c->cd(i-1);
+            if(DoLogOne) c->cd(i-1)->SetLogy(1);
+        }
         //c->cd(i-1)->SetLeftMargin(0.15);
         //c->cd(i-1)->SetRightMargin(0.07);
         //c->cd(i-1)->SetBottomMargin(0.15);
@@ -205,7 +213,8 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         st[i]->Add(h1_T[i]);
         st[i]->Add(h1_TT_ll[i]);
         st[i]->Add(h1_TT_sl[i]);
-        float HistMax = h1_MC[i]->GetMaximum()>h1_f1500_100[i]->GetMaximum()?h1_MC[i]->GetMaximum():h1_f1500_100[i]->GetMaximum();
+        //float HistMax = h1_MC[i]->GetMaximum()>h1_f1500_100[i]->GetMaximum()?h1_MC[i]->GetMaximum():h1_f1500_100[i]->GetMaximum();
+        float HistMax = 4;
         st[i]->SetMaximum(HistMax*(DoLogOne?200:1.5));
         //st[i]->SetMinimum(h1_MC[i]->GetMinimum()*(DoLogOne?1:0));
         st[i]->SetMinimum((DoLogOne?0.05:0));
@@ -240,12 +249,12 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         l1->SetLineColor(kWhite);
         l1->SetShadowColor(kWhite);
         if(doData) l1->AddEntry(h1_DATA[i],        " Data",  "lp");
-        l1->AddEntry(h1_TT_sl[i],        " TT(l)",    "f");
-        l1->AddEntry(h1_TT_ll[i],        " TT(ll)",    "f");
+        l1->AddEntry(h1_TT_sl[i],        " t#bar{t}(1#font[12]{l})",    "f");
+        l1->AddEntry(h1_TT_ll[i],        " t#bar{t}(2#font[12]{l})",    "f");
         l1->AddEntry(h1_T[i],           " t+tW",  "f");
         l1->AddEntry(h1_WJets[i],       " WJets", "f");
-        l1->AddEntry(h1_DY[i],          " DY",    "f");
-        l1->AddEntry(h1_TTV[i],         " TTV",    "f");
+        l1->AddEntry(h1_DY[i],          " Drell-Yan",    "f");
+        l1->AddEntry(h1_TTV[i],         " t#bar{t}V",    "f");
         l1->AddEntry(h1_f1500_100[i],   " T1tttt[1500,100]", "l");
         l1->AddEntry(h1_f1200_800[i],   " T1tttt[1200,800]", "l");
         l1->Draw();
@@ -285,11 +294,17 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
 
     // 
     if(HistName=="mj") HistName="JetMass";
-    c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
-    c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.root", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
-    
+   if(DrawOnlyAllFJ)
+   {
+       c_AllFJ->Print( Form("Figures/%s/CompareDataMC_AllFJ_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
+   }
+   else 
+   { 
+       c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
+   } 
     // 
     HistFile->Close();
     delete c; 
+    delete c_AllFJ; 
 
 }
