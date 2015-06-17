@@ -32,6 +32,34 @@
 
 using namespace std;
 
+bool isLO(TString ProcessName)
+{
+    // single top and TTH samples are generated with aMC@NLO
+    // and require special treatment of negative weights
+    if(ProcessName.Contains("amcatnlo")) return false;
+    else if(ProcessName.Contains("aMCatNLO")) return false;
+    else if(ProcessName.Contains("TToLeptons")) return false;
+    else if(ProcessName.Contains("TBarToLeptons")) return false;
+    else if(ProcessName.Contains("TTH")) return false;
+    else return true;
+
+}
+
+// only care about the sign of the weight;
+// the average of the weights is the cross section
+int getWeights(TChain *chB)
+{
+    // gimmicky way to quickly get number of positive and negative weights
+    // without having to call SetBranchStatus manually
+    TH1F *weights = new TH1F("weights", "weights", 2, -1e9, 1e9);
+    chB->Project("weights", "weight");
+
+    float weightSum = weights->GetBinContent(2)-weights->GetBinContent(1);
+    cout << weightSum << " events after taking into account negative weights" << endl;
+
+    return (int)weightSum;
+}
+
 //
 // Make fat jets 
 //
@@ -175,12 +203,15 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     
     // Get total number of events of a sample 
     int TotalNEntries=1;
+    int TotalNEntriesNeg=1;
     
     if(!isData)
     { 
         TChain * chainATotal = new TChain("/cfA/eventA");  
         chainATotal->Add(Form("%s/*.root", InputName.Data()));
         TotalNEntries = (int)chainATotal->GetEntries();
+        if(isLO(ProcessName)) TotalNEntriesNeg = (int)chainATotal->GetEntries();
+        else TotalNEntriesNeg = getWeights(chainB);
     }
 
     //
@@ -202,6 +233,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     int Npuplusone_; 
     float Npu_; 
     float EventWeight_; 
+    float EventWeightNeg_; 
     float MJ_pT30_; 
     float MET_;  
     float METPhi_;  
@@ -296,6 +328,26 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     vector<float> FatjetPt_R1p5_pT30_Eta2p5_;
     vector<float> FatjetEta_R1p5_pT30_Eta2p5_;
     vector<float> FatjetPhi_R1p5_pT30_Eta2p5_;
+    vector<float> mj_R1p2_pT35_Eta2p5_;
+    vector<float> FatjetPt_R1p2_pT35_Eta2p5_;
+    vector<float> FatjetEta_R1p2_pT35_Eta2p5_;
+    vector<float> FatjetPhi_R1p2_pT35_Eta2p5_; 
+    vector<float> mj_R1p2_pT40_Eta2p5_;
+    vector<float> FatjetPt_R1p2_pT40_Eta2p5_;
+    vector<float> FatjetEta_R1p2_pT40_Eta2p5_;
+    vector<float> FatjetPhi_R1p2_pT40_Eta2p5_; 
+    vector<float> mj_R1p2_pT45_Eta2p5_;
+    vector<float> FatjetPt_R1p2_pT45_Eta2p5_;
+    vector<float> FatjetEta_R1p2_pT45_Eta2p5_;
+    vector<float> FatjetPhi_R1p2_pT45_Eta2p5_; 
+    vector<float> mj_R1p2_pT50_Eta2p5_;
+    vector<float> FatjetPt_R1p2_pT50_Eta2p5_;
+    vector<float> FatjetEta_R1p2_pT50_Eta2p5_;
+    vector<float> FatjetPhi_R1p2_pT50_Eta2p5_; 
+    vector<float> mj_R1p2_pT60_Eta2p5_;
+    vector<float> FatjetPt_R1p2_pT60_Eta2p5_;
+    vector<float> FatjetEta_R1p2_pT60_Eta2p5_;
+    vector<float> FatjetPhi_R1p2_pT60_Eta2p5_; 
     vector<float> RA4ElsPt_;
     vector<float> RA4ElsEta_;
     vector<float> RA4ElsPhi_;
@@ -308,22 +360,87 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     vector<float> RA4MusVetoPt_;
     vector<float> RA4MusVetoEta_;
     vector<float> RA4MusVetoPhi_;
+    vector<float> JetE_;
     vector<float> JetPt_;
     vector<float> JetEta_;
     vector<float> JetPhi_;
     vector<float> JetCSV_;
+    vector<float> RA4ElsPt_mi_;
+    vector<float> RA4ElsEta_mi_;
+    vector<float> RA4ElsPhi_mi_;
+    vector<float> RA4MusPt_mi_;
+    vector<float> RA4MusEta_mi_;
+    vector<float> RA4MusPhi_mi_;
+    vector<float> RA4ElsVetoPt_mi_;
+    vector<float> RA4ElsVetoEta_mi_;
+    vector<float> RA4ElsVetoPhi_mi_;
+    vector<float> RA4MusVetoPt_mi_;
+    vector<float> RA4MusVetoEta_mi_;
+    vector<float> RA4MusVetoPhi_mi_;
+    vector<float> IsoTrkVetoElsPt_;
+    vector<float> IsoTrkVetoElsEta_;
+    vector<float> IsoTrkVetoElsPhi_;
+    vector<float> IsoTrkVetoMusPt_;
+    vector<float> IsoTrkVetoMusEta_;
+    vector<float> IsoTrkVetoMusPhi_;
+    vector<float> IsoTrkVetoHadPt_;
+    vector<float> IsoTrkVetoHadEta_;
+    vector<float> IsoTrkVetoHadPhi_;
+    vector<float> JetE_mi_;
+    vector<float> JetPt_mi_;
+    vector<float> JetEta_mi_;
+    vector<float> JetPhi_mi_;
+    vector<float> JetCSV_mi_;
     vector<float> GenPt_;
     vector<float> GenEta_;
     vector<float> GenPhi_;
+    vector<float> GenStatus_;
     vector<float> GenId_;
     vector<float> GenMId_;
     vector<float> GenGMId_;
     vector<float> GenJetPt_;
     vector<float> GenJetEta_;
     vector<float> GenJetPhi_;
+    vector<float> MCJetE_;
     vector<float> MCJetPt_;
     vector<float> MCJetEta_;
     vector<float> MCJetPhi_;
+    vector<float> Genmj_R0p8_pT30_Eta2p5_;
+    vector<float> GenFatjetPt_R0p8_pT30_Eta2p5_;
+    vector<float> GenFatjetEta_R0p8_pT30_Eta2p5_;
+    vector<float> GenFatjetPhi_R0p8_pT30_Eta2p5_;
+    vector<float> Genmj_R1p0_pT30_Eta2p5_;
+    vector<float> GenFatjetPt_R1p0_pT30_Eta2p5_;
+    vector<float> GenFatjetEta_R1p0_pT30_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p0_pT30_Eta2p5_;
+    vector<float> Genmj_R1p2_pT30_Eta2p5_;
+    vector<float> GenFatjetPt_R1p2_pT30_Eta2p5_;
+    vector<float> GenFatjetEta_R1p2_pT30_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p2_pT30_Eta2p5_;
+    vector<float> Genmj_R1p4_pT30_Eta2p5_;
+    vector<float> GenFatjetPt_R1p4_pT30_Eta2p5_;
+    vector<float> GenFatjetEta_R1p4_pT30_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p4_pT30_Eta2p5_;
+    vector<float> Genmj_R1p2_pT35_Eta2p5_;
+    vector<float> GenFatjetPt_R1p2_pT35_Eta2p5_;
+    vector<float> GenFatjetEta_R1p2_pT35_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p2_pT35_Eta2p5_;
+    vector<float> Genmj_R1p2_pT40_Eta2p5_;
+    vector<float> GenFatjetPt_R1p2_pT40_Eta2p5_;
+    vector<float> GenFatjetEta_R1p2_pT40_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p2_pT40_Eta2p5_;
+    vector<float> Genmj_R1p2_pT45_Eta2p5_;
+    vector<float> GenFatjetPt_R1p2_pT45_Eta2p5_;
+    vector<float> GenFatjetEta_R1p2_pT45_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p2_pT45_Eta2p5_;
+    vector<float> Genmj_R1p2_pT50_Eta2p5_;
+    vector<float> GenFatjetPt_R1p2_pT50_Eta2p5_;
+    vector<float> GenFatjetEta_R1p2_pT50_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p2_pT50_Eta2p5_;
+    vector<float> Genmj_R1p2_pT60_Eta2p5_;
+    vector<float> GenFatjetPt_R1p2_pT60_Eta2p5_;
+    vector<float> GenFatjetEta_R1p2_pT60_Eta2p5_;
+    vector<float> GenFatjetPhi_R1p2_pT60_Eta2p5_;
     
     babyTree_->Branch("run",            	&run_);    
     babyTree_->Branch("lumiblock",      	&lumiblock_); 
@@ -341,6 +458,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("Npuplusone",        	&Npuplusone_);       
     babyTree_->Branch("Npu",            	&Npu_);       
     babyTree_->Branch("EventWeight",    	&EventWeight_);
+    babyTree_->Branch("EventWeightNeg",    	&EventWeightNeg_);
     babyTree_->Branch("MJ_pT30",        	&MJ_pT30_);        
     babyTree_->Branch("MET",            	&MET_);        
     babyTree_->Branch("METPhi",            	&METPhi_);        
@@ -435,6 +553,26 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("FatjetPt_R1p5_pT30_Eta2p5",  	&FatjetPt_R1p5_pT30_Eta2p5_); 
     babyTree_->Branch("FatjetEta_R1p5_pT30_Eta2p5", 	&FatjetEta_R1p5_pT30_Eta2p5_);
     babyTree_->Branch("FatjetPhi_R1p5_pT30_Eta2p5",     &FatjetPhi_R1p5_pT30_Eta2p5_);
+    babyTree_->Branch("mj_R1p2_pT35_Eta2p5",        	&mj_R1p2_pT35_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT35_Eta2p5",  	&FatjetPt_R1p2_pT35_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT35_Eta2p5", 	&FatjetEta_R1p2_pT35_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT35_Eta2p5",     &FatjetPhi_R1p2_pT35_Eta2p5_);
+    babyTree_->Branch("mj_R1p2_pT40_Eta2p5",        	&mj_R1p2_pT40_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT40_Eta2p5",  	&FatjetPt_R1p2_pT40_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT40_Eta2p5", 	&FatjetEta_R1p2_pT40_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT40_Eta2p5",     &FatjetPhi_R1p2_pT40_Eta2p5_);
+    babyTree_->Branch("mj_R1p2_pT45_Eta2p5",        	&mj_R1p2_pT45_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT45_Eta2p5",  	&FatjetPt_R1p2_pT45_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT45_Eta2p5", 	&FatjetEta_R1p2_pT45_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT45_Eta2p5",     &FatjetPhi_R1p2_pT45_Eta2p5_);
+    babyTree_->Branch("mj_R1p2_pT50_Eta2p5",        	&mj_R1p2_pT50_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT50_Eta2p5",  	&FatjetPt_R1p2_pT50_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT50_Eta2p5", 	&FatjetEta_R1p2_pT50_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT50_Eta2p5",     &FatjetPhi_R1p2_pT50_Eta2p5_);
+    babyTree_->Branch("mj_R1p2_pT60_Eta2p5",        	&mj_R1p2_pT60_Eta2p5_);     
+    babyTree_->Branch("FatjetPt_R1p2_pT60_Eta2p5",  	&FatjetPt_R1p2_pT60_Eta2p5_); 
+    babyTree_->Branch("FatjetEta_R1p2_pT60_Eta2p5", 	&FatjetEta_R1p2_pT60_Eta2p5_);
+    babyTree_->Branch("FatjetPhi_R1p2_pT60_Eta2p5",     &FatjetPhi_R1p2_pT60_Eta2p5_);
     babyTree_->Branch("RA4ElsPt",           &RA4ElsPt_);
     babyTree_->Branch("RA4ElsEta",          &RA4ElsEta_);
     babyTree_->Branch("RA4ElsPhi",          &RA4ElsPhi_);
@@ -447,22 +585,87 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     babyTree_->Branch("RA4MusVetoPt",       &RA4MusVetoPt_);
     babyTree_->Branch("RA4MusVetoEta",      &RA4MusVetoEta_);
     babyTree_->Branch("RA4MusVetoPhi",      &RA4MusVetoPhi_);
+    babyTree_->Branch("JetE",              &JetE_);
     babyTree_->Branch("JetPt",              &JetPt_);
     babyTree_->Branch("JetEta",             &JetEta_);
     babyTree_->Branch("JetPhi",             &JetPhi_);
     babyTree_->Branch("JetCSV",             &JetCSV_);
+    babyTree_->Branch("RA4ElsPt_mi",        &RA4ElsPt_mi_);
+    babyTree_->Branch("RA4ElsEta_mi",       &RA4ElsEta_mi_);
+    babyTree_->Branch("RA4ElsPhi_mi",       &RA4ElsPhi_mi_);
+    babyTree_->Branch("RA4MusPt_mi",        &RA4MusPt_mi_);
+    babyTree_->Branch("RA4MusEta_mi",       &RA4MusEta_mi_);
+    babyTree_->Branch("RA4MusPhi_mi",       &RA4MusPhi_mi_);
+    babyTree_->Branch("RA4ElsVetoPt_mi",    &RA4ElsVetoPt_mi_);
+    babyTree_->Branch("RA4ElsVetoEta_mi",   &RA4ElsVetoEta_mi_);
+    babyTree_->Branch("RA4ElsVetoPhi_mi",   &RA4ElsVetoPhi_mi_);
+    babyTree_->Branch("RA4MusVetoPt_mi",    &RA4MusVetoPt_mi_);
+    babyTree_->Branch("RA4MusVetoEta_mi",   &RA4MusVetoEta_mi_);
+    babyTree_->Branch("RA4MusVetoPhi_mi",   &RA4MusVetoPhi_mi_);
+    babyTree_->Branch("IsoTrkVetoElsPt",    &IsoTrkVetoElsPt_);
+    babyTree_->Branch("IsoTrkVetoElsEta",   &IsoTrkVetoElsEta_);
+    babyTree_->Branch("IsoTrkVetoElsPhi",   &IsoTrkVetoElsPhi_);
+    babyTree_->Branch("IsoTrkVetoMusPt",    &IsoTrkVetoMusPt_);
+    babyTree_->Branch("IsoTrkVetoMusEta",   &IsoTrkVetoMusEta_);
+    babyTree_->Branch("IsoTrkVetoMusPhi",   &IsoTrkVetoMusPhi_);
+    babyTree_->Branch("IsoTrkVetoHadPt",    &IsoTrkVetoHadPt_);
+    babyTree_->Branch("IsoTrkVetoHadEta",   &IsoTrkVetoHadEta_);
+    babyTree_->Branch("IsoTrkVetoHadPhi",   &IsoTrkVetoHadPhi_);
+    babyTree_->Branch("JetE_mi",            &JetE_mi_);
+    babyTree_->Branch("JetPt_mi",           &JetPt_mi_);
+    babyTree_->Branch("JetEta_mi",          &JetEta_mi_);
+    babyTree_->Branch("JetPhi_mi",          &JetPhi_mi_);
+    babyTree_->Branch("JetCSV_mi",          &JetCSV_mi_);
     babyTree_->Branch("GenPt",              &GenPt_);
     babyTree_->Branch("GenEta",             &GenEta_);
     babyTree_->Branch("GenPhi",             &GenPhi_);
+    babyTree_->Branch("GenStatus",          &GenStatus_);
     babyTree_->Branch("GenId",              &GenId_);
     babyTree_->Branch("GenMId",             &GenMId_);
     babyTree_->Branch("GenGMId",            &GenGMId_);
-    babyTree_->Branch("GenJetPt",              &GenJetPt_);
-    babyTree_->Branch("GenJetEta",             &GenJetEta_);
-    babyTree_->Branch("GenJetPhi",             &GenJetPhi_);
-    babyTree_->Branch("MCJetPt",              &MCJetPt_);
-    babyTree_->Branch("MCJetEta",             &MCJetEta_);
-    babyTree_->Branch("MCJetPhi",             &MCJetPhi_);
+    babyTree_->Branch("GenJetPt",           &GenJetPt_);
+    babyTree_->Branch("GenJetEta",          &GenJetEta_);
+    babyTree_->Branch("GenJetPhi",          &GenJetPhi_);
+    babyTree_->Branch("MCJetE",             &MCJetE_);
+    babyTree_->Branch("MCJetPt",            &MCJetPt_);
+    babyTree_->Branch("MCJetEta",           &MCJetEta_);
+    babyTree_->Branch("MCJetPhi",           &MCJetPhi_);
+    babyTree_->Branch("Genmj_R0p8_pT30_Eta2p5",        	&Genmj_R0p8_pT30_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R0p8_pT30_Eta2p5",  	&GenFatjetPt_R0p8_pT30_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R0p8_pT30_Eta2p5", 	&GenFatjetEta_R0p8_pT30_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R0p8_pT30_Eta2p5",  &GenFatjetPhi_R0p8_pT30_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p0_pT30_Eta2p5",        	&Genmj_R1p0_pT30_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p0_pT30_Eta2p5",  	&GenFatjetPt_R1p0_pT30_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p0_pT30_Eta2p5", 	&GenFatjetEta_R1p0_pT30_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p0_pT30_Eta2p5",  &GenFatjetPhi_R1p0_pT30_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p2_pT30_Eta2p5",        	&Genmj_R1p2_pT30_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p2_pT30_Eta2p5",  	&GenFatjetPt_R1p2_pT30_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p2_pT30_Eta2p5", 	&GenFatjetEta_R1p2_pT30_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p2_pT30_Eta2p5",  &GenFatjetPhi_R1p2_pT30_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p4_pT30_Eta2p5",        	&Genmj_R1p4_pT30_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p4_pT30_Eta2p5",  	&GenFatjetPt_R1p4_pT30_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p4_pT30_Eta2p5", 	&GenFatjetEta_R1p4_pT30_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p4_pT30_Eta2p5",  &GenFatjetPhi_R1p4_pT30_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p2_pT35_Eta2p5",        	&Genmj_R1p2_pT35_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p2_pT35_Eta2p5",  	&GenFatjetPt_R1p2_pT35_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p2_pT35_Eta2p5", 	&GenFatjetEta_R1p2_pT35_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p2_pT35_Eta2p5",  &GenFatjetPhi_R1p2_pT35_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p2_pT40_Eta2p5",        	&Genmj_R1p2_pT40_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p2_pT40_Eta2p5",  	&GenFatjetPt_R1p2_pT40_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p2_pT40_Eta2p5", 	&GenFatjetEta_R1p2_pT40_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p2_pT40_Eta2p5",  &GenFatjetPhi_R1p2_pT40_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p2_pT45_Eta2p5",        	&Genmj_R1p2_pT45_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p2_pT45_Eta2p5",  	&GenFatjetPt_R1p2_pT45_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p2_pT45_Eta2p5", 	&GenFatjetEta_R1p2_pT45_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p2_pT45_Eta2p5",  &GenFatjetPhi_R1p2_pT45_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p2_pT50_Eta2p5",        	&Genmj_R1p2_pT50_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p2_pT50_Eta2p5",  	&GenFatjetPt_R1p2_pT50_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p2_pT50_Eta2p5", 	&GenFatjetEta_R1p2_pT50_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p2_pT50_Eta2p5",  &GenFatjetPhi_R1p2_pT50_Eta2p5_);
+    babyTree_->Branch("Genmj_R1p2_pT60_Eta2p5",        	&Genmj_R1p2_pT60_Eta2p5_);     
+    babyTree_->Branch("GenFatjetPt_R1p2_pT60_Eta2p5",  	&GenFatjetPt_R1p2_pT60_Eta2p5_); 
+    babyTree_->Branch("GenFatjetEta_R1p2_pT60_Eta2p5", 	&GenFatjetEta_R1p2_pT60_Eta2p5_);
+    babyTree_->Branch("GenFatjetPhi_R1p2_pT60_Eta2p5",  &GenFatjetPhi_R1p2_pT60_Eta2p5_);
    
     // 
     // Event weights
@@ -478,6 +681,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     Int_t nentries = (Int_t)chainA->GetEntries();
     cout<<"[MJ Analysis] Number of entries is: "<<nentries<<endl;
     cout<<"[MJ Analysis] Number of entries of total sample is: "<<TotalNEntries<<endl;
+    cout<<"[MJ Analysis] Number of entries of total sample is(taking into account negative weights in aMC@NLO samples): "<<TotalNEntriesNeg<<endl;
     // Progress tracking 
     int i_permille_old = 0; 
     TDatime DTStart;
@@ -534,6 +738,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         Npuplusone_         =   -1;
         Npu_                =   -1;
         EventWeight_        =   1.;
+        EventWeightNeg_     =   1.;
         MJ_pT30_            =-999.;
         MET_                =-999.;
         METPhi_             =-999.;
@@ -629,6 +834,26 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         FatjetPt_R1p5_pT30_Eta2p5_.clear();
         FatjetEta_R1p5_pT30_Eta2p5_.clear();
         FatjetPhi_R1p5_pT30_Eta2p5_.clear();
+        mj_R1p2_pT35_Eta2p5_.clear();
+        FatjetPt_R1p2_pT35_Eta2p5_.clear();
+        FatjetEta_R1p2_pT35_Eta2p5_.clear();
+        FatjetPhi_R1p2_pT35_Eta2p5_.clear();
+        mj_R1p2_pT40_Eta2p5_.clear();
+        FatjetPt_R1p2_pT40_Eta2p5_.clear();
+        FatjetEta_R1p2_pT40_Eta2p5_.clear();
+        FatjetPhi_R1p2_pT40_Eta2p5_.clear();
+        mj_R1p2_pT45_Eta2p5_.clear();
+        FatjetPt_R1p2_pT45_Eta2p5_.clear();
+        FatjetEta_R1p2_pT45_Eta2p5_.clear();
+        FatjetPhi_R1p2_pT45_Eta2p5_.clear();
+        mj_R1p2_pT50_Eta2p5_.clear();
+        FatjetPt_R1p2_pT50_Eta2p5_.clear();
+        FatjetEta_R1p2_pT50_Eta2p5_.clear();
+        FatjetPhi_R1p2_pT50_Eta2p5_.clear();
+        mj_R1p2_pT60_Eta2p5_.clear();
+        FatjetPt_R1p2_pT60_Eta2p5_.clear();
+        FatjetEta_R1p2_pT60_Eta2p5_.clear();
+        FatjetPhi_R1p2_pT60_Eta2p5_.clear();
         RA4ElsPt_.clear();
         RA4ElsEta_.clear();
         RA4ElsPhi_.clear();
@@ -641,50 +866,115 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         RA4MusVetoPt_.clear();
         RA4MusVetoEta_.clear();
         RA4MusVetoPhi_.clear();
+        JetE_.clear();
         JetPt_.clear();
         JetEta_.clear();
         JetPhi_.clear();
         JetCSV_.clear();
+        RA4ElsPt_mi_.clear();
+        RA4ElsEta_mi_.clear();
+        RA4ElsPhi_mi_.clear();
+        RA4MusPt_mi_.clear();
+        RA4MusEta_mi_.clear();
+        RA4MusPhi_mi_.clear();
+        RA4ElsVetoPt_mi_.clear();
+        RA4ElsVetoEta_mi_.clear();
+        RA4ElsVetoPhi_mi_.clear();
+        RA4MusVetoPt_mi_.clear();
+        RA4MusVetoEta_mi_.clear();
+        RA4MusVetoPhi_mi_.clear();
+        IsoTrkVetoElsPt_.clear();
+        IsoTrkVetoElsEta_.clear();
+        IsoTrkVetoElsPhi_.clear();
+        IsoTrkVetoMusPt_.clear();
+        IsoTrkVetoMusEta_.clear();
+        IsoTrkVetoMusPhi_.clear();
+        IsoTrkVetoHadPt_.clear();
+        IsoTrkVetoHadEta_.clear();
+        IsoTrkVetoHadPhi_.clear();
+        JetE_mi_.clear();
+        JetPt_mi_.clear();
+        JetEta_mi_.clear();
+        JetPhi_mi_.clear();
+        JetCSV_mi_.clear();
         GenPt_.clear();
         GenEta_.clear();
         GenPhi_.clear();
+        GenStatus_.clear();
         GenId_.clear();
         GenMId_.clear();
         GenGMId_.clear();
         GenJetPt_.clear();
         GenJetEta_.clear();
         GenJetPhi_.clear();
+        MCJetE_.clear();
         MCJetPt_.clear();
         MCJetEta_.clear();
         MCJetPhi_.clear();
+        Genmj_R0p8_pT30_Eta2p5_.clear();
+        GenFatjetPt_R0p8_pT30_Eta2p5_.clear();
+        GenFatjetEta_R0p8_pT30_Eta2p5_.clear();
+        GenFatjetPhi_R0p8_pT30_Eta2p5_.clear();
+        Genmj_R1p0_pT30_Eta2p5_.clear();
+        GenFatjetPt_R1p0_pT30_Eta2p5_.clear();
+        GenFatjetEta_R1p0_pT30_Eta2p5_.clear();
+        GenFatjetPhi_R1p0_pT30_Eta2p5_.clear();
+        Genmj_R1p2_pT30_Eta2p5_.clear();
+        GenFatjetPt_R1p2_pT30_Eta2p5_.clear();
+        GenFatjetEta_R1p2_pT30_Eta2p5_.clear();
+        GenFatjetPhi_R1p2_pT30_Eta2p5_.clear();
+        Genmj_R1p4_pT30_Eta2p5_.clear();
+        GenFatjetPt_R1p4_pT30_Eta2p5_.clear();
+        GenFatjetEta_R1p4_pT30_Eta2p5_.clear();
+        GenFatjetPhi_R1p4_pT30_Eta2p5_.clear();
+        Genmj_R1p2_pT35_Eta2p5_.clear();
+        GenFatjetPt_R1p2_pT35_Eta2p5_.clear();
+        GenFatjetEta_R1p2_pT35_Eta2p5_.clear();
+        GenFatjetPhi_R1p2_pT35_Eta2p5_.clear();
+        Genmj_R1p2_pT40_Eta2p5_.clear();
+        GenFatjetPt_R1p2_pT40_Eta2p5_.clear();
+        GenFatjetEta_R1p2_pT40_Eta2p5_.clear();
+        GenFatjetPhi_R1p2_pT40_Eta2p5_.clear();
+        Genmj_R1p2_pT45_Eta2p5_.clear();
+        GenFatjetPt_R1p2_pT45_Eta2p5_.clear();
+        GenFatjetEta_R1p2_pT45_Eta2p5_.clear();
+        GenFatjetPhi_R1p2_pT45_Eta2p5_.clear();
+        Genmj_R1p2_pT50_Eta2p5_.clear();
+        GenFatjetPt_R1p2_pT50_Eta2p5_.clear();
+        GenFatjetEta_R1p2_pT50_Eta2p5_.clear();
+        GenFatjetPhi_R1p2_pT50_Eta2p5_.clear();
+        Genmj_R1p2_pT60_Eta2p5_.clear();
+        GenFatjetPt_R1p2_pT60_Eta2p5_.clear();
+        GenFatjetEta_R1p2_pT60_Eta2p5_.clear();
+        GenFatjetPhi_R1p2_pT60_Eta2p5_.clear();
 
         //
         // Core analysis 
         //
         // Get event weight 
         float EventWeight = 1;
+        float EventWeightNeg = 1;
         if(!isData) 
         {
-            EventWeight = Xsec/TotalNEntries*Lumi; // scale for 1 pb * Lumi
+            EventWeight         = Xsec/TotalNEntries*Lumi; // scale for 1 pb * Lumi
+            EventWeightNeg      = Xsec/TotalNEntriesNeg*Lumi; // scale for 1 pb * Lumi
+            // take into account negative weights in NLO samples
+            if(weight<0) EventWeightNeg*=-1.0;
             // need more weights if needed 
         } 
-
-
+    
+        //
+        // Reliso 
+        //
         // Get good RA4 muons
-        vector<int> RA4MuonVeto = GetMuons(false);
-        vector<int> RA4Muon     = GetMuons(true);
+        vector<int> RA4MuonVeto = GetMuons(false, false);
+        vector<int> RA4Muon     = GetMuons(true, false);
         // Get good RA4 electrons
-        vector<int> RA4ElecVeto = GetElectrons(false);
-        vector<int> RA4Elec     = GetElectrons(true);
+        vector<int> RA4ElecVeto = GetElectrons(false, false);
+        vector<int> RA4Elec     = GetElectrons(true, false);
         // Get good skinny jets, HT and B-tagged jets 
         float HT=-999.; 
-        vector<int> GoodJets_AK4 = GetJets(RA4Elec,RA4Muon,RA4ElecVeto,RA4MuonVeto, HT);
-
-
-        // Skim : HT>750 MET>250
-        //if(HT<500) continue;
-        //if(pfType1mets_et->at(0)<100) continue;
-
+        vector<int> GoodJets_AK4 = GetJets(RA4Elec,RA4Muon,RA4ElecVeto,RA4MuonVeto,HT);
         // Nbtag 
         int Ncsvm=0;
         int Ncsvl=0;
@@ -694,6 +984,38 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             if(jets_AK4_btag_inc_secVertexCombined->at(GoodJets_AK4.at(j)) > 0.423/*0.244*/) Ncsvl++; 
         }
         
+        //
+        // MiniIso 
+        //
+        // Get good RA4 muons
+        vector<int> RA4MuonVeto_mini = GetMuons(false,  true);
+        vector<int> RA4Muon_mini     = GetMuons(true,   true);
+        // Get good RA4 electrons
+        vector<int> RA4ElecVeto_mini = GetElectrons(false,  true);
+        vector<int> RA4Elec_mini     = GetElectrons(true,   true);
+        // Get good skinny jets, HT and B-tagged jets 
+        float HT_mini=-999.; 
+        vector<int> GoodJets_AK4_mini = GetJets(RA4Elec_mini,RA4Muon_mini,RA4ElecVeto_mini,RA4MuonVeto_mini,HT_mini);
+        // Nbtag 
+        int Ncsvm_mini=0;
+        int Ncsvl_mini=0;
+        for(int jmini=0; jmini<(int)GoodJets_AK4_mini.size(); jmini++)
+        { 
+            if(jets_AK4_btag_inc_secVertexCombined->at(GoodJets_AK4_mini.at(jmini)) > 0.814/*0.679*/) Ncsvm_mini++; 
+            if(jets_AK4_btag_inc_secVertexCombined->at(GoodJets_AK4_mini.at(jmini)) > 0.423/*0.244*/) Ncsvl_mini++; 
+        }
+
+        // Iso track veto 
+        std::vector<std::pair<int,double> > eCands;
+        std::vector<std::pair<int,double> > muCands;
+        std::vector<std::pair<int,double> > hadCands;
+        GetIsoTracks(eCands,muCands,hadCands);
+
+        // Skim : HT>500 MET>250
+        if( HT<500 && HT_mini<500) continue;
+        //if(pfType1mets_et->at(0)<200) continue;
+        if( (RA4Muon_mini.size()+RA4Elec_mini.size())<2 && (RA4Muon.size()+RA4Elec.size())<2 ) continue;
+
         // 
         // pT(R=0.5) > 30 GeV
         // 
@@ -896,8 +1218,143 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             FatjetEta_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Eta());
             FatjetPhi_R1p5_pT30_Eta2p5_.push_back(FatJet_R1p5_pT30_Eta2p5.at(ifj).Phi());
         }
+        
+        //  R=1.2  pT(SJ)>35,40,45,50,50  |eta|<2.5
+        vector<TLorentzVector>  FatJet_R1p2_pT35_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 35, 2.5);
+        vector<TLorentzVector>  FatJet_R1p2_pT40_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 40, 2.5);
+        vector<TLorentzVector>  FatJet_R1p2_pT45_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 45, 2.5);
+        vector<TLorentzVector>  FatJet_R1p2_pT50_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 50, 2.5);
+        vector<TLorentzVector>  FatJet_R1p2_pT60_Eta2p5 = makeFatJet(FatJetConstituent, 1.2, 60, 2.5);
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT35_Eta2p5.size();ifj++)
+        {
+            mj_R1p2_pT35_Eta2p5_.push_back(FatJet_R1p2_pT35_Eta2p5.at(ifj).M());
+            FatjetPt_R1p2_pT35_Eta2p5_.push_back(FatJet_R1p2_pT35_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p2_pT35_Eta2p5_.push_back(FatJet_R1p2_pT35_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT35_Eta2p5_.push_back(FatJet_R1p2_pT35_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT40_Eta2p5.size();ifj++)
+        {
+            mj_R1p2_pT40_Eta2p5_.push_back(FatJet_R1p2_pT40_Eta2p5.at(ifj).M());
+            FatjetPt_R1p2_pT40_Eta2p5_.push_back(FatJet_R1p2_pT40_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p2_pT40_Eta2p5_.push_back(FatJet_R1p2_pT40_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT40_Eta2p5_.push_back(FatJet_R1p2_pT40_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT45_Eta2p5.size();ifj++)
+        {
+            mj_R1p2_pT45_Eta2p5_.push_back(FatJet_R1p2_pT45_Eta2p5.at(ifj).M());
+            FatjetPt_R1p2_pT45_Eta2p5_.push_back(FatJet_R1p2_pT45_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p2_pT45_Eta2p5_.push_back(FatJet_R1p2_pT45_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT45_Eta2p5_.push_back(FatJet_R1p2_pT45_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT50_Eta2p5.size();ifj++)
+        {
+            mj_R1p2_pT50_Eta2p5_.push_back(FatJet_R1p2_pT50_Eta2p5.at(ifj).M());
+            FatjetPt_R1p2_pT50_Eta2p5_.push_back(FatJet_R1p2_pT50_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p2_pT50_Eta2p5_.push_back(FatJet_R1p2_pT50_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT50_Eta2p5_.push_back(FatJet_R1p2_pT50_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<FatJet_R1p2_pT60_Eta2p5.size();ifj++)
+        {
+            mj_R1p2_pT60_Eta2p5_.push_back(FatJet_R1p2_pT60_Eta2p5.at(ifj).M());
+            FatjetPt_R1p2_pT60_Eta2p5_.push_back(FatJet_R1p2_pT60_Eta2p5.at(ifj).Pt());
+            FatjetEta_R1p2_pT60_Eta2p5_.push_back(FatJet_R1p2_pT60_Eta2p5.at(ifj).Eta());
+            FatjetPhi_R1p2_pT60_Eta2p5_.push_back(FatJet_R1p2_pT60_Eta2p5.at(ifj).Phi());
+        }
+     
+        //
+        // Cluster GenJet to make FJ 
+        //
+        vector<TLorentzVector> GenFatJetConstituent; 
+        for(int imcjet=0; imcjet<mc_jets_pt->size(); imcjet++) 
+        {
+            float px_tmp = mc_jets_pt->at(imcjet)*TMath::Cos(mc_jets_phi->at(imcjet));; 
+            float py_tmp = mc_jets_pt->at(imcjet)*TMath::Sin(mc_jets_phi->at(imcjet));; 
+            float pz_tmp = mc_jets_pt->at(imcjet)/TMath::Tan(2*TMath::ATan(TMath::Exp(-mc_jets_eta->at(imcjet)))); 
+
+            TLorentzVector tmp(px_tmp, py_tmp, pz_tmp, mc_jets_energy->at(imcjet));
+            GenFatJetConstituent.push_back(tmp);
+        }
+        vector<TLorentzVector>  GenFatJet_R0p8_pT30_Eta2p5 = makeFatJet(GenFatJetConstituent, 0.8, 30, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p0_pT30_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.0, 30, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p2_pT30_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.2, 30, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p4_pT30_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.4, 30, 2.5);
+        
+        vector<TLorentzVector>  GenFatJet_R1p2_pT35_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.2, 35, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p2_pT40_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.2, 40, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p2_pT45_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.2, 45, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p2_pT50_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.2, 50, 2.5);
+        vector<TLorentzVector>  GenFatJet_R1p2_pT60_Eta2p5 = makeFatJet(GenFatJetConstituent, 1.2, 60, 2.5);
+        
+        for(unsigned int ifj=0; ifj<GenFatJet_R0p8_pT30_Eta2p5.size();ifj++)
+        {
+            Genmj_R0p8_pT30_Eta2p5_.push_back(GenFatJet_R0p8_pT30_Eta2p5.at(ifj).M());
+            GenFatjetPt_R0p8_pT30_Eta2p5_.push_back(GenFatJet_R0p8_pT30_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R0p8_pT30_Eta2p5_.push_back(GenFatJet_R0p8_pT30_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R0p8_pT30_Eta2p5_.push_back(GenFatJet_R0p8_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p0_pT30_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p0_pT30_Eta2p5_.push_back(GenFatJet_R1p0_pT30_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p0_pT30_Eta2p5_.push_back(GenFatJet_R1p0_pT30_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p0_pT30_Eta2p5_.push_back(GenFatJet_R1p0_pT30_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p0_pT30_Eta2p5_.push_back(GenFatJet_R1p0_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p2_pT30_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p2_pT30_Eta2p5_.push_back(GenFatJet_R1p2_pT30_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p2_pT30_Eta2p5_.push_back(GenFatJet_R1p2_pT30_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p2_pT30_Eta2p5_.push_back(GenFatJet_R1p2_pT30_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p2_pT30_Eta2p5_.push_back(GenFatJet_R1p2_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p4_pT30_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p4_pT30_Eta2p5_.push_back(GenFatJet_R1p4_pT30_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p4_pT30_Eta2p5_.push_back(GenFatJet_R1p4_pT30_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p4_pT30_Eta2p5_.push_back(GenFatJet_R1p4_pT30_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p4_pT30_Eta2p5_.push_back(GenFatJet_R1p4_pT30_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p2_pT35_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p2_pT35_Eta2p5_.push_back(GenFatJet_R1p2_pT35_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p2_pT35_Eta2p5_.push_back(GenFatJet_R1p2_pT35_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p2_pT35_Eta2p5_.push_back(GenFatJet_R1p2_pT35_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p2_pT35_Eta2p5_.push_back(GenFatJet_R1p2_pT35_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p2_pT40_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p2_pT40_Eta2p5_.push_back(GenFatJet_R1p2_pT40_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p2_pT40_Eta2p5_.push_back(GenFatJet_R1p2_pT40_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p2_pT40_Eta2p5_.push_back(GenFatJet_R1p2_pT40_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p2_pT40_Eta2p5_.push_back(GenFatJet_R1p2_pT40_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p2_pT45_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p2_pT45_Eta2p5_.push_back(GenFatJet_R1p2_pT45_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p2_pT45_Eta2p5_.push_back(GenFatJet_R1p2_pT45_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p2_pT45_Eta2p5_.push_back(GenFatJet_R1p2_pT45_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p2_pT45_Eta2p5_.push_back(GenFatJet_R1p2_pT45_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p2_pT50_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p2_pT50_Eta2p5_.push_back(GenFatJet_R1p2_pT50_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p2_pT50_Eta2p5_.push_back(GenFatJet_R1p2_pT50_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p2_pT50_Eta2p5_.push_back(GenFatJet_R1p2_pT50_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p2_pT50_Eta2p5_.push_back(GenFatJet_R1p2_pT50_Eta2p5.at(ifj).Phi());
+        }
+        for(unsigned int ifj=0; ifj<GenFatJet_R1p2_pT60_Eta2p5.size();ifj++)
+        {
+            Genmj_R1p2_pT60_Eta2p5_.push_back(GenFatJet_R1p2_pT60_Eta2p5.at(ifj).M());
+            GenFatjetPt_R1p2_pT60_Eta2p5_.push_back(GenFatJet_R1p2_pT60_Eta2p5.at(ifj).Pt());
+            GenFatjetEta_R1p2_pT60_Eta2p5_.push_back(GenFatJet_R1p2_pT60_Eta2p5.at(ifj).Eta());
+            GenFatjetPhi_R1p2_pT60_Eta2p5_.push_back(GenFatJet_R1p2_pT60_Eta2p5.at(ifj).Phi());
+        }
         // Fat jets on-the-fly ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
-       
+
+
+        // FIXME 
+        //cout << NIsoTkVeto() << endl; // need to find correct branch names in cfa 
+
+
         //
         // Fill the baby variables 
         //
@@ -912,6 +1369,7 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         NBtagCSVM_          =   Ncsvm;
         NBtagCSVL_          =   Ncsvl;
         EventWeight_        =   EventWeight;
+        EventWeightNeg_     =   EventWeightNeg;
         MJ_pT30_            =   MJ_pT30;
         MET_                =   pfType1mets_et->at(0);
         METPhi_             =   pfType1mets_phi->at(0);
@@ -923,7 +1381,6 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
                 Npuminusone_ = PU_NumInteractions->at(bc);
             if(PU_bunchCrossing->at(bc)==1) 
                 Npuplusone_  = PU_NumInteractions->at(bc);
-            
             if(PU_bunchCrossing->at(bc)==0)
                 Npu_ = PU_NumInteractions->at(bc);
         }
@@ -935,15 +1392,17 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             FatjetPhi_pT30_.push_back(fjets30_phi->at(ifj));
             //FatjetN_pT30_.push_back(fastjets_AK4_R1p2_R0p5pT30_nconstituents->at(Vector_GoodFatjet_pT30_Index.at(igoodfatjet)));
         }
-
+        // RelIso
         for(unsigned int imus=0; imus<RA4Muon.size(); imus++) 
         {
+            //cout << "[DEBUG] [Muon] mini-isolation : " << imus << " :: " << GetIsolation(imus, 13, 0.2, false, true, true, true, false) << endl;
             RA4MusPt_.push_back(mus_pt->at(RA4Muon.at(imus)));
             RA4MusEta_.push_back(mus_eta->at(RA4Muon.at(imus)));
             RA4MusPhi_.push_back(mus_phi->at(RA4Muon.at(imus)));
         }
         for(unsigned int iels=0; iels<RA4Elec.size(); iels++) 
         {
+            //cout << "[DEBUG] [Electron] mini-isolation : " << iels << " :: " << GetIsolation(iels, 11, 0.2, false, true, true, true, false) << endl;
             RA4ElsPt_.push_back(els_pt->at(RA4Elec.at(iels)));
             RA4ElsEta_.push_back(els_eta->at(RA4Elec.at(iels)));
             RA4ElsPhi_.push_back(els_phi->at(RA4Elec.at(iels)));
@@ -960,21 +1419,90 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
             RA4ElsVetoEta_.push_back(els_eta->at(RA4ElecVeto.at(iels)));
             RA4ElsVetoPhi_.push_back(els_phi->at(RA4ElecVeto.at(iels)));
         }
-        
         for(int igoodjet=0; igoodjet<(int)GoodJets_AK4.size(); igoodjet++) 
         {
           int ijet = GoodJets_AK4.at(igoodjet); 
+          JetE_.push_back(jets_AK4_energy->at(ijet)); 
           JetPt_.push_back(jets_AK4_pt->at(ijet)); 
           JetEta_.push_back(jets_AK4_eta->at(ijet)); 
           JetPhi_.push_back(jets_AK4_phi->at(ijet)); 
           JetCSV_.push_back(jets_AK4_btag_inc_secVertexCombined->at(ijet)); 
         }
+        // MiniIso
+        for(unsigned int imus=0; imus<RA4Muon_mini.size(); imus++) 
+        {
+            //cout << "[DEBUG] [Muon] mini-isolation : " << imus << " :: " << GetIsolation(imus, 13, 0.2, false, true, true, true, false) << endl;
+            RA4MusPt_mi_.push_back(mus_pt->at(RA4Muon_mini.at(imus)));
+            RA4MusEta_mi_.push_back(mus_eta->at(RA4Muon_mini.at(imus)));
+            RA4MusPhi_mi_.push_back(mus_phi->at(RA4Muon_mini.at(imus)));
+        }
+        for(unsigned int iels=0; iels<RA4Elec_mini.size(); iels++) 
+        {
+            //cout << "[DEBUG] [Electron] mini-isolation : " << iels << " :: " << GetIsolation(iels, 11, 0.2, false, true, true, true, false) << endl;
+            RA4ElsPt_mi_.push_back(els_pt->at(RA4Elec_mini.at(iels)));
+            RA4ElsEta_mi_.push_back(els_eta->at(RA4Elec_mini.at(iels)));
+            RA4ElsPhi_mi_.push_back(els_phi->at(RA4Elec_mini.at(iels)));
+        }
+        for(unsigned int imus=0; imus<RA4MuonVeto_mini.size(); imus++) 
+        {
+            RA4MusVetoPt_mi_.push_back(mus_pt->at(RA4MuonVeto_mini.at(imus)));
+            RA4MusVetoEta_mi_.push_back(mus_eta->at(RA4MuonVeto_mini.at(imus)));
+            RA4MusVetoPhi_mi_.push_back(mus_phi->at(RA4MuonVeto_mini.at(imus)));
+        }
+        for(unsigned int iels=0; iels<RA4ElecVeto_mini.size(); iels++) 
+        {
+            RA4ElsVetoPt_mi_.push_back(els_pt->at(RA4ElecVeto_mini.at(iels)));
+            RA4ElsVetoEta_mi_.push_back(els_eta->at(RA4ElecVeto_mini.at(iels)));
+            RA4ElsVetoPhi_mi_.push_back(els_phi->at(RA4ElecVeto_mini.at(iels)));
+        }
+        for(unsigned int iisotrkels=0; iisotrkels<eCands.size(); iisotrkels++) 
+        {
+            if(eCands.at(iisotrkels).second>0.2) continue;
+            unsigned int ipfcand = eCands.at(iisotrkels).first;
+            IsoTrkVetoElsPt_.push_back(pfcand_pt->at(ipfcand));
+            IsoTrkVetoElsEta_.push_back(pfcand_eta->at(ipfcand));
+            IsoTrkVetoElsPhi_.push_back(pfcand_phi->at(ipfcand));
+        }
+        for(unsigned int iisotrkmus=0; iisotrkmus<muCands.size(); iisotrkmus++) 
+        {
+            if(muCands.at(iisotrkmus).second>0.2) continue;
+            unsigned int ipfcand = muCands.at(iisotrkmus).first;
+            IsoTrkVetoMusPt_.push_back(pfcand_pt->at(ipfcand));
+            IsoTrkVetoMusEta_.push_back(pfcand_eta->at(ipfcand));
+            IsoTrkVetoMusPhi_.push_back(pfcand_phi->at(ipfcand));
+        }
+        for(unsigned int iisotrkhad=0; iisotrkhad<hadCands.size(); iisotrkhad++) 
+        {
+            if(hadCands.at(iisotrkhad).second>0.1) continue;
+            unsigned int ipfcand = hadCands.at(iisotrkhad).first;
+            IsoTrkVetoHadPt_.push_back(pfcand_pt->at(ipfcand));
+            IsoTrkVetoHadEta_.push_back(pfcand_eta->at(ipfcand));
+            IsoTrkVetoHadPhi_.push_back(pfcand_phi->at(ipfcand));
+        }
+
+        for(int igoodjet=0; igoodjet<(int)GoodJets_AK4_mini.size(); igoodjet++) 
+        {
+          int ijet = GoodJets_AK4_mini.at(igoodjet); 
+          JetE_mi_.push_back(jets_AK4_energy->at(ijet)); 
+          JetPt_mi_.push_back(jets_AK4_pt->at(ijet)); 
+          JetEta_mi_.push_back(jets_AK4_eta->at(ijet)); 
+          JetPhi_mi_.push_back(jets_AK4_phi->at(ijet)); 
+          JetCSV_mi_.push_back(jets_AK4_btag_inc_secVertexCombined->at(ijet)); 
+        }
+
         // gen top pT for TTbar samples  
         for(int igen=0; igen<(int)mc_doc_id->size(); igen++) 
-        { 
+        {   
+            // ME ISR 
+            //  status=23 && same parents as top with status=22 or proton(2212)
+            // PS ISR 
+            //  status!=23 && same parents as top with status=22 or proton(2212)
+            // FSR 
+            //  parent is top with status=22 
             GenPt_.push_back(   mc_doc_pt->at(igen));  
-            GenPhi_.push_back(  mc_doc_phi->at(igen));  
             GenEta_.push_back(  mc_doc_eta->at(igen));  
+            GenPhi_.push_back(  mc_doc_phi->at(igen));  
+            GenStatus_.push_back(  mc_doc_status->at(igen));  
             GenId_.push_back(   mc_doc_id->at(igen));  
             GenMId_.push_back(  mc_doc_mother_id->at(igen));  
             GenGMId_.push_back( mc_doc_grandmother_id->at(igen));  
@@ -1004,22 +1532,13 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
         GenMET_                =   pfType1mets_gen_et->at(0);
         for(int imcjet=0; imcjet<mc_jets_pt->size(); imcjet++) 
         { 
+            MCJetE_.push_back(mc_jets_energy->at(imcjet)); 
             MCJetPt_.push_back(mc_jets_pt->at(imcjet)); 
             MCJetEta_.push_back(mc_jets_eta->at(imcjet)); 
             MCJetPhi_.push_back(mc_jets_phi->at(imcjet)); 
         }
 
         babyTree_->Fill(); // Fill all events
-
-        //for(int i=0; i<GoodJets_AK4.size(); i++) cout << event << " :: " << HT << endl;
-        
-        // Clean fat jets? 
-        // (1) identify if all skinny jets associated with a given fat jet 
-        //     are good jets by comparing index of skinny jet in GoodJets_AK4
-        //     and fastjet_.._R1p2pTxx_index
-        // (2) if a skinny jet is not in the good jet, its four vector is subtracted 
-        //     from the fat jet and mj is calculated again
-        // (3) MJ is then calculated
 
     } // event loop
     cout << endl;
@@ -1047,3 +1566,4 @@ void DoOneProcess13TeV(TString InputName, TString ProcessName, int ibegin, int i
     delete chainA;
     delete chainB;
 }
+

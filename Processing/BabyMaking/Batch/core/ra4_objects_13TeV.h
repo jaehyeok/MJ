@@ -6,10 +6,29 @@
 #include <iostream> 
 
 #define MinSignalLeptonPt 20
-#define MinVetoLeptonPt 15
-#define MinJetPt 40
+#define MinVetoLeptonPt 10 /*15*/
+#define MinJetPt 40 /*40*/ 
 
 using namespace std;
+
+//
+// dPhi, dR, ... 
+//
+float getDPhi(float phi1, float phi2)
+{
+    float absdphi = abs(phi1-phi2);
+    if(absdphi < TMath::Pi()) return absdphi;
+    else return (2*TMath::Pi() - absdphi);
+}
+float getDR(float dphi, float deta)
+{
+    return TMath::Sqrt(dphi*dphi+deta*deta);
+}
+float getDR(float eta1, float eta2, float phi1, float phi2)
+{
+    return getDR(getDPhi(phi1, phi2), eta1-eta2);
+}
+
 
 double getDZ(double vx, double vy, double vz, double px, double py, double pz, int firstGoodVertex)
 {
@@ -17,16 +36,144 @@ double getDZ(double vx, double vy, double vz, double px, double py, double pz, i
         -((vx-pv_x->at(firstGoodVertex))*px+(vy-pv_y->at(firstGoodVertex))*py)*pz/(px*px+py*py); 
 }
 
+//
+// Code for mini-isolation
+// Taken from Jack's code : https://github.com/jbradmil/csa14/blob/master/src/event_handler.cpp#L3028
+// 
+double GetIsolation(const int ilep, const int ParticleType, const double rmax, const bool mini, const bool addCH, const bool addPH, const bool addNH, const bool usePFweight) 
+{ 
+
+    double ptThresh(0.5);
+    double lep_pt(0.), lep_eta(0.), lep_phi(0.), deadcone_nh(0.), deadcone_ch(0.), deadcone_ph(0.), deadcone_pu(0.);;
+    if(ParticleType==11) {
+        lep_pt = els_pt->at(ilep);
+        lep_eta = els_eta->at(ilep);
+        lep_phi = els_phi->at(ilep);
+        ptThresh = 0;
+        if (fabs(lep_eta)>1.479) {deadcone_ch = 0.015; deadcone_pu = 0.015; deadcone_ph = 0.08;}
+    }else if(ParticleType==13){
+        lep_pt = mus_pt->at(ilep);
+        lep_eta = mus_eta->at(ilep);
+        lep_phi = mus_phi->at(ilep);
+        deadcone_ch = 0.0001; deadcone_pu = 0.01; deadcone_ph = 0.01;deadcone_nh = 0.01;
+    } else{
+        lep_pt = pfcand_pt->at(ilep);
+        lep_eta = pfcand_eta->at(ilep);
+        lep_phi = pfcand_phi->at(ilep);
+        deadcone_ch = 0.0001; deadcone_pu = 0.01; deadcone_ph = 0.01;deadcone_nh = 0.01; // Using muon cones
+    }
+
+    bool need_pfweight = false;
+    if(usePFweight) need_pfweight = true;
+
+    double riso_max = std::max(0.4,10./lep_pt);
+    // find the PF cands that matches the lepton
+    double drmin = DBL_MAX;
+    uint match_index = 9999999;
+    for (unsigned int icand = 0; icand < pfcand_pt->size(); icand++) {
+        if(isnan(pfcand_eta->at(icand))
+                || isnan(pfcand_phi->at(icand))) continue;
+        double dr = getDR(pfcand_eta->at(icand), lep_eta, pfcand_phi->at(icand), lep_phi);
+        if (dr < drmin){
+            drmin = dr;
+            match_index = icand;
+        }
+    }
+
+    // 11, 13, 22 for ele/mu/gamma, 211 for charged hadrons, 130 for neutral hadrons,
+    // 1 and 2 for hadronic and em particles in HF
+    double iso_nh(0.), iso_ph(0.), iso_ch(0.), iso_pu(0.);
+    // get cone size--shrinking if mini, otherwise fixed
+    double R(0);
+    if (mini) R=std::max(0.05,std::min(rmax, 10./lep_pt));
+    else R=rmax;
+
+    for (unsigned int icand = 0; icand < pfcand_pt->size(); icand++) {
+        if (icand==match_index) continue;
+        uint pdgId = TMath::Nint(pfcand_pdgId->at(icand));
+        if (pdgId<7) continue;
+        if(isnan(pfcand_pt->at(icand))
+                || isnan(pfcand_eta->at(icand))
+                || isnan(pfcand_phi->at(icand))) continue;
+        double dr = getDR(pfcand_eta->at(icand), lep_eta, pfcand_phi->at(icand), lep_phi);
+        if (dr > riso_max) continue;
+        ////////////////// NEUTRALS /////////////////////////
+        if (pfcand_charge->at(icand)==0){
+            if (pfcand_pt->at(icand)>ptThresh) {
+                double wpv(0.), wpu(0.), wpf(1.);
+                for (unsigned int jcand = 0; need_pfweight && jcand < pfcand_pt->size(); jcand++) {
+                    if (pfcand_charge->at(icand)!=0 || icand==jcand) continue;
+                    double jpt = pfcand_pt->at(jcand);
+                    double jdr = getDR(pfcand_eta->at(icand), pfcand_eta->at(jcand),
+                            pfcand_phi->at(icand), pfcand_phi->at(jcand));
+                    if(jdr<=0) continue; // We can either not count it, or count it infinitely...
+                    if (pfcand_fromPV->at(icand)>1) wpv += log(jpt/jdr);
+                    else wpu += log(jpt/jdr);
+                }
+                /////////// PHOTONS ////////////
+                if (pdgId==22) {
+                    if(dr < deadcone_ph) continue;
+                    wpf = (usePFweight)?(wpv/(wpv+wpu)):1.;
+                    if (dr<R) iso_ph += wpf*pfcand_pt->at(icand);
+                }
+                /////////// NEUTRAL HADRONS ////////////
+                else if (pdgId==130) {
+                    if(dr < deadcone_nh) continue;
+                    wpf = (usePFweight)?(wpv/(wpv+wpu)):1.;
+                    if (dr<R) iso_nh += wpf*pfcand_pt->at(icand);
+                }
+            }
+            ////////////////// CHARGED from PV /////////////////////////
+        } else if (pfcand_fromPV->at(icand)>1){
+            if (fabs(pdgId)==211) {
+                if(dr < deadcone_ch) continue;
+                if (dr<R) {
+                    // if (ParticleType==13) cout << "Adding to cone.." << endl;
+                    // if (ParticleType==13) printf("imu %d, ch pfcand %d: pt=%f, deadcone=%f, dr cut=%f, dr=%f\n",ilep, icand, pfcand_pt->at(icand), deadcone_ch, R, dr); 
+                    iso_ch += pfcand_pt->at(icand);
+                }
+            }
+            ////////////////// CHARGED from PU /////////////////////////
+        } else {
+            if (pfcand_pt->at(icand)>ptThresh){
+                if(dr < deadcone_pu) continue;
+                if (dr<R) iso_pu += pfcand_pt->at(icand);}
+        }
+    }
+
+    // now add the components
+    double isolation(0.);
+    if(addPH) isolation += iso_ph;
+    if(addNH) isolation += iso_nh;
+    if(addPH && addNH && !usePFweight) isolation -= iso_pu/2.;
+    if(isolation < 0) isolation = 0;
+    if(addCH) isolation += iso_ch;
+
+    // if (ParticleType==13){
+    //   printf("Muon %d: pt=%3.3f, mini_iso=%3.3f, iso_ph=%3.3f, iso_nh=%3.3f, iso_ch=%3.3f, iso_pu=%3.3f\n", ilep, mus_pt->at(ilep), isolation, iso_ph, iso_nh, iso_ch, iso_pu); 
+    // }
+
+    return isolation/lep_pt;
+}
+
+
 /////////////////////////////////////////////////////////////////////////
 ////////////////////////////////  MUONS  ////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
+// Ref : https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId#Tight_Muon
+// The veto muon Id is the same as the tight but with lower pT cut. 
+// The signal muon isolation is R= 0.4, iso < 0.12 
+// The veto muon isolation is R= 0.4, iso < 0.2
 float GetMuonIsolation(int imu)
 {
     if(imu >= (int)mus_pt->size()) return -999;
-    double sumEt = mus_pfIsolationR03_sumNeutralHadronEt->at(imu) + mus_pfIsolationR03_sumPhotonEt->at(imu) 
-        - 0.5*mus_pfIsolationR03_sumPUPt->at(imu);
+    //double sumEt = mus_pfIsolationR03_sumNeutralHadronEt->at(imu) + mus_pfIsolationR03_sumPhotonEt->at(imu) 
+    //    - 0.5*mus_pfIsolationR03_sumPUPt->at(imu);
+    double sumEt = mus_pfIsolationR04_sumNeutralHadronEt->at(imu) + mus_pfIsolationR04_sumPhotonEt->at(imu) 
+        - 0.5*mus_pfIsolationR04_sumPUPt->at(imu);
     if(sumEt<0.0) sumEt=0.0;
-    return (mus_pfIsolationR03_sumChargedHadronPt->at(imu) + sumEt)/mus_pt->at(imu);
+    //return (mus_pfIsolationR03_sumChargedHadronPt->at(imu) + sumEt)/mus_pt->at(imu);
+    return (mus_pfIsolationR04_sumChargedHadronPt->at(imu) + sumEt)/mus_pt->at(imu);
 }
 
 bool IsBasicMuon(int imu)
@@ -35,55 +182,83 @@ bool IsBasicMuon(int imu)
 
     float d0PV = mus_tk_d0dum->at(imu)-pv_x->at(0)*sin(mus_tk_phi->at(imu))+pv_y->at(0)*cos(mus_tk_phi->at(imu));
 
-    return (mus_isGlobalMuon->at(imu) > 0
-            && mus_isPF->at(imu)
-            && mus_id_GlobalMuonPromptTight->at(imu)> 0 
-            && mus_tk_LayersWithMeasurement->at(imu) > 5
-            && mus_tk_numvalPixelhits->at(imu) > 0
+    return ( //mus_isGlobalMuon->at(imu) > 0
+            mus_isPF->at(imu)
+            // recoMu.globalTrack()->normalizedChi2() < 10.
+            // recoMu.globalTrack()->hitPattern().numberOfValidMuonHits() > 0
+            && mus_id_GlobalMuonPromptTight->at(imu)> 0  // this includes above two and isGlobalMuon 
             && mus_numberOfMatchedStations->at(imu) > 1
             //&& fabs(mus_dB->at(imu)) < 0.02
-            && fabs(d0PV) < 0.02
-            && fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
-                    mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5
+            && fabs(d0PV) < 0.2/*0.02*/
+            //&& fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
+            //        mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5
+            && fabs(mus_tk_vz->at(imu)-pv_z->at(0))<0.5
+            && mus_tk_numvalPixelhits->at(imu) > 0
+            && mus_tk_LayersWithMeasurement->at(imu) > 5
+            
             && mus_pt->at(imu) >= MinSignalLeptonPt
             && fabs(mus_eta->at(imu)) <= 2.4);
 }
 
-bool IsSignalMuon(int imu)
+bool IsSignalMuon(int imu, bool doMiniIso)
 {
     if(imu >= (int)mus_pt->size()) return false;
 
-    float relIso = GetMuonIsolation(imu);  
-    return (IsBasicMuon(imu) && relIso < 0.12); 
+    bool passIso=false; 
+    if(!doMiniIso)  passIso = GetMuonIsolation(imu)<0.12;  
+    if(doMiniIso)   passIso = GetIsolation(imu, 13, 0.2, false, true, true, true, false)<0.2;  
+    
+    return (IsBasicMuon(imu) && passIso); 
 }
 
-bool IsVetoMuon(int imu)
+bool IsVetoMuon(int imu, bool doMiniIso)
 {
     if(imu >= (int)mus_pt->size()) return false;
-    if(IsSignalMuon(imu)) return false; // not signal muon
+    if(IsSignalMuon(imu, doMiniIso)) return false; // not signal muon
 
-    float relIso = GetMuonIsolation(imu);
-
+    float d0PV = mus_tk_d0dum->at(imu)-pv_x->at(0)*sin(mus_tk_phi->at(imu))+pv_y->at(0)*cos(mus_tk_phi->at(imu));
+    
+    bool passIso=false; 
+    if(!doMiniIso)  passIso = GetMuonIsolation(imu)<0.2;  
+    if(doMiniIso)   passIso = GetIsolation(imu, 13, 0.2, false, true, true, true, false)<0.2;  // FIXME : make sure the cut value here  
+/*
     return ((mus_isGlobalMuon->at(imu) >0 || mus_isTrackerMuon->at(imu) >0)
             && mus_isPF->at(imu) 
             && fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
                     mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5 
             && mus_pt->at(imu) >= MinVetoLeptonPt
             && fabs(mus_eta->at(imu)) <= 2.5
-            && relIso < 0.2);
+*/
+    return (//mus_isGlobalMuon->at(imu) > 0
+            mus_isPF->at(imu)
+            // recoMu.globalTrack()->normalizedChi2() < 10.
+            // recoMu.globalTrack()->hitPattern().numberOfValidMuonHits() > 0
+            && mus_id_GlobalMuonPromptTight->at(imu) > 0   // this includes above two and isGlobalMuon
+            && mus_numberOfMatchedStations->at(imu) > 1
+            //&& fabs(mus_dB->at(imu)) < 0.02
+            && fabs(d0PV) < 0.2/*0.02*/
+            //&& fabs(getDZ(mus_tk_vx->at(imu), mus_tk_vy->at(imu), mus_tk_vz->at(imu), mus_tk_px->at(imu), 
+            //        mus_tk_py->at(imu), mus_tk_pz->at(imu), 0)) < 0.5
+            && fabs(mus_tk_vz->at(imu)-pv_z->at(0))<0.5
+            && mus_tk_numvalPixelhits->at(imu) > 0
+            && mus_tk_LayersWithMeasurement->at(imu) > 5
+            
+            && mus_pt->at(imu) >= MinVetoLeptonPt
+            && fabs(mus_eta->at(imu)) <= 2.4
+            && passIso);
 }
 
 
-vector<int> GetMuons(bool doSignal)
+vector<int> GetMuons(bool doSignal, bool doMiniIso)
 {
     vector<int> muons;
     for(int index=0; index<(int)mus_pt->size(); index++)
         if(doSignal)
         {
-            if(IsSignalMuon(index)) muons.push_back(index);
+            if(IsSignalMuon(index, doMiniIso)) muons.push_back(index);
         } else 
         {
-            if(IsVetoMuon(index)) muons.push_back(index);
+            if(IsVetoMuon(index, doMiniIso)) muons.push_back(index);
         }
     return muons;
 }
@@ -92,87 +267,202 @@ vector<int> GetMuons(bool doSignal)
 /////////////////////////////////////////////////////////////////////////
 //////////////////////////////  ELECTRONS  //////////////////////////////
 /////////////////////////////////////////////////////////////////////////
+// Ref : https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedElectronIdentificationRun2#Working_points_for_PHYS14_sample
+
 float GetElectronIsolation(int iel)
 {
     float absiso = els_pfIsolationR03_sumChargedHadronPt->at(iel) + std::max(0.0 , els_pfIsolationR03_sumNeutralHadronEt->at(iel) + els_pfIsolationR03_sumPhotonEt->at(iel) - 0.5 * els_pfIsolationR03_sumPUPt->at(iel) );
     return absiso/els_pt->at(iel);
 }
 
-bool IsBasicElectron(int iel)
+bool IsBasicElectron(int iel) // Medium working point 
 {
     if(iel >= (int)els_pt->size()) return false;
 
     float d0PV = els_d0dum->at(iel)-pv_x->at(0)*sin(els_tk_phi->at(iel))+pv_y->at(0)*cos(els_tk_phi->at(iel));
-
+    
     return (els_pt->at(iel) > MinSignalLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
-            && !els_hasMatchedConversion->at(iel)
-            && els_n_inner_layer->at(iel) <= 1 // FIXME why this does not exist in PHYS14? 
-            && fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                    sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.1
-            && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.05 
-            && fabs(d0PV) < 0.02 
-            && ((els_isEB->at(iel) // Endcap selection
-                    && fabs(els_dEtaIn->at(iel)) < 0.004
-                    && fabs(els_dPhiIn->at(iel)) < 0.06
-                    && els_sigmaIEtaIEta->at(iel) < 0.01
-                    && els_hadOverEm->at(iel) < 0.12 ) ||
-                (els_isEE->at(iel)  // Barrel selection
-                 && fabs(els_dEtaIn->at(iel)) < 0.007
-                 && fabs(els_dPhiIn->at(iel)) < 0.03
-                 && els_sigmaIEtaIEta->at(iel) < 0.03
-                 && els_hadOverEm->at(iel) < 0.10 ))
+            && ((els_isEB->at(iel) // Barrel selection
+                 && els_full5x5_sigmaIetaIeta->at(iel)  < 0.010399
+                 && fabs(els_dEtaIn->at(iel))           < 0.007641
+                 && fabs(els_dPhiIn->at(iel))           < 0.032643
+                 && els_hadOverEm->at(iel)              < 0.060662
+                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.153897
+                 && fabs(d0PV)                          < 0.011811
+                 && fabs(els_vz->at(iel) - pv_z->at(0)) < 0.070775
+                && els_expectedMissingInnerHits->at(iel) <= 1     
+                && els_PATpassConversionVeto->at(iel)             
+                ) ||
+                (els_isEE->at(iel)  // Endcap selection
+                 && els_full5x5_sigmaIetaIeta->at(iel)  < 0.029524
+                 && fabs(els_dEtaIn->at(iel))           < 0.009285
+                 && fabs(els_dPhiIn->at(iel))           < 0.042447
+                 && els_hadOverEm->at(iel)              < 0.104263
+                 && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.137468
+                 && fabs(d0PV)                          < 0.051682
+                 && fabs(els_vz->at(iel) - pv_z->at(0)) < 0.180720
+                 && els_expectedMissingInnerHits->at(iel) <= 1    
+                 && els_PATpassConversionVeto->at(iel)            
+                ))
            );
 }
 
-bool IsSignalElectron(int iel)
+bool IsSignalElectron(int iel, bool doMiniIso)
 {
     if(iel >= (int)els_pt->size()) return false;
-
-    double relIso = GetElectronIsolation(iel);
-    return (IsBasicElectron(iel) && relIso < 0.15);
+   
+    bool passIso=false;
+    float isocut=0.2179;  // Medium working point 
+    if(els_isEE->at(iel)) isocut=0.254;
+    if(!doMiniIso)  passIso=GetElectronIsolation(iel)<isocut;
+    if(doMiniIso)   passIso=GetIsolation(iel, 11, 0.2, false, true, true, true, false)<0.1;
+    
+    return (IsBasicElectron(iel) && passIso);
 }
 
-bool IsVetoElectron(int iel)
+bool IsVetoElectron(int iel, bool doMiniIso)
 {
     if(iel >= (int)els_pt->size()) return false;
-    if(IsSignalElectron(iel)) return false; // not signal electron 
+    if(IsSignalElectron(iel, doMiniIso)) return false; // not signal electron 
 
     float d0PV = els_d0dum->at(iel)-pv_x->at(0)*sin(els_tk_phi->at(iel))+pv_y->at(0)*cos(els_tk_phi->at(iel));
-    double relIso = GetElectronIsolation(iel);
+    // 
+    bool passIso=false;
+    float isocut=0.3313;   
+    if(els_isEE->at(iel)) isocut=0.3816;
+    if(!doMiniIso)  passIso=GetElectronIsolation(iel)<isocut;
+    if(doMiniIso)   passIso=GetIsolation(iel, 11, 0.2, false, true, true, true, false)<0.1;
 
     return (els_pt->at(iel) > MinVetoLeptonPt
             && fabs(els_scEta->at(iel)) < 2.5
-            && relIso < 0.15
-            && fabs(getDZ(els_vx->at(iel), els_vy->at(iel), els_vz->at(iel), cos(els_tk_phi->at(iel))*els_tk_pt->at(iel), 
-                    sin(els_tk_phi->at(iel))*els_tk_pt->at(iel), els_tk_pz->at(iel), 0)) < 0.2
-            && fabs(d0PV) < 0.04 
             && ((els_isEB->at(iel) // Endcap selection
-                    && fabs(els_dEtaIn->at(iel)) < 0.007
-                    && fabs(els_dPhiIn->at(iel)) < 0.8
-                    && els_sigmaIEtaIEta->at(iel) < 0.01
-                    && els_hadOverEm->at(iel) < 0.15) ||
+                    && els_full5x5_sigmaIetaIeta->at(iel)   < 0.011100
+                    && fabs(els_dEtaIn->at(iel))            < 0.016315
+                    && fabs(els_dPhiIn->at(iel))            < 0.252044
+                    && els_hadOverEm->at(iel)               < 0.345843
+                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.248070
+                    && fabs(d0PV)                           < 0.060279
+                    && fabs(els_vz->at(iel) - pv_z->at(0))  < 0.800538
+                    && els_expectedMissingInnerHits->at(iel) <= 2     
+                    && els_PATpassConversionVeto->at(iel)             
+                    && passIso
+                    ) ||
                 (els_isEE->at(iel)  // Barrel selection
-                 && fabs(els_dEtaIn->at(iel)) < 0.01
-                 && fabs(els_dPhiIn->at(iel)) < 0.7
-                 && els_sigmaIEtaIEta->at(iel) < 0.03))
+                    && els_full5x5_sigmaIetaIeta->at(iel)   < 0.033987
+                    && fabs(els_dEtaIn->at(iel))            < 0.010671
+                    && fabs(els_dPhiIn->at(iel))            < 0.245263
+                    && els_hadOverEm->at(iel)               < 0.134691
+                    && fabs(1./els_caloEnergy->at(iel) - els_eOverPIn->at(iel)/els_caloEnergy->at(iel)) < 0.157160
+                    && fabs(d0PV)                           < 0.273097
+                    && fabs(els_vz->at(iel) - pv_z->at(0))  < 0.885860
+                    && els_expectedMissingInnerHits->at(iel) <= 3     
+                    && els_PATpassConversionVeto->at(iel)             
+                    && passIso
+                 ))
            );  
 }
 
-vector<int> GetElectrons(bool doSignal)
+vector<int> GetElectrons(bool doSignal, bool doMiniIso)
 {
     vector<int> electrons;
     for(int index=0; index<(int)els_pt->size(); index++)
         if(doSignal)
         {
-            if(IsSignalElectron(index)) electrons.push_back(index);
+            if(IsSignalElectron(index, doMiniIso)) electrons.push_back(index);
         }   
         else 
         {
-            if(IsVetoElectron(index)) electrons.push_back(index);
+            if(IsVetoElectron(index, doMiniIso)) electrons.push_back(index);
         }
     return electrons;
 }
+
+
+/////////////////////////////////////////////////////////////////////////
+////////////////////////////  Track Veto  ///////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+// From Jack's code : https://github.com/jbradmil/csa14/blob/master/src/event_handler.cpp
+bool PassIsoTrackBaseline(const uint itk)
+{
+    if (static_cast<int>(pfcand_charge->at(itk))==0) return false;
+    if (pfcand_pt->at(itk)<3) return false;
+    if (fabs(pfcand_eta->at(itk))>2.5) return false;
+    if (pfcand_fromPV->at(itk)<=1) return false; // pileup suppression
+    if (static_cast<int>(pfcand_pdgId->at(itk))==0) return false;
+    return true;
+}
+
+double GetPFCandIsolation(const uint indexA)
+{ // absolute, not relative -- charged tracks only
+    double isoSum(0);
+    for (uint other(0); other<pfcand_pdgId->size(); other++) {
+        if (isnan(pfcand_charge->at(other)) || isnan(pfcand_pt->at(other))  || isnan(pfcand_fromPV->at(other)) || isnan(pfcand_phi->at(other)) || isnan(pfcand_eta->at(other)) ) continue;
+        if (other==indexA) continue; // don't count track in it's own isolation sum
+        if (static_cast<int>(pfcand_charge->at(other))==0) continue; // only consider charged tracks
+        if (fabs(pfcand_fromPV->at(other))<=1) continue; // pileup suppression
+        double deltaR = getDR(pfcand_eta->at(indexA), pfcand_eta->at(other), 
+                              pfcand_phi->at(indexA), pfcand_phi->at(other)); // isolation cone
+        if (deltaR>0.3) continue;
+        isoSum+=pfcand_pt->at(other);
+    }
+    return isoSum;
+}
+
+void GetIsoTracks(std::vector<std::pair<int,double> > &eCands, 
+                  std::vector<std::pair<int,double> > &muCands, 
+                  std::vector<std::pair<int,double> > &hadCands) 
+{
+    eCands.clear();
+    muCands.clear();
+    hadCands.clear();
+    // cout << "Found " << pfcand_pt->size() << " PFCands." << endl;
+    for (uint itk(0); itk<pfcand_pdgId->size(); itk++) {
+        if (isnan(pfcand_charge->at(itk)) || isnan(pfcand_pt->at(itk))  || isnan(pfcand_dz->at(itk)) || isnan(pfcand_phi->at(itk)) || isnan(pfcand_eta->at(itk)) ) continue;
+        if (!PassIsoTrackBaseline(itk)) continue;
+        double pt = pfcand_pt->at(itk);
+        if (pt<5) continue;
+        //  int type = static_cast<int>(pfcand_pdgId->at(itk));
+        double iso = GetPFCandIsolation(itk);
+        double relIso=iso/pfcand_pt->at(itk);
+        // note: not cutting here on isolation!
+        switch (abs(TMath::Nint(pfcand_pdgId->at(itk)))) {
+            case 11:
+                eCands.push_back(std::make_pair(itk, relIso));
+                break;
+            case 13:
+                muCands.push_back(std::make_pair(itk, relIso));
+                break;
+            case 211:
+                // if (pfcand_pt->at(itk)>10) printf("pfcand %d: pdgId=%d, pt=%f, ch_rel_iso=%f, mT=%f\n", itk, TMath::Nint(pfcand_pdgId->at(itk)), pfcand_pt->at(itk), relIso, GetMTW(pfcand_pt->at(itk),pfTypeImets_et->at(0),pfcand_phi->at(itk),pfTypeImets_phi->at(0)));
+                if (pt>10) hadCands.push_back(std::make_pair(itk, relIso));
+                break;
+            default:
+                continue;
+        }
+    }
+    return;
+}
+/*
+int NIsoTkVeto()
+{
+    int isotks = 0;
+    for(size_t itk = 0; itk < tks_pt().size() && isotks < 2; ++itk){
+        switch(abs(tks_id().at(itk))){
+            case 11:
+            case 13:
+                if(tks_pt().at(itk)>5.
+                        && tks_r03_ch().at(itk)<0.2) ++isotks;
+                break;
+            default:
+                if(tks_pt().at(itk)>10
+                        && tks_r03_ch().at(itk)<0.1) ++isotks;
+                break;
+        }
+    }
+    return isotks;
+}
+*/
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////  JETS  ////////////////////////////////
@@ -266,7 +556,7 @@ vector<int> GetJets(vector<int> SigEl, vector<int> SigMu, vector<int> VetoEl, ve
         // }
         // if(!useJet) continue;
 
-        if(jets_AK4_pt->at(ijet) > 40) 
+        if(jets_AK4_pt->at(ijet) > MinJetPt) 
         {
             HT += jets_AK4_pt->at(ijet);
             jets.push_back(ijet);
@@ -296,91 +586,6 @@ int GetTrueParticle(double RecEta, double RecPhi, double &closest_dR)
     }
     return closest_imc;
 }
-
-/*
-int GetTrueMuon(int index, int &momID, double &closest_dR)
-{
-    if(index < 0 || index >= static_cast<int>(mus_eta->size())) return -1;
-
-    int closest_imc = -1, idLepton = 0; 
-    double dR = 9999.; closest_dR = 9999.;
-    double MCEta, MCPhi;
-    double RecEta = mus_eta->at(index), RecPhi = mus_phi->at(index);
-    for(int imc=0; imc < (int)mc_mus_id->size(); imc++)
-    {
-        MCEta = mc_mus_eta->at(imc); MCPhi = mc_mus_phi->at(imc);
-        dR = sqrt(pow(RecEta-MCEta,2) + pow(RecPhi-MCPhi,2));
-        if(dR < closest_dR) 
-        {
-            closest_dR = dR;
-            closest_imc = imc;
-        }
-    }
-    if(closest_imc >= 0)
-    {
-        idLepton = static_cast<int>(mc_mus_id->at(closest_imc));
-        momID = static_cast<int>(mc_mus_mother_id->at(closest_imc));
-        if(idLepton == momID) momID = static_cast<int>(mc_mus_ggrandmother_id->at(closest_imc));
-    } 
-    else 
-    {
-        closest_imc = GetTrueParticle(RecEta, RecPhi, closest_dR);
-        if(closest_imc >= 0)
-        {
-            momID = static_cast<int>(mc_doc_mother_id->at(closest_imc));
-            idLepton = static_cast<int>(mc_doc_id->at(closest_imc));
-        } 
-        else 
-        {
-            momID = 0;
-            idLepton = 0;
-        }
-    }
-    return idLepton;
-}
-*/
-/*
-int GetTrueElectron(int index, int &momID, double &closest_dR)
-{
-    if(index < 0 || index >= static_cast<int>(els_eta->size())) return -1;
-
-    int closest_imc = -1, idLepton = 0; 
-    double dR = 9999.; closest_dR = 9999.;
-    double MCEta, MCPhi;
-    double RecEta = els_eta->at(index), RecPhi = els_phi->at(index);
-    for(int imc=0; imc < (int)mc_electrons_id->size(); imc++)
-    {
-        MCEta = mc_electrons_eta->at(imc); MCPhi = mc_electrons_phi->at(imc);
-        dR = sqrt(pow(RecEta-MCEta,2) + pow(RecPhi-MCPhi,2));
-        if(dR < closest_dR) 
-        {
-            closest_dR = dR;
-            closest_imc = imc;
-        }
-    }
-    if(closest_imc >= 0)
-    {
-        idLepton = static_cast<int>(mc_electrons_id->at(closest_imc));
-        momID = static_cast<int>(mc_electrons_mother_id->at(closest_imc));
-        if(idLepton == momID) momID = static_cast<int>(mc_electrons_ggrandmother_id->at(closest_imc));
-    } 
-    else 
-    {
-        closest_imc = GetTrueParticle(RecEta, RecPhi, closest_dR);
-        if(closest_imc >= 0)
-        {
-            momID = static_cast<int>(mc_doc_mother_id->at(closest_imc));
-            idLepton = static_cast<int>(mc_doc_id->at(closest_imc));
-        } 
-        else 
-        {
-            momID = 0;
-            idLepton = 0;
-        }
-    }
-    return idLepton;
-}
-*/
 
 /////////////////////////////////////////////////////////////////////////
 ////////////////////////////  EVENT CLEANING  ///////////////////////////
