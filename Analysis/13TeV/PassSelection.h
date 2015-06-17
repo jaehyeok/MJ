@@ -1,18 +1,18 @@
 // 
 bool PassNLep(unsigned int Nlep)
 {
-    if( (RA4MusPt_->size()+RA4ElsPt_->size())==Nlep 
-        && RA4MusVetoPt_->size()==0 
-        && RA4ElsVetoPt_->size()==0 
-      ) return true;
-    else return false;
-       
+//    if( (RA4MusPt_->size()+RA4ElsPt_->size())==Nlep 
+//        //&& RA4MusVetoPt_->size()==0 
+//        //&& RA4ElsVetoPt_->size()==0 
+//      ) return true;
+//    else return false;
+    return (nels_+nmus_)==static_cast<int>(Nlep); 
 }
 
 // 
 bool PassBaselineSelection(float HT, float MET, int Ncsvm, int Nskinny)
 {
-   return  (HT>750 && MET>250 && Ncsvm>1 && Nskinny>5); 
+   return  (HT>500 && MET>200 && Ncsvm>1 && Nskinny>6); 
 }
 
 // 
@@ -35,7 +35,7 @@ bool PassSelection(TString Region,
         && MET  > 400
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 600 
     )  passed = true;
     
@@ -44,7 +44,7 @@ bool PassSelection(TString Region,
         && MET  > 400
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 500 
     )  passed = true;
     
@@ -53,7 +53,7 @@ bool PassSelection(TString Region,
         && MET  > 400
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 400 
     )  passed = true;
     
@@ -62,7 +62,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > -1 
-        && mT   < 150 
+        && mT   < 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -71,7 +71,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -152,7 +152,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > 6 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -161,7 +161,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > 7 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -170,7 +170,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > 8 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -179,7 +179,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 600 
     )  passed = true;
     
@@ -188,7 +188,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 500 
     )  passed = true;
     
@@ -197,8 +197,8 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
-        && MJ   > 400 
+        && mT   < 140 
+        && MJ   < 400 
     )  passed = true;
     
     if(Region=="SR14" 
@@ -206,7 +206,7 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > 5 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 600 
     )  passed = true;
     
@@ -215,7 +215,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 600 
     )  passed = true;
     
@@ -224,7 +224,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > -1 
         && Njet > 3 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -233,7 +233,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > -1 
         && Njet > 4 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -242,7 +242,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > 1 
         && Njet > 3 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -251,7 +251,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > 1 
         && Njet > 4 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -260,7 +260,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > 1 
         && Njet > 5 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 400 
     )  passed = true;
     
@@ -269,7 +269,7 @@ bool PassSelection(TString Region,
         && MET  > 400 
         && Nb   > 1 
         && Njet > 5 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 500 
     )  passed = true;
     
@@ -278,7 +278,7 @@ bool PassSelection(TString Region,
         && MET  > 350 
         && Nb   > -1 
         && Njet > 5 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -287,7 +287,7 @@ bool PassSelection(TString Region,
         && MET  > 350 
         && Nb   > -1 
         && Njet > 6 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -296,7 +296,7 @@ bool PassSelection(TString Region,
         && MET  > 350 
         && Nb   > -1 
         && Njet > 7 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -305,7 +305,7 @@ bool PassSelection(TString Region,
         && MET  > 350 
         && Nb   > -1 
         && Njet > 8 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > -1 
     )  passed = true;
     
@@ -314,8 +314,17 @@ bool PassSelection(TString Region,
         && MET  > -1 
         && Nb   > -1 
         && Njet > -1 
-        && mT   > 150 
+        && mT   > 140 
         && MJ   > 300 
+    )  passed = true;
+    
+    if(Region=="TEST" 
+        && HT   > 500 
+        && MET  > 300 
+        && Nb   > 1 
+        && Njet > 6 
+        && mT   > 140 
+        && MJ   > 600 
     )  passed = true;
    
    return passed;

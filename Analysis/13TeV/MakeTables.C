@@ -139,7 +139,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
 
     TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Region));
         
-    TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_MC[7];
+    TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_TTV[7], *h1_MC[7];
     TH1F *h1_f1500_100[7], *h1_f1200_800[7];
     for(int i=2; i<7; i++)
     {
@@ -149,6 +149,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
         h1_TT_ll[i]     = (TH1F*)HistFile->Get(Form("h1_TT_ll_%s_%ifatjet", HistName.Data(), i));
         h1_WJets[i]     = (TH1F*)HistFile->Get(Form("h1_WJets_%s_%ifatjet", HistName.Data(), i));
         h1_DY[i]        = (TH1F*)HistFile->Get(Form("h1_DY_%s_%ifatjet", HistName.Data(), i));
+        h1_TTV[i]       = (TH1F*)HistFile->Get(Form("h1_TTV_%s_%ifatjet", HistName.Data(), i));
         h1_f1500_100[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1500_100_%s_%ifatjet", HistName.Data(), i));
         h1_f1200_800[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1200_800_%s_%ifatjet", HistName.Data(), i));
 
@@ -157,6 +158,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
         h1_MC[i]->Add(h1_WJets[i]);
         h1_MC[i]->Add(h1_T[i]);
         h1_MC[i]->Add(h1_DY[i]);
+        h1_MC[i]->Add(h1_TTV[i]);
     }   
 
     // -------------------------------------
@@ -207,6 +209,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, false);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, false);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, false);
+    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, false);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, false);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, false);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, false);
@@ -256,6 +259,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
+    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, true);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
@@ -269,6 +273,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
+    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, true);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
@@ -282,6 +287,7 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
+    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, true);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);

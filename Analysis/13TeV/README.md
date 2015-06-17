@@ -46,4 +46,10 @@ Then, you will have histogram files in `HistFiles`, plots in pdf format in `Figu
 
 #### Possible improvements 
 
+One obvious thing is to write a separate code to do background estimation 
+
+```
+Calculation of k1 and k2, and their uncertainties (which syst uncert to include needs to be determined)
+Application of these 
+```
 

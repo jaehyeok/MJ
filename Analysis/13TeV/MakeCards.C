@@ -56,7 +56,7 @@ void MakeCards(int lepflav=0, const char* Region="")
 
     TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Region));
         
-    TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_MC[7];
+    TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_TTV[7], *h1_MC[7];
     TH1F *h1_f1500_100[7], *h1_f1200_800[7];
     for(int i=2; i<7; i++)
     {
@@ -66,6 +66,7 @@ void MakeCards(int lepflav=0, const char* Region="")
         h1_TT_ll[i]     = (TH1F*)HistFile->Get(Form("h1_TT_ll_%s_%ifatjet", HistName.Data(), i));
         h1_WJets[i]     = (TH1F*)HistFile->Get(Form("h1_WJets_%s_%ifatjet", HistName.Data(), i));
         h1_DY[i]        = (TH1F*)HistFile->Get(Form("h1_DY_%s_%ifatjet", HistName.Data(), i));
+        h1_TTV[i]       = (TH1F*)HistFile->Get(Form("h1_TTV_%s_%ifatjet", HistName.Data(), i));
         h1_f1500_100[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1500_100_%s_%ifatjet", HistName.Data(), i));
         h1_f1200_800[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1200_800_%s_%ifatjet", HistName.Data(), i));
 
@@ -74,6 +75,7 @@ void MakeCards(int lepflav=0, const char* Region="")
         h1_MC[i]->Add(h1_WJets[i]);
         h1_MC[i]->Add(h1_T[i]);
         h1_MC[i]->Add(h1_DY[i]);
+        h1_MC[i]->Add(h1_TTV[i]);
     }   
 
     //
@@ -85,6 +87,7 @@ void MakeCards(int lepflav=0, const char* Region="")
     const char* Nsingletop;    
     const char* Nwjets;       
     const char* Ndy;           
+    const char* Nttv;           
     if(lepflav!=11 && lepflav!=13)
     {
         Ndata         = Form("%i",   (int)(h1_MC[6]->Integral(0,1000)+h1_f1500_100[6]->Integral(0,1000))); 
@@ -92,7 +95,7 @@ void MakeCards(int lepflav=0, const char* Region="")
         Nttbar        = Form("%.3f", h1_TT_ll[6]->Integral(0,1000)+h1_TT_sl[6]->Integral(0,1000)); 
         Nsingletop    = Form("%.3f", h1_T[6]->Integral(0,1000)); 
         Nwjets        = Form("%.3f", h1_WJets[6]->Integral(0,1000)); 
-        Ndy           = Form("%.3f", h1_DY[6]->Integral(0,1000)); 
+        Ndy           = Form("%.3f", h1_DY[6]->Integral(0,1000)+h1_TTV[6]->Integral()); 
     }
     else 
     { 
@@ -102,7 +105,7 @@ void MakeCards(int lepflav=0, const char* Region="")
         Nttbar        = Form("%.3f", h1_TT_ll[6]->GetBinContent(bin)+h1_TT_sl[6]->GetBinContent(bin)); 
         Nsingletop    = Form("%.3f", h1_T[6]->GetBinContent(bin)); 
         Nwjets        = Form("%.3f", h1_WJets[6]->GetBinContent(bin)); 
-        Ndy           = Form("%.3f", h1_DY[6]->GetBinContent(bin)); 
+        Ndy           = Form("%.3f", h1_DY[6]->GetBinContent(bin)+h1_TTV[6]->GetBinContent(bin)); 
     }
 
     // -------------------------------------
@@ -114,11 +117,11 @@ void MakeCards(int lepflav=0, const char* Region="")
     fout << "jmax * number of background" << endl;
     fout << "kmax * number of nuisance parameters" << endl;
     fout << "Observation " << Ndata << endl;
-    fout << PrintCardOneLine("bin",                         "",     Region,     Region,     Region,         Region,     Region  ) << endl;
-    fout << PrintCardOneLine("process",                     "",     "T1tttt",   "ttbar",    "singletop",    "DY",       "Wjets" ) << endl;
-    fout << PrintCardOneLine("process",                     "",     "0",        "1",        "2",            "3",        "4"     ) << endl;
-    fout << PrintCardOneLine("rate",                        "",     Nsig,       Nttbar,     Nsingletop,     Nwjets,     Ndy     ) << endl;
-    fout << PrintCardOneLine(Form("ttbar_SF_%s",Region),    "lnN",  "-",       "1.5",       "-",            "-",        "-"     ) << endl;
+    fout << PrintCardOneLine("bin",                         "",     Region,     Region,     Region,         Region,         Region  ) << endl;
+    fout << PrintCardOneLine("process",                     "",     "T1tttt",   "ttbar",    "singletop",    "DYTTV",        "Wjets" ) << endl;
+    fout << PrintCardOneLine("process",                     "",     "0",        "1",        "2",            "3",            "4"     ) << endl;
+    fout << PrintCardOneLine("rate",                        "",     Nsig,       Nttbar,     Nsingletop,     Ndy,            Nwjets  ) << endl;
+    fout << PrintCardOneLine(Form("ttbar_SF_%s",Region),    "lnN",  "-",       "1.5",       "-",            "-",            "-"     ) << endl;
 
     fout.close();
 

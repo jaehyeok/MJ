@@ -22,31 +22,34 @@ void DoAnalysis(bool OnlyDraw=false)
     TChain *ch_wjets        = new TChain("tree", "WJets");
     TChain *ch_dy           = new TChain("tree", "DY");
     TChain *ch_t            = new TChain("tree", "T");
+    TChain *ch_ttv          = new TChain("tree", "TTV");
     TChain *ch_f1500_100    = new TChain("tree", "T1tttt_f1500_100");
     TChain *ch_f1200_800    = new TChain("tree", "T1tttt_f1200_800");
   
-    TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14/HT750MET250/";
-    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14_JetPt20_16Mar2015_HT750MET250/";
+    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14/HT750MET250/";
+    //TString BabyDir = "/Users/jaehyeok/Research/Tools/fastjet-3.0.6/example/babies/13TeV/Phys14_JetPt20_16Mar2015/"/*_HT750MET250/"*/;
+    TString BabyDir = "/Users/jaehyeok/scratch/2015_05_25/skim/"/*_HT750MET250/"*/;
     
     // Data
     //ch_data->Add(BabyDir+"baby_MuHad_*.root");                            
     
     // TT 
-    ch_ttbar_sl->Add(BabyDir+"baby_TTJets*.root");
-    ch_ttbar_ll->Add(BabyDir+"baby_TTJets*.root");
+    ch_ttbar_sl->Add(BabyDir+"*TTJets*.root");
+    ch_ttbar_ll->Add(BabyDir+"*TTJets*.root");
     // WJets 
-    //ch_wjets->Add(BabyDir+"baby_WJetsToLNu*f1To*.root");
-    ch_wjets->Add(BabyDir+"baby_WJetsToLNu*.root");
+    ch_wjets->Add(BabyDir+"*WJetsToLNu*.root");
     // DY 
-    //ch_dy->Add(BabyDir+"baby_DYJetsToLL*f1To*.root");
-    ch_dy->Add(BabyDir+"baby_DYJetsToLL*.root");
+    ch_dy->Add(BabyDir+"*DYJetsToLL*.root");
     // Singla top 
-    ch_t->Add(BabyDir+"baby_*channel*_f*.root");
+    ch_t->Add(BabyDir+"*T*channel*.root");
+    // TTV 
+    ch_ttv->Add(BabyDir+"*TTW*.root");
+    ch_ttv->Add(BabyDir+"*TTZ*.root");
+    ch_ttv->Add(BabyDir+"*WH_HToBB*.root");
 
     // Signal
-    ch_f1500_100->Add(BabyDir+"baby_*1500*.root");
-    ch_f1200_800->Add(BabyDir+"baby_*1200*.root");
-    
+    ch_f1500_100->Add(BabyDir+"*_*mGl-1500_mLSP-100*.root");
+    ch_f1200_800->Add(BabyDir+"*_*mGl-1200_mLSP-800*.root");
     
     // ----------------------------------------
     //  Get number of entries 
@@ -57,6 +60,7 @@ void DoAnalysis(bool OnlyDraw=false)
     cout << "wjets              : " << ch_wjets->GetEntries()       << endl;
     cout << "dy                 : " << ch_dy->GetEntries()          << endl;
     cout << "Single top         : " << ch_t->GetEntries()           << endl;
+    cout << "TTV                : " << ch_ttv->GetEntries()       << endl;
     cout << "T1tttt(1500,100)   : " << ch_f1500_100->GetEntries()    << endl;
     cout << "T1tttt(1200,8000)  : " << ch_f1200_800->GetEntries()  << endl;
    
@@ -65,7 +69,7 @@ void DoAnalysis(bool OnlyDraw=false)
     // Loop over SR and CR : make sure that these regions exist in "PassSelection.h"
     //
     //char* Region[] = {"Baseline","SR0", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SR9"}; 
-    char* Region[] = {"Baseline"}; 
+    char* Region[] = {"TEST"}; 
     int NRegion = sizeof(Region)/sizeof(Region[0]);
 
     for(int iregion=0; iregion<NRegion; iregion++)
@@ -88,6 +92,7 @@ void DoAnalysis(bool OnlyDraw=false)
             MakeHists(ch_wjets,     Region[iregion]); 
             MakeHists(ch_dy,	    Region[iregion]); 
             MakeHists(ch_t,         Region[iregion]); 
+            MakeHists(ch_ttv,       Region[iregion]); 
             MakeHists(ch_f1500_100, Region[iregion]);  
             MakeHists(ch_f1200_800, Region[iregion]); 
 
@@ -105,6 +110,7 @@ void DoAnalysis(bool OnlyDraw=false)
         // ----------------------------------------
         //  Draw histograms 
         // ---------------------------------------- 
+/*
         Make1DPlots("dRlep",        Region[iregion]);
         Make1DPlots("dPhiMET",      Region[iregion]);
         Make1DPlots("dRbmin",       Region[iregion]);
@@ -156,7 +162,12 @@ void DoAnalysis(bool OnlyDraw=false)
         Make1DPlots("mjOverPt4",    Region[iregion]);
         Make1DPlots("mj3overmj2",   Region[iregion]);
         Make1DPlots("mj2overmj1",   Region[iregion]);
-
+*/
+        Make1DPlots("mj08_1",        Region[iregion]);
+        Make1DPlots("mj08_2",        Region[iregion]);
+        Make1DPlots("mj08_3",        Region[iregion]);
+        Make1DPlots("mj08_4",        Region[iregion]);
+        Make1DPlots("mindPhibb",     Region[iregion]);
         // ----------------------------------------
         //  Make table of yields 
         // ---------------------------------------- 
@@ -167,9 +178,9 @@ void DoAnalysis(bool OnlyDraw=false)
         // ----------------------------------------
         //  Make cards for combine/LandS 
         // ---------------------------------------- 
-        MakeCards(0,   Region[iregion]);
-        MakeCards(11,  Region[iregion]);
-        MakeCards(13,  Region[iregion]);
+        //MakeCards(0,   Region[iregion]);
+        //MakeCards(11,  Region[iregion]);
+        //MakeCards(13,  Region[iregion]);
     } //for(int iregion=0; iregion<2; iregion++)
 
 }

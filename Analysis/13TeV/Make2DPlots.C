@@ -44,7 +44,7 @@ void Make2DPlots(TString HistName, char* Region, int NMergeBins=1, bool doRatio=
     }
 
 
-    TH2F *h2_DATA[7], *h2_T[7], *h2_TT_sl[7], *h2_TT_ll[7], *h2_TT[7], *h2_WJets[7], *h2_DY[7]; 
+    TH2F *h2_DATA[7], *h2_T[7], *h2_TT_sl[7], *h2_TT_ll[7], *h2_TT[7], *h2_WJets[7], *h2_DY[7], *h2_TTV[7]; 
     TH2F *h2_Ratio[7], *h2_MC[7]; 
     TH2F *h2_f1500_100[7], *h2_f1200_800[7];
     TCanvas *c_TT_sl = new TCanvas("c_TT_sl","c_TT_sl",1600,360);  
@@ -62,7 +62,8 @@ void Make2DPlots(TString HistName, char* Region, int NMergeBins=1, bool doRatio=
         h2_TT_sl[i]         = (TH2F*)HistFile->Get(Form("h2_TT_sl_%s_%ifatjet", HistName.Data(), i));
         h2_TT_ll[i]         = (TH2F*)HistFile->Get(Form("h2_TT_ll_%s_%ifatjet", HistName.Data(), i));
         h2_WJets[i]         = (TH2F*)HistFile->Get(Form("h2_WJets_%s_%ifatjet", HistName.Data(), i));
-//        h2_DY[i]          = (TH2F*)HistFile->Get(Form("h2_DY_%s_%ifatjet", HistName.Data(), i)); 
+        h2_DY[i]          = (TH2F*)HistFile->Get(Form("h2_DY_%s_%ifatjet", HistName.Data(), i)); 
+        h2_TTV[i]          = (TH2F*)HistFile->Get(Form("h2_TTV_%s_%ifatjet", HistName.Data(), i)); 
         h2_f1500_100[i]      = (TH2F*)HistFile->Get(Form("h2_T1tttt_f1500_100_%s_%ifatjet", HistName.Data(), i)); 
         h2_f1200_800[i]    = (TH2F*)HistFile->Get(Form("h2_T1tttt_f1200_800_%s_%ifatjet", HistName.Data(), i)); 
 
