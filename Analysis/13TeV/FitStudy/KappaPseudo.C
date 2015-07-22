@@ -9,10 +9,12 @@
 #include "TRandom1.h"
 #include "TRandom2.h"
 #include "TRandom3.h"
+#include "RooStats/RooStatsUtils.h"
 
 using namespace std;
 
 bool doGamma = true;
+int Npseudo = 30000;
 
 // Code from http://www.hongliangjie.com/2012/12/19/how-to-generate-gamma-random-variables/
 // Parameter b could be theta...
@@ -51,8 +53,10 @@ double gsl_ran_gamma(const double a, const double b, TRandom3 &rand){
 }
 
 
-bool IsWithin1Sig(int ipseudo, float N1true, float N2true, float N3true, int N1poisson, int N2poisson, int N3poisson) 
+bool IsWithinInterval(float sigma, int ipseudo, float N1true, float N2true, float N3true, int N1poisson, int N2poisson, int N3poisson) 
 { 
+    if(N1poisson==0) return false;
+
     TH1F *h1gamma = new TH1F("h1gamma", "N1poisson", 1000, (N1poisson?N1poisson-TMath::Sqrt(N1poisson)*50:0)>0?N1poisson-TMath::Sqrt(N1poisson)*50:0, 
                         N1poisson?TMath::Sqrt(N1poisson)*10+N1poisson:10);
     TH1F *h2gamma = new TH1F("h2gamma", "N2poisson", 1000, (N2poisson?N2poisson-TMath::Sqrt(N2poisson)*50:0)>0?N2poisson-TMath::Sqrt(N2poisson)*50:0, 
@@ -71,7 +75,7 @@ bool IsWithin1Sig(int ipseudo, float N1true, float N2true, float N3true, int N1p
 
     TRandom3 rand(4321); // gamma
     
-    for(int i=0; i<50000; i++)  
+    for(int i=0; i<Npseudo; i++)  
     { 
         float N1temp = gsl_ran_gamma(N1poisson+1,1,rand);        
         float N2temp = gsl_ran_gamma(N2poisson+1,1,rand);        
@@ -89,7 +93,8 @@ bool IsWithin1Sig(int ipseudo, float N1true, float N2true, float N3true, int N1p
     //
     // Get 1sigma band
     //
-    float   kappa    = N3poisson * N2poisson / N1poisson;  
+    float   kappa=999999.;
+    if(N1poisson!=0) kappa = N3poisson * N2poisson / N1poisson;  
     int     ibinmod  = hgamma->FindBin(kappa); 
     //cout << "i bin mod " << ibinmod << endl; 
    
@@ -101,7 +106,7 @@ bool IsWithin1Sig(int ipseudo, float N1true, float N2true, float N3true, int N1p
     { 
         psigma = psigma + hgamma->GetBinContent(ip); 
         //cout << psigma << " " << ipsigma << endl;
-        if(psigma > /*0.34*/0.4987/*0.475*/) 
+        if(psigma > 0.5-RooStats::SignificanceToPValue(sigma)) 
         { 
             ipsigma = ip;
             break;
@@ -112,7 +117,7 @@ bool IsWithin1Sig(int ipseudo, float N1true, float N2true, float N3true, int N1p
     { 
         if(im!=0) msigma = msigma + hgamma->GetBinContent(im); 
         //cout << msigma << " " << imsigma << endl;
-        if(msigma > /*0.34*/0.4987/*0.475*/) 
+        if(msigma > 0.5-RooStats::SignificanceToPValue(sigma)) 
         { 
             imsigma = im;
             break;
@@ -125,7 +130,7 @@ bool IsWithin1Sig(int ipseudo, float N1true, float N2true, float N3true, int N1p
         for(int i=1; i<=hgamma->GetXaxis()->GetNbins(); i++)  
         { 
             psigma = psigma + hgamma->GetBinContent(i); 
-            if(psigma > /*0.34*2*/0.4987*2/*0.475*2*/) 
+            if(psigma > 1-2*RooStats::SignificanceToPValue(sigma)) 
             { 
                 ipsigma = i;
                 break;
@@ -177,11 +182,12 @@ float GetXErr(float N1, float N2, float N1Err, float N2Err)
     return TMath::Sqrt( N1*N1*N2Err*N2Err + N2*N2*N1Err*N1Err );
 }
 
-void KappaPseudoOneConfig( float N1, float N2, float N3,  
+void KappaPseudoOneConfig( float sigma, float N1, float N2, float N3,  
                            bool flucN1=false, bool flucN2=true, bool flucN3=true, 
                            float scale1=1., float scale2=1., float scale3=1.) 
 { 
 
+    cout << " Testing " << sigma << " sigma " << endl; 
     cout << N1 << " " << N2 << " " << N3 << " " 
          << flucN1 << " " << flucN2 << " " << flucN3 << " " 
          << scale1 << " " << scale2 << " " << scale3 << " " 
@@ -191,7 +197,6 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
     gStyle->SetStatW(0.3);                
     gStyle->SetStatH(0.25);                
 
-    int Npseudo = 50000;
     N1 = N1 * scale1;
     N2 = N2 * scale2;
     N3 = N3 * scale3;
@@ -229,7 +234,8 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
 
     for(int i=0; i<Npseudo; i++)  
     { 
-        if((i%10000)==0) cout << "Generated " << i << " experiments" << endl;
+        int checkpoint = (int)Npseudo/10;
+        if((i%checkpoint)==0) cout << "Generated " << i << "/" << Npseudo << " experiments " << endl;
 
         float N1temp   = N1;
         float N2temp   = N2;
@@ -241,13 +247,13 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
 
  //       cout << N1temp << " " << N2temp << " " << N3temp << endl;
 
-        float kappaData = N3temp * N2temp / N1temp;
-        if(N1temp==0) kappaData = 999999.;
+        float kappaData = 999999.;
+        if(N1temp!=0) kappaData = N3temp * N2temp / N1temp;
         //float kappaData = N3temp;
         
-        // Check if N is within 68% interval in Gamma 
-        bool Within68 = IsWithin1Sig(i, N1, N2, N3, (int)N1temp, (int)N2temp, (int)N3temp); 
-        //cout << Within68 << endl;
+        // Check if N is within sigma interval in Gamma 
+        bool WithinInterval = IsWithinInterval(sigma, i, N1, N2, N3, (int)N1temp, (int)N2temp, (int)N3temp); 
+        //cout << WithinInterval << endl;
 /*
         if(doGamma) 
         {
@@ -270,7 +276,7 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
         h3->Fill(N3temp);
 
         h->Fill(kappaData);
-        if(Within68) hband->Fill(kappaData); 
+        if(WithinInterval) hband->Fill(kappaData); 
         //cout << N1temp << " " << N2temp << " " << N3temp << endl;
     }
     hband->Scale(1./h->Integral());
@@ -292,6 +298,7 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
     c->cd(3);
     h1->Draw();
     c->cd(4);
+    c->cd(4)->SetLogy(1);
     hkappa->Draw();
    
     //
@@ -315,7 +322,7 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
     { 
         psigma = psigma + h->GetBinContent(ip); 
         //cout << psigma << " " << ipsigma << endl;
-        if(psigma > /*0.34*/0.4987/*0.475*/) 
+        if(psigma > 0.5-RooStats::SignificanceToPValue(sigma)) 
         { 
             ipsigma = ip;
             break;
@@ -326,7 +333,7 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
     { 
         if(im!=0) msigma = msigma + h->GetBinContent(im); 
         //cout << msigma << " " << imsigma << endl;
-        if(msigma > /*0.34*/0.4987/*0.475*/) 
+        if(msigma > 0.5-RooStats::SignificanceToPValue(sigma)) 
         { 
             imsigma = im;
             break;
@@ -344,7 +351,7 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
         for(int i=1; i<=h->GetXaxis()->GetNbins(); i++)  
         { 
             psigma = psigma + h->GetBinContent(i); 
-            if(psigma > /*0.34*2*/0.4987*2/*0.475*2*/) 
+            if(psigma > 1-2*RooStats::SignificanceToPValue(sigma)) 
             { 
                 ipsigma = i;
                 break;
@@ -392,7 +399,9 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
                       << N1 << "\t" << N2 << "\t" << N3 << "\t" 
                       << flucN1 << "\t" << flucN2 << "\t" << flucN3 << "\t" 
                       << scale1 << "\t" << scale2 << "\t" << scale3 << "\t" 
-                      << Form("%.2f",kappa) << "\t" << Form("%.2f",h->GetBinLowEdge(ipsigma+1)-kappa) << "\t" << Form("%.2f",kappa-h->GetBinLowEdge(imsigma)) 
+                      << Form("%.2f",kappa) << "\t" << Form("%.2f",h->GetBinLowEdge(ipsigma+1)-kappa) << "\t" << Form("%.2f",kappa-h->GetBinLowEdge(imsigma)) << "\t"  
+                      << hband->Integral() << "\t" 
+                      << RooStats::PValueToSignificance(0.5-hband->Integral()/2) << "\t" 
          << endl; 
 
     TLine *linekappa;
@@ -419,7 +428,7 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
     //tex_kappa_lin->SetTextAlign(22);
     //tex_kappa_lin->Draw("same");
     
-    TLatex *tex_coverage = new TLatex(0.8,0.2,Form("Coverage = %.2f", hband->Integral()));
+    TLatex *tex_coverage = new TLatex(0.8,0.2,Form("Coverage = %.1f#sigma", RooStats::PValueToSignificance(0.5-hband->Integral()/2)));
     tex_coverage->SetNDC();
     tex_coverage->SetTextSize(0.05);
     tex_coverage->SetLineWidth(2);
@@ -445,6 +454,11 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
                                                                  (int)flucN1, (int)flucN2, (int)flucN3, 
                                                                  strscale1.Data(), strscale2.Data(), strscale3.Data() 
             ));
+    c->Print(Form("fig/N2N3overN1_Npseudo%i_N1%s_N2%s_N3%s_fluct%i%i%i_scale_N1%s_N2%s_N3%s.C", Npseudo, 
+                                                                 strN1.Data(),strN2.Data(),strN3.Data(), 
+                                                                 (int)flucN1, (int)flucN2, (int)flucN3, 
+                                                                 strscale1.Data(), strscale2.Data(), strscale3.Data() 
+            ));
 
     delete h1;
     delete h2;
@@ -458,17 +472,28 @@ void KappaPseudoOneConfig( float N1, float N2, float N3,
 
 }
 
-void KappaPseudo(float N1=1, float N2=1, float N3=1)
+void KappaPseudo(float sigma=2.5, float N1=1, float N2=1, float N3=1)
 { 
     //KappaPseudoOneConfig( N1, N2, N3, true,     true,   true,   1., 1., 1.);
 
-    //KappaPseudoOneConfig(506.19,67.05,43.24,true,true,true,0.3,0.3,0.3);  
-    //KappaPseudoOneConfig(227.56,35.59,17.52,true,true,true,0.3,0.3,0.3);
-    KappaPseudoOneConfig(151.47,26.76,10.80,true,true,true,0.3,0.3,0.3);
-    KappaPseudoOneConfig(103.03,19.62,6.8,true,true,true,0.3,0.3,0.3);
-    KappaPseudoOneConfig(71.33,15.13,5.64,true,true,true,0.3,0.3,0.3);
-    KappaPseudoOneConfig(47.06,10.58,4.78,true,true,true,0.3,0.3,0.3);
-    KappaPseudoOneConfig(32.7,7.8,3.7,true,true,true,0.3,0.3,0.3);
+    KappaPseudoOneConfig(sigma,506.19,67.05,43.24,true,true,true,0.6,0.6,0.6);  
+    KappaPseudoOneConfig(sigma,336.73,51.23,29.49,true,true,true,0.6,0.6,0.6);  
+    KappaPseudoOneConfig(sigma,227.56,35.59,17.52,true,true,true,0.6,0.6,0.6);
+    KappaPseudoOneConfig(sigma,151.47,26.76,10.80,true,true,true,0.6,0.6,0.6);
+    KappaPseudoOneConfig(sigma,103.03,19.62,6.8,true,true,true,0.6,0.6,0.6);
+    KappaPseudoOneConfig(sigma,71.33,15.13,5.64,true,true,true,0.6,0.6,0.6);
+    KappaPseudoOneConfig(sigma,47.06,10.58,4.78,true,true,true,0.6,0.6,0.6);
+    KappaPseudoOneConfig(sigma,32.7,7.8,3.7,true,true,true,0.6,0.6,0.6);
+
+    KappaPseudoOneConfig(sigma,506.19,67.05,43.24,true,true,true,1,1,1);  
+    KappaPseudoOneConfig(sigma,336.73,51.23,29.49,true,true,true,1,1,1);  
+    KappaPseudoOneConfig(sigma,227.56,35.59,17.52,true,true,true,1,1,1);
+    KappaPseudoOneConfig(sigma,151.47,26.76,10.80,true,true,true,1,1,1);
+    KappaPseudoOneConfig(sigma,103.03,19.62,6.8,true,true,true,1,1,1);
+    KappaPseudoOneConfig(sigma,71.33,15.13,5.64,true,true,true,1,1,1);
+    KappaPseudoOneConfig(sigma,47.06,10.58,4.78,true,true,true,1,1,1);
+    KappaPseudoOneConfig(sigma,32.7,7.8,3.7,true,true,true,1,1,1);
+
 
 /*
     KappaPseudoOneConfig( N1, N2, N3, true,     true,   false,  1., 1., 1.); 
