@@ -13,8 +13,8 @@
 
 using namespace std;
 
-bool doGamma = true;
-int Npseudo = 10000;
+bool doGamma     = true;
+int Npseudo      = 10000;
 int NpseudoGamma = 10000;
 
 // Code from http://www.hongliangjie.com/2012/12/19/how-to-generate-gamma-random-variables/
@@ -129,7 +129,7 @@ void SignificanceOneConfig(float N1, float N2, float N3, float N4, float Nsig, f
     TH1F *h3        = new TH1F("h3",        "N3",       100000, -0.5,  N3+TMath::Sqrt(N3)*10);
     TH1F *hb        = new TH1F("hb",        "Nb",       100000,    0,  N4+Nsig+TMath::Sqrt(N4+Nsig)*10);
     TH1F *hsig      = new TH1F("hsig",      "Nsig",     100000, -0.5,  Nsig+TMath::Sqrt(Nsig)*10);
-    TH1F *hsignif   = new TH1F("hsignif",   "Nsignif",  100000,    0,  4);
+    TH1F *hsignif   = new TH1F("hsignif",   "Significance(Gamma)",  100000,    0,  4);
     h1->Sumw2();
     h2->Sumw2();
     h3->Sumw2();
@@ -206,7 +206,7 @@ void SignificanceOneConfig(float N1, float N2, float N3, float N4, float Nsig, f
     tex_signif->SetTextAlign(22);
     tex_signif->SetTextColor(kRed);
     
-    TCanvas *c = new TCanvas("c","c",1200,800);
+    TCanvas *c = new TCanvas("c","c",500*3,350*2);
     c->Divide(3,2);
     c->cd(1);
     h1->Draw("hist");
@@ -222,8 +222,8 @@ void SignificanceOneConfig(float N1, float N2, float N3, float N4, float Nsig, f
     tex_signif->Draw("same");
     c->cd(5);
     hsignif->Draw("hist");
-    //c->Print(Form("fig/Signif_Npseudo%i_NpseugoGamma%i_Nb%i_Nsig%i.pdf", Npseudo, NpseudoGamma, (int)Nb, (int)Nsig) );
-    //c->Print(Form("fig/Signif_Npseudo%i_NpseugoGamma%i_Nb%i_Nsig%i.C", Npseudo, NpseudoGamma, (int)Nb, (int)Nsig) );
+    c->Print(Form("fig/Signif_Npseudo%i_NpseugoGamma%i_N1%i_N2%i_N3%i_N4%i_Nsig%i.pdf", 
+             Npseudo, NpseudoGamma, (int)N1, (int)N2, (int)N3, (int)N4, (int)Nsig) );
    
 }
 
