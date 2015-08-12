@@ -192,7 +192,8 @@ float GetSignificangeGamma(float Nb, float Nsig)
     hbgamma->Sumw2();
     for(int i=0; i<NpseudoGamma; i++)   
     { 
-        float Nbgamma = gsl_ran_gamma(Nb+1,1,rand);        
+        //float Nbgamma = gsl_ran_gamma(Nb+1,1,rand);        
+        float Nbgamma = gsl_ran_gamma(2*Nb+1,0.5,rand);        
         hbgamma->Fill(Nbgamma);
     }
     hbgamma->Scale(1./hbgamma->Integral());
@@ -227,7 +228,7 @@ void SignificanceOneConfig(float Nb, float Nsig)
     TRandom3 rand(1234); // gamma
 
     TH1F *hb        = new TH1F("hb",        "Poisson(x|Nb)",       100000, (Nb-TMath::Sqrt(Nb)*10)<0?-0.5:Nb-TMath::Sqrt(Nb)*10,  Nb+TMath::Sqrt(Nb)*10);
-    TH1F *hsignif   = new TH1F("hsignif",   "Significance",  10,     1,  3);
+    TH1F *hsignif   = new TH1F("hsignif",   "Significance",  10,     1,  5);
     hb->Sumw2();
     hsignif->Sumw2();
 
@@ -287,7 +288,7 @@ void SignificanceOneConfig(float Nb, float Nsig)
 //void Significance(float Nb=10, float Nsig=7)
 void Significance(float Nb=100, float Nsig=28)
 { 
-//    SignificanceOneConfig(9.8,7.2);  
+    SignificanceOneConfig(9.8,7.2);  
     SignificanceOneConfig(99.1,20.9);  
     SignificanceOneConfig(799.4,57.6);  
 }

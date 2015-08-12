@@ -18,6 +18,7 @@
 #include "TLatex.h"
 #include "TMath.h"
 
+using namespace std;
 ofstream fout;
 
 //
@@ -129,7 +130,7 @@ void PrintTableOneLine(TString Process, TH1F* h1[7], int lepflav=0, bool doLatex
     }
 }
 
-void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
+void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false, float Lumi=40)
 { 
     if(lepflav==0)  cout << "[MJ Table] Yields for Electron+Muon" << endl;
     if(lepflav==11) cout << "[MJ Table] Yields for Electron" << endl;
@@ -209,8 +210,9 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, false);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, false);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, false);
-    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, false);
+    PrintTableOneLine("TTV",                h1_TTV,         lepflav,	doLatex, false);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, false);
+    PrintTableOneLine("Data",               h1_DATA,        lepflav,	doLatex, false);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, false);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, false);
         
@@ -259,8 +261,9 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
-    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, true);
+    PrintTableOneLine("TTV",                h1_TTV,         lepflav,	doLatex, true);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
+    PrintTableOneLine("Data",               h1_DATA,        lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
     fout << "\\hline \\hline" << endl;
@@ -273,8 +276,9 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
-    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, true);
+    PrintTableOneLine("TTV",                h1_TTV,         lepflav,	doLatex, true);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
+    PrintTableOneLine("Data",               h1_DATA,        lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
     fout << "\\hline \\hline" << endl;
@@ -287,8 +291,9 @@ void MakeTables(int lepflav=0, const char* Region="", bool doLatex=false)
     PrintTableOneLine("t+tW",               h1_T,           lepflav,	doLatex, true);
     PrintTableOneLine("WJets",              h1_WJets,       lepflav,	doLatex, true);
     PrintTableOneLine("DY",                 h1_DY,          lepflav,	doLatex, true);
-    PrintTableOneLine("TTV",                h1_TTV,          lepflav,	doLatex, true);
+    PrintTableOneLine("TTV",                h1_TTV,         lepflav,	doLatex, true);
     PrintTableOneLine("Total Bkg",          h1_MC,          lepflav,	doLatex, true);
+    PrintTableOneLine("Data",               h1_DATA,        lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1200,800]",   h1_f1200_800,   lepflav,	doLatex, true);
     PrintTableOneLine("T1tttt[1500,100]",   h1_f1500_100,   lepflav,	doLatex, true);
 

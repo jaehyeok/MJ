@@ -7,9 +7,6 @@
 #include "TLegend.h"
 #include "TLatex.h"
 
-bool DoLog          = 1;
-int SignalScale     = 1;
-
 //
 // h2 cosmetics
 //
@@ -18,14 +15,14 @@ void h2cosmetic(TH2F* &h2, char* title, TString Xvar="", TString Yvar="", TStrin
     h2->SetTitle(title);
     h2->SetXTitle(Xvar);
     h2->SetYTitle(Yvar);
-    h2->SetZTitle(Yvar);
+    h2->SetZTitle(Zvar);
     h2->SetStats(0);
 }
 
 //
 // 2D histograms 
 //
-void Make2DPlots(TString HistName, char* Region, int NMergeBins=1, bool doRatio=false) 
+void Make2DPlots(TString HistName, char* Region, /*int NMergeBins=1,*/ bool doRatio=false, float Lumi=40) 
 { 
     TFile* HistFile = TFile::Open("HistFiles/Hist.root");
    
@@ -85,10 +82,10 @@ void Make2DPlots(TString HistName, char* Region, int NMergeBins=1, bool doRatio=
         c_TT_ll->cd(i-1);
         h2_TT_ll[i]->Draw("colz");
     
-        c_TT_sl->Print( Form("Figures/%s/2D_TT_sl_%s%s.pdf", 
-                        Region, HistName.Data(), DoLog?"_log":"") ); 
-        c_TT_ll->Print( Form("Figures/%s/2D_TT_ll_%s%s.pdf", 
-                        Region, HistName.Data(), DoLog?"_log":"") ); 
+        c_TT_sl->Print( Form("Figures/%s/2D_TT_sl_%s.pdf", 
+                        Region, HistName.Data()) ); 
+        c_TT_ll->Print( Form("Figures/%s/2D_TT_ll_%s.pdf", 
+                        Region, HistName.Data()) ); 
     }
   
     if(doRatio) 
@@ -105,8 +102,8 @@ void Make2DPlots(TString HistName, char* Region, int NMergeBins=1, bool doRatio=
             h2_Ratio[i]->SetMinimum(0.5);
             h2_Ratio[i]->SetMaximum(1.5);
             h2_Ratio[i]->Draw("colz");
-            c_Ratio->Print( Form("Figures/%s/2D_Ratio_%s%s.pdf",
-                            Region, HistName.Data(), DoLog?"_log":"") ); 
+            c_Ratio->Print( Form("Figures/%s/2D_Ratio_%s.pdf",
+                            Region, HistName.Data()) ); 
         } 
     }
 

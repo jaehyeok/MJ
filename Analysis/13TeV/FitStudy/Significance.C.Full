@@ -1,0 +1,246 @@
+#include <iostream>
+
+#include "TH1F.h"
+#include "TStyle.h"
+#include "TCanvas.h"
+#include "TMath.h"
+#include "TLine.h"
+#include "TLatex.h"
+#include "TRandom1.h"
+#include "TRandom2.h"
+#include "TRandom3.h"
+#include "RooStats/RooStatsUtils.h"
+
+using namespace std;
+
+bool doGamma     = true;
+int Npseudo      = 10000;
+int NpseudoGamma = 10000;
+
+// Code from http://www.hongliangjie.com/2012/12/19/how-to-generate-gamma-random-variables/
+// Parameter b could be theta...
+double gsl_ran_gamma(const double a, const double b, TRandom3 &rand){
+  
+  if (a < 1)
+  {
+    double u = rand.Uniform(1);
+    return gsl_ran_gamma(1.0 + a, b, rand) * pow (u, 1.0 / a);
+  }
+
+  double x, v, u;
+  double d = a - 1.0 / 3.0;
+  double c = (1.0 / 3.0) / sqrt (d);
+  
+  while (1) 
+  {
+    do 
+    {
+      x = rand.Gaus(0, 1.0);
+      v = 1.0 + c * x;
+    }
+    while (v <= 0);
+      
+    v = v * v * v;
+    u = rand.Uniform(1);
+
+    if (u < 1 - 0.0331 * x * x * x * x) 
+      break;
+
+    if (log (u) < 0.5 * x * x + d * (1 - v + log (v)))
+      break;
+  }
+    
+  return b * d * v;
+}
+
+//
+//
+//
+float GetSignificangeGamma(float N1poisson, float N2poisson, float N3poisson, float kappa, float Nsig)
+{ 
+    TRandom3 rand(4321); // gamma
+    
+    //TH1F *hbgamma        = new TH1F("hbgamma",        "Nbgamma",       100000, -0.5,  100000-0.5/*Nb+TMath::Sqrt(Nb)*10*/);
+    TH1F *hbgamma        = new TH1F("hbgamma",        "Nbgamma",       100000, -0.5,  1000/*Nb+TMath::Sqrt(Nb)*10*/);
+    hbgamma->Sumw2();
+    for(int i=0; i<NpseudoGamma; i++)   
+    { 
+        float N1gamma = gsl_ran_gamma(N1poisson+1,1,rand);    
+        float N2gamma = gsl_ran_gamma(N2poisson+1,1,rand);    
+        float N3gamma = gsl_ran_gamma(N3poisson+1,1,rand);    
+        float Nbgamma = N3gamma * N2gamma / N1gamma * kappa;
+        //float Nbgamma =N2gamma; // FIXME
+        hbgamma->Fill(Nbgamma);
+    }
+    hbgamma->Scale(1./hbgamma->Integral());
+    
+    // Find the bin where there is Nsig and calculate p-value 
+    int ibin = hbgamma->FindBin( (N3poisson*N2poisson/N1poisson)*kappa+Nsig);
+    //int ibin = hbgamma->FindBin( N2poisson+Nsig); // FIXME
+    float pvalue = hbgamma->Integral(ibin,1000000);
+    float significance = RooStats::PValueToSignificance(pvalue);
+
+    //cout << "[Gamma] p-value with Gamma  : " << pvalue << endl;
+    //cout << "[Gamma] significance(sigma) : " << significance << endl;
+
+    delete hbgamma;
+
+    return significance;
+}
+
+//
+// 
+//
+void SignificanceOneConfig(float N1, float N2, float N3, float N4, float Nsig, float scale)
+{ 
+    //
+    TString strN1       = Form("%.1f",N1);
+    TString strN2       = Form("%.1f",N2);
+    TString strN3       = Form("%.1f",N3); 
+    TString strN4       = Form("%.1f",N4); 
+    TString strNsig     = Form("%.1f",Nsig); 
+    TString strscale    = Form("%.1f",scale);
+    strN1.ReplaceAll(".","p");
+    strN2.ReplaceAll(".","p");
+    strN3.ReplaceAll(".","p");
+    strN4.ReplaceAll(".","p");
+    strNsig.ReplaceAll(".","p");
+    strscale.ReplaceAll(".","p");
+
+    float kappa = (N1*N4)/(N2*N3);  // don't fluctuate kappa assuming that we have inf MC stats
+
+    cout << Form("N1=%.1f \t N2=%.1f \t N3=%.1f \t N4=%.1f \t Nsig=%.1f \t scale=%.1f ", N1, N2, N3, N4, Nsig, scale) << endl;
+
+    gStyle->SetOptStat(111111110);
+    gStyle->SetStatW(0.3);                
+    gStyle->SetStatH(0.25);                
+
+    TRandom1 *fN1 = new TRandom1();
+    TRandom2 *fN2 = new TRandom2();
+    TRandom3 *fN3 = new TRandom3();
+    TRandom3 rand(1234); // gamma
+    
+    // scale 
+    N1   = N1 * scale;
+    N2   = N2 * scale;
+    N3   = N3 * scale;
+    N4   = N4 * scale;
+    Nsig = Nsig * scale;
+
+    TH1F *h1        = new TH1F("h1",        "Poisson(x|N1)",       100000, (N1-TMath::Sqrt(N1)*10<0)?-0.5:N1-TMath::Sqrt(N1)*10,  N1+TMath::Sqrt(N1)*10);
+    TH1F *h2        = new TH1F("h2",        "Poisson(x|N2)",       100000, (N2-TMath::Sqrt(N2)*10<0)?-0.5:N2-TMath::Sqrt(N2)*10,  N2+TMath::Sqrt(N2)*10);
+    TH1F *h3        = new TH1F("h3",        "Poisson(x|N3)",       100000, (N3-TMath::Sqrt(N3)*10<0)?-0.5:N3-TMath::Sqrt(N3)*10,  N3+TMath::Sqrt(N3)*10);
+    TH1F *hb        = new TH1F("hb",        "Nb prediction",       100000, (N4-TMath::Sqrt(N4)*10<0)?-0.5:N4-TMath::Sqrt(N4)*10,  N4+TMath::Sqrt(N4)*10);
+    TH1F *hsig      = new TH1F("hsig",      "Nsig",                100000, -0.5,  Nsig+TMath::Sqrt(Nsig)*10);
+    TH1F *hsignif   = new TH1F("hsignif",   "Significance(Gamma)",  100000,    0,  4);
+    h1->Sumw2();
+    h2->Sumw2();
+    h3->Sumw2();
+    hb->Sumw2();
+    hsig->Sumw2();
+    hsignif->Sumw2();
+    
+    //
+    for(int i=0; i<Npseudo; i++)  
+    { 
+        int checkpoint = (int)Npseudo/10;
+        if((i%checkpoint)==0) cout << "Generated " << i << "/" << Npseudo << " experiments " << endl;
+
+        float N1poisson     = fN1->Poisson(N1);
+        float N2poisson     = fN2->Poisson(N2);
+        float N3poisson     = fN3->Poisson(N3);
+
+        float signifgamma = GetSignificangeGamma(N1poisson, N2poisson, N3poisson, kappa, Nsig);
+        //float signifgamma = 2.; // DEBUG FIXME
+
+        h1->Fill(N1poisson);
+        h2->Fill(N2poisson);
+        h3->Fill(N3poisson);
+        hb->Fill(N3poisson*N2poisson/N1poisson * kappa);
+        hsignif->Fill(signifgamma);
+
+    }
+    h1->Scale(1./h1->Integral());
+    h2->Scale(1./h2->Integral());
+    h3->Scale(1./h3->Integral());
+    hb->Scale(1./hb->Integral());
+    hsignif->Scale(1./hsignif->Integral());
+   
+    // Find the bin where there is Nsig and calculate p-value 
+    int     ibin         = hb->FindBin( (N3*N2/N1)*kappa+Nsig);
+    float   pvalue       = hb->Integral(ibin,100000);
+    float   significance = RooStats::PValueToSignificance(pvalue);
+
+    cout << "[Poisson] true Nb+Nsig  : " << (N3*N2/N1)*kappa+Nsig << endl;
+    cout << "[Poisson] ibin          : " << ibin << endl;
+    cout << "[Poisson] true p-value  : " << pvalue << endl;
+    cout << "[Poisson] true significance(sigma) : " << significance << endl;
+
+    TH1F *hpval = (TH1F*)hb->Clone("hpval");
+    hpval->SetTitle("P value");
+    hpval->Reset(); 
+    for(int i=ibin; i<=hb->GetXaxis()->GetNbins(); i++) 
+    { 
+        hpval->SetBinContent(i,hb->GetBinContent(i));
+    }
+    hpval->SetFillColor(kGreen);
+
+    // Rebin
+    hb->Rebin(100000/50);
+    hpval->Rebin(100000/50);
+    hsignif->Rebin(100000/20);
+    
+    TLine *lineNsig;
+    lineNsig = new TLine(Nsig+N4, 0, Nsig+N4, hb->GetMaximum()*1.05);
+    lineNsig->SetLineStyle(2);
+    lineNsig->SetLineWidth(3);
+    lineNsig->SetLineColor(kRed);
+    
+    TLatex *tex_pval = new TLatex(0.7,0.3,Form("True p-value = %.2f",pvalue));
+    tex_pval->SetNDC();
+    tex_pval->SetTextSize(0.05);
+    tex_pval->SetLineWidth(2);
+    tex_pval->SetTextAlign(22);
+    tex_pval->SetTextColor(kRed);
+    
+    TLatex *tex_signif = new TLatex(0.7,0.25,Form("True significane = %.2f",significance));
+    tex_signif->SetNDC();
+    tex_signif->SetTextSize(0.05);
+    tex_signif->SetLineWidth(2);
+    tex_signif->SetTextAlign(22);
+    tex_signif->SetTextColor(kRed);
+    
+    TCanvas *c = new TCanvas("c","c",500*3,350*2);
+    c->Divide(3,2);
+    c->cd(1);
+    h1->Draw("hist");
+    c->cd(2);
+    h2->Draw("hist");
+    c->cd(3);
+    h3->Draw("hist");
+    c->cd(4);
+    hb->Draw("hist");
+    hpval->Draw("hist same");
+    lineNsig->Draw("same");
+    tex_pval->Draw("same");
+    tex_signif->Draw("same");
+    c->cd(5);
+    hsignif->Draw("hist");
+    c->Print(Form("fig/Signif_Npseudo%i_NpseugoGamma%i_N1%i_N2%i_N3%i_N4%i_Nsig%i.pdf", 
+             Npseudo, NpseudoGamma, (int)N1, (int)N2, (int)N3, (int)N4, (int)Nsig) );
+   
+}
+
+//void Significance(float N1=32.7, float N2=7.8, float N3=3.7, float N4=0.4, float Nsig=8.5, float scale=1)
+void Significance(float N1=10000, float N2=10000, float N3=10000, float N4=10000, float Nsig=350, float scale=1)
+{ 
+//    SignificanceOneConfig(10,    10,    10,     10,     18.3,   1);  
+//    SignificanceOneConfig(100,   100,   100,    100,    41,     1);  
+//    SignificanceOneConfig(1000,  1000,  1000,   1000,   115,    1);  
+//    SignificanceOneConfig(10000, 10000, 10000,  10000,  351,    1);  
+      SignificanceOneConfig(30,    9,     3,     0.9,      1.8,    1);  
+      SignificanceOneConfig(50,    15,     5,     1.5,      2.1,    1);  
+      SignificanceOneConfig(100,    30,     10,     3,      2.8,    1);  
+      SignificanceOneConfig(1000,   300,    100,    30,     7.7,    1);  
+      SignificanceOneConfig(10000,  3000,   1000,   300,    23.2,   1);  
+}

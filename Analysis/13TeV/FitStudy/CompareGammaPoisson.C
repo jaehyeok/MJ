@@ -70,7 +70,7 @@ void h1cosmetic(TH1F* &h1, char* title, int linecolor=kBlack, int linewidth=1, i
 //
 // 
 //
-void CompareGammaPoisson(float N=10)
+void CompareGammaPoisson(float N=100)
 { 
 
     gStyle->SetOptStat(111111110);
@@ -93,7 +93,7 @@ void CompareGammaPoisson(float N=10)
         //if((i%checkpoint)==0) cout << "Generated " << i << "/" << Npseudo << " experiments " << endl;
         
         float Npoisson      = frand->Poisson(N);
-        float Ngamma        = gsl_ran_gamma(N+1,1,rand);;
+        float Ngamma        = gsl_ran_gamma(2*N+1,0.5,rand);;
 
         hpoisson->Fill(Npoisson);
         hgamma->Fill(Ngamma);
@@ -107,6 +107,7 @@ void CompareGammaPoisson(float N=10)
 
     TCanvas *c = new TCanvas("c","c",400,400);
     c->cd(1);
+    hpoisson->SetMaximum(hpoisson->GetMaximum()>hgamma->GetMaximum()?hpoisson->GetMaximum()*1.2:hgamma->GetMaximum()*1.2);
     hpoisson->Draw("HIST");
     hgamma->Draw("HIST SAME");
     c->Print(Form("fig/ComparePoissonGamma_N%i.pdf", (int)N));

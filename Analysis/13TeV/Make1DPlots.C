@@ -6,6 +6,7 @@
 #include "TString.h"
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TPad.h"
 #include "THStack.h"
 #include "TSystem.h"
 #include "TFile.h"
@@ -20,13 +21,14 @@
 
 using namespace std;
 bool DoLog          = 0;
-bool doData         = 0;
+bool doData         = 1;
 bool SignalScale    = 1;
 bool DrawOnlyAllFJ  = 1;
 
 //
-// UCSB RA4 Color scheme
+// "OLD(Jack's)" UCSB RA4 Color scheme
 //
+/*
 TColor ucsb_blue(1000, 1/255.,57/255.,166/255.);
 TColor ucsb_gold(1001, 255/255.,200/255.,47/255);
 TColor penn_red(1002, 149/255.,0/255.,26/255.);
@@ -37,7 +39,26 @@ TColor tar_heel_blue(1006, 86/255.,160/255.,211/255.);
 TColor sig_teal(1007, 96/255.,159/255.,128/255.);
 TColor sig_gold(1008, 215/255.,162/255.,50/255.);
 TColor seal_brown(1010, 89/255.,38/255.,11/255.);
+*/
 
+TColor light_blue(1011, 153/255.,220/255.,255/255.);
+TColor med_blue(1012, 1/255.,148/255.,218/255.);
+TColor red(1015, 250/255.,96/255.,1/255.);
+TColor skype_green(1018,9/255.,186/255.,1/255.);
+// TColor purple(1019, 172/255.,46/255.,135/255.);
+TColor purple(1019, 183/255.,66/255.,176/255.);
+TColor ucsb_gold(1020, 255/255.,200/255.,47/255);
+
+// New color scheme
+enum 
+{
+    c_tt_1l     = 1012, // ucsb_blue
+    c_tt_2l     = 1011, // tar_heel_blue
+    c_wjets     = 1018, // ucsb_gold
+    c_singlet   = 1015,
+    c_zjets     = 1020,
+    c_other     = 1019
+};
 
 //
 // h1 cosmetics
@@ -54,22 +75,9 @@ void h1cosmetic(TH1F* &h1, char* title, int linecolor=kBlack, int linewidth=1, i
 }
 
 //
-// h2 cosmetics
-//
-void h2cosmetic(TH2F* &h2, char* title, TString Xvar="", TString Yvar="", TString Zvar="")
-{
-    h2->SetTitle(title);
-    h2->SetXTitle(Xvar);
-    h2->SetYTitle(Yvar);
-    h2->SetZTitle(Zvar);
-    h2->SetStats(0);
-}
-
-
-//
 // Stacks
 //
-void Make1DPlots(TString HistName, char* Region, int NMergeBins=1) 
+void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, float Lumi=40) 
 { 
     gInterpreter->ExecuteMacro("~/macros/JaeStyle.C");
 
@@ -143,18 +151,19 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
     if(HistName=="WpT")                 	var=(char*)"p_{T}(W) [GeV]";
 
     TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_TTV[7], *h1_MC[7]; 
+    TH1F *h1_One[7], *h1_Ratio[7]; 
     TH1F *h1_f1500_100[7], *h1_f1200_800[7];
     THStack *st[7];
     //TCanvas *c = new TCanvas("c","c",1500,300);  
     //c->Divide(5,1);
     TCanvas *c = new TCanvas("c","c",1200,800);  
     c->Divide(3,2);
-    TCanvas *c_AllFJ = new TCanvas("c_AllFJ","c_AllFJ",400,300);
+    TCanvas *c_AllFJ = new TCanvas("c_AllFJ","c_AllFJ",400,400);
     for(int i=2; i<7; i++) 
     {
         if(i!=6 && DrawOnlyAllFJ)  continue;
 
-        h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i)); 
+        h1_DATA[i]      = (TH1F*)HistFile->Get(Form("h1_DATA_%s_%ifatjet", HistName.Data(), i));  
         h1_T[i]         = (TH1F*)HistFile->Get(Form("h1_T_%s_%ifatjet", HistName.Data(), i));
         h1_TT_sl[i]     = (TH1F*)HistFile->Get(Form("h1_TT_sl_%s_%ifatjet", HistName.Data(), i));
         h1_TT_ll[i]     = (TH1F*)HistFile->Get(Form("h1_TT_ll_%s_%ifatjet", HistName.Data(), i));
@@ -163,6 +172,11 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         h1_TTV[i]       = (TH1F*)HistFile->Get(Form("h1_TTV_%s_%ifatjet", HistName.Data(), i)); 
         h1_f1500_100[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1500_100_%s_%ifatjet", HistName.Data(), i)); 
         h1_f1200_800[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1200_800_%s_%ifatjet", HistName.Data(), i)); 
+
+        h1_One[i]       = new TH1F( Form("h1_One_%i",i), Form("h1_One_%i",i), 1,
+                                    h1_DATA[i]->GetXaxis()->GetBinLowEdge(1),
+                                    h1_DATA[i]->GetXaxis()->GetBinUpEdge(h1_DATA[i]->GetXaxis()->GetNbins())  );
+        h1_One[i]->SetBinContent(1,1);
 
         // merge bins
         h1_DATA[i]->Rebin(NMergeBins);
@@ -181,28 +195,41 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         h1_MC[i]->Add(h1_T[i]);
         h1_MC[i]->Add(h1_DY[i]);
         h1_MC[i]->Add(h1_TTV[i]);
+        
+        h1_Ratio[i] = (TH1F*)h1_DATA[i]->Clone(Form("h1_Ratio_%s_%ifatjet", HistName.Data(), i));
+        h1_Ratio[i]->Divide(h1_MC[i]);
 
         h1cosmetic(h1_DATA[i],          Form("DATA %ifatjet", i),               kBlack, 2, 0,           var);
-        h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),              kBlack, 2, 1000,        var);
-        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 2, 1006,        var);
-        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 2, kGreen+3,    var);
-        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 2, 1002,        var);
-        h1cosmetic(h1_DY[i],            Form("DYJets %ifatjet", i),             kBlack, 2, kBlue+4,     var);
-        h1cosmetic(h1_TTV[i],           Form("TTV %ifatjet", i),                kBlack, 2, 1002,        var);
+        h1cosmetic(h1_TT_sl[i],         Form("TT(l) %ifatjet", i),              kBlack, 2, c_tt_1l,     var);
+        h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 2, c_tt_2l,     var);
+        h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 2, c_singlet,   var);
+        h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 2, c_wjets,     var);
+        h1cosmetic(h1_DY[i],            Form("DYJets %ifatjet", i),             kBlack, 2, c_zjets,     var);
+        h1cosmetic(h1_TTV[i],           Form("TTV %ifatjet", i),                kBlack, 2, c_other,     var);
         h1cosmetic(h1_f1500_100[i],     Form("T1tttt(1500,100) %ifatjet", i),   kRed,   2, 0,           var);
         h1cosmetic(h1_f1200_800[i],     Form("T1tttt(1200,800) %ifatjet", i),   kBlue,  2, 0,           var);
+        h1cosmetic(h1_Ratio[i],         Form(" "),                              kBlack, 2, kBlack,      var);
+        h1cosmetic(h1_One[i],           Form(" "),                              kGray,  2, 0,           var);
 
         bool DoLogOne = (DoLog && h1_MC[i]->Integral()>0);
         if(DrawOnlyAllFJ) c_AllFJ->cd();
         else 
         {
             c->cd(i-1);
-            if(DoLogOne) c->cd(i-1)->SetLogy(1);
         }
         //c->cd(i-1)->SetLeftMargin(0.15);
         //c->cd(i-1)->SetRightMargin(0.07);
         //c->cd(i-1)->SetBottomMargin(0.15);
-        //c->cd(i-1)->SetTopMargin(0.1);
+        //c->cd(i-1)->SetTopMargin(0.1); 
+
+        TPad *pad1 = new TPad("p_main", "p_main", 0.0, 0.3, 1.0, 1.0);
+        pad1->SetBottomMargin(0.04);
+        pad1->SetRightMargin(0.1);
+        pad1->SetLeftMargin(0.2);
+        pad1->Draw();
+        pad1->cd();
+        pad1->cd()->SetLogy(DoLogOne);
+
         TString StackTitle = Form("%i fatjets", i);
         if(i==6) StackTitle = "All fatjets";
         if(i==5) StackTitle = "5+ fatjets";
@@ -213,9 +240,10 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         st[i]->Add(h1_T[i]);
         st[i]->Add(h1_TT_ll[i]);
         st[i]->Add(h1_TT_sl[i]);
-        //float HistMax = h1_MC[i]->GetMaximum()>h1_f1500_100[i]->GetMaximum()?h1_MC[i]->GetMaximum():h1_f1500_100[i]->GetMaximum();
-        float HistMax = 4;
-        st[i]->SetMaximum(HistMax*(DoLogOne?200:1.5));
+        float HistMax = h1_MC[i]->GetMaximum()>h1_f1500_100[i]->GetMaximum()?h1_MC[i]->GetMaximum():h1_f1500_100[i]->GetMaximum();
+        if(h1_DATA[i]->GetMaximum()>HistMax) HistMax=h1_DATA[i]->GetMaximum();
+        //float HistMax = 4;
+        st[i]->SetMaximum(HistMax*(DoLogOne?200:1.7));
         //st[i]->SetMinimum(h1_MC[i]->GetMinimum()*(DoLogOne?1:0));
         st[i]->SetMinimum((DoLogOne?0.05:0));
         st[i]->Draw("HIST"); 
@@ -225,7 +253,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         //st[i]->GetYaxis()->SetTitleOffset(1.1); 
         //st[i]->GetYaxis()->SetTitleSize(0.07); 
         st[i]->GetYaxis()->SetTitle("Events/bin"); 
-        //st[i]->GetXaxis()->SetLabelSize(0.07); 
+        st[i]->GetXaxis()->SetLabelSize(0.0); 
         st[i]->GetXaxis()->SetTitle(var); 
         //st[i]->GetXaxis()->SetTitleOffset(1.1); 
         //st[i]->GetXaxis()->SetTitleSize(0.07); 
@@ -237,18 +265,19 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         h1_DATA[i]->SetStats(0);
         if(doData) h1_DATA[i]->Draw("E SAME");
 
-        TLegend *l1 = new TLegend(0.23, 0.70, 0.87, 0.86);
+        TLegend *l1 = new TLegend(0.23, 0.60, 0.87, 0.86);
         l1->SetNColumns(2);
         l1->SetBorderSize(0);
         l1->SetFillColor(0);
         l1->SetFillStyle(0);
         l1->SetTextFont(42);
         l1->SetTextAlign(12);
-        l1->SetTextSize(0.034);
+        l1->SetTextSize(0.05);
         l1->SetFillColor(kWhite);
         l1->SetLineColor(kWhite);
         l1->SetShadowColor(kWhite);
         if(doData) l1->AddEntry(h1_DATA[i],        " Data",  "lp");
+        if(doData) l1->AddEntry(h1_DATA[i],        " ",  "");
         l1->AddEntry(h1_TT_sl[i],        " t#bar{t}(1#font[12]{l})",    "f");
         l1->AddEntry(h1_TT_ll[i],        " t#bar{t}(2#font[12]{l})",    "f");
         l1->AddEntry(h1_T[i],           " t+tW",  "f");
@@ -265,9 +294,9 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         h1_f1200_800[i]->Draw("SAME HIST");
 
         // CMS Labels 
-        float textSize = 0.04;
+        float textSize = 0.05;
 
-        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#sqrt{s}=13 TeV, L = %i fb^{-1}", 10));
+        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#sqrt[]{s}=13 TeV, L = %.1f pb^{-1}", Lumi));
         TexEnergyLumi->SetNDC();
         TexEnergyLumi->SetTextSize(textSize);
         TexEnergyLumi->SetTextAlign (31);
@@ -289,19 +318,51 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1)
         
         TexEnergyLumi->Draw("SAME");
         TexCMS->Draw("SAME");
-        if(i!=6) TexExt->Draw("SAME");
+        if(i!=6) TexExt->Draw("SAME"); 
+
+        if(DrawOnlyAllFJ) c_AllFJ->cd();
+        else 
+        {
+            c->cd(i-1);
+        }
+        TPad *pad2 = new TPad("p_pull", "p_pull", 0.0, 0.0, 1.0, 0.3);
+        pad2->SetLeftMargin(0.2);
+        pad2->Draw();
+        pad2->cd();
+        pad2->SetTopMargin(0.04);
+        pad2->SetRightMargin(0.1);
+        pad2->SetBottomMargin(0.4);
+        
+        h1_One[i]->SetLabelSize(0.16,"XY");
+        h1_One[i]->SetTitleSize(0.16,"XY");
+        h1_One[i]->SetTitleOffset(1.0);
+        h1_One[i]->GetYaxis()->SetNdivisions(3,true);
+        h1_One[i]->GetXaxis()->SetNdivisions(5,true);
+        h1_One[i]->SetMinimum(0);
+        h1_One[i]->SetMaximum(2);
+        h1_One[i]->SetYTitle("Data/MC");
+        //h1_One[i]->GetYaxis()->SetTitleOffset(1.0);
+        h1_One[i]->Draw("HIST");
+        //h1_Ratio[i]->SetMinimum(0);
+        //h1_Ratio[i]->SetMaximum(2);
+        h1_Ratio[i]->SetMarkerStyle(20);
+        h1_Ratio[i]->SetMarkerSize(0.8);
+        //h1_Ratio[i]->SetLabelSize(0.1,"XY");
+        //h1_Ratio[i]->SetTitleSize(0.1,"XY");
+        //h1_Ratio[i]->SetTitleOffset(1.5);
+        h1_Ratio[i]->Draw("SAME E");
     }
 
     // 
     if(HistName=="mj") HistName="JetMass";
-   if(DrawOnlyAllFJ)
-   {
-       c_AllFJ->Print( Form("Figures/%s/CompareDataMC_AllFJ_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
-   }
-   else 
-   { 
-       c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
-   } 
+    if(DrawOnlyAllFJ)
+    {
+        c_AllFJ->Print( Form("Figures/%s/CompareDataMC_AllFJ_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
+    }
+    else 
+    { 
+        c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
+    } 
     // 
     HistFile->Close();
     delete c; 

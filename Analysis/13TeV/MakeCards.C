@@ -18,7 +18,7 @@
 #include "TLatex.h"
 #include "TMath.h"
 
-ofstream fout;
+ofstream fout_card;
 
 //
 // Print A line of table
@@ -41,7 +41,7 @@ const char* PrintCardOneLine(const char* col1, const char* col2, float col3, flo
     return line;
 }
 
-void MakeCards(int lepflav=0, const char* Region="")
+void MakeCards(int lepflav=0, const char* Region="", float Lumi=40)
 { 
     cout << "[MJ Analysis] Make cards for " << Region << endl; 
     TString lepflavname = "all"; 
@@ -111,19 +111,19 @@ void MakeCards(int lepflav=0, const char* Region="")
     // -------------------------------------
     // Print out on file  
     // -------------------------------------
-    fout.open(Form("Cards/%s_%s.dat", Region, lepflavname.Data()));
+    fout_card.open(Form("Cards/%s_%s.dat", Region, lepflavname.Data()));
 
-    fout << "imax 1 number of channels" << endl;
-    fout << "jmax * number of background" << endl;
-    fout << "kmax * number of nuisance parameters" << endl;
-    fout << "Observation " << Ndata << endl;
-    fout << PrintCardOneLine("bin",                         "",     Region,     Region,     Region,         Region,         Region  ) << endl;
-    fout << PrintCardOneLine("process",                     "",     "T1tttt",   "ttbar",    "singletop",    "DYTTV",        "Wjets" ) << endl;
-    fout << PrintCardOneLine("process",                     "",     "0",        "1",        "2",            "3",            "4"     ) << endl;
-    fout << PrintCardOneLine("rate",                        "",     Nsig,       Nttbar,     Nsingletop,     Ndy,            Nwjets  ) << endl;
-    fout << PrintCardOneLine(Form("ttbar_SF_%s",Region),    "lnN",  "-",       "1.5",       "-",            "-",            "-"     ) << endl;
+    fout_card << "imax 1 number of channels" << endl;
+    fout_card << "jmax * number of background" << endl;
+    fout_card << "kmax * number of nuisance parameters" << endl;
+    fout_card << "Observation " << Ndata << endl;
+    fout_card << PrintCardOneLine("bin",                         "",     Region,     Region,     Region,         Region,         Region  ) << endl;
+    fout_card << PrintCardOneLine("process",                     "",     "T1tttt",   "ttbar",    "singletop",    "DYTTV",        "Wjets" ) << endl;
+    fout_card << PrintCardOneLine("process",                     "",     "0",        "1",        "2",            "3",            "4"     ) << endl;
+    fout_card << PrintCardOneLine("rate",                        "",     Nsig,       Nttbar,     Nsingletop,     Ndy,            Nwjets  ) << endl;
+    fout_card << PrintCardOneLine(Form("ttbar_SF_%s",Region),    "lnN",  "-",       "1.5",       "-",            "-",            "-"     ) << endl;
 
-    fout.close();
+    fout_card.close();
 
 }
 

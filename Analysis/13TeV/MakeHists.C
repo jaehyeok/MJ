@@ -15,7 +15,6 @@
 #include "PassSelection.h"
 
 using namespace std;
-bool    DoLog           = 1;
 int     FatjetpTthres   = 0;
 int     mjthres         = 0;
 
@@ -37,6 +36,13 @@ TH2F* InitTH2F(char* Name, char* Title, int NXbins, double XMin, double XMax, in
     h2->Sumw2();
     return h2;
 }
+
+TH2F* InitTH2F(char* Name, char* Title, int NXbins, Float_t* xbins, int NYbins, Float_t* ybins){
+    TH2F *h2 = new TH2F(Name, Title, NXbins, xbins, NYbins, ybins);
+    h2->Sumw2();
+    return h2;
+}
+
 
 //
 // Fill TH1F
@@ -120,7 +126,7 @@ float getISRSF(float ISRpT)
 //
 // main function
 //
-void MakeHists(TChain *ch, char* Region) 
+void MakeHists(TChain *ch, char* Region, float Lumi) 
 { 
 
     InitBaby(ch); 
@@ -154,6 +160,7 @@ void MakeHists(TChain *ch, char* Region)
     TH2F *h2_HTmT[7], *h2_MJMET[7];
     TH2F *h2_HTMJ[7], *h2_METmT[7];
     TH2F *h2_dPhidpTtop[7], *h2_dPhidpTttbar[7];
+    TH2F *h2_M1_MET200to400_nj6to7[7], *h2_M1_MET400toInf_nj6to7[7], *h2_M1_MET200to400_nj8toInf[7], *h2_M1_MET400toInf_nj8toInf[7];
 
     for(int i=0; i<7; i++) 
     {   
@@ -183,13 +190,13 @@ void MakeHists(TChain *ch, char* Region)
                                      20, 0, TMath::Pi());
         h1_MJ[i] = InitTH1F( Form("h1_%s_MJ_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_MJ_%ifatjet", ch->GetTitle(), i), 
-                             20, 0, 2000);
+                             20, 0, 600);
         h1_MJ_ISR[i] = InitTH1F( Form("h1_%s_MJ_ISR_%ifatjet", ch->GetTitle(), i), 
                                  Form("h1_%s_MJ_ISR_%ifatjet", ch->GetTitle(), i), 
                                  20, 0, 2000);
         h1_mj[i] = InitTH1F( Form("h1_%s_mj_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mj_%ifatjet", ch->GetTitle(), i), 
-                             40, 0, 800);
+                             40, 0, 400);
         h1_Nfatjet[i] = InitTH1F( Form("h1_%s_Nfatjet_%ifatjet", ch->GetTitle(), i), 
                                   Form("h1_%s_Nfatjet_%ifatjet", ch->GetTitle(), i), 
                                   11, -0.5, 10.5);
@@ -201,8 +208,7 @@ void MakeHists(TChain *ch, char* Region)
                                      7, -0.5, 6.5);
         h1_mT[i] = InitTH1F( Form("h1_%s_mT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_mT_%ifatjet", ch->GetTitle(), i), 
-                             //20, 0, 200);
-                             16, 0, 800);
+                             20, 0, 300);
         h1_muspT[i] = InitTH1F( Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_muspT_%ifatjet", ch->GetTitle(), i), 
                              20, 0, 200);
@@ -234,11 +240,11 @@ void MakeHists(TChain *ch, char* Region)
         h1_HT[i] = InitTH1F( Form("h1_%s_HT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_HT_%ifatjet", ch->GetTitle(), i), 
                              //20, 350, 1350);
-                             28, 500, 4000);
+                             28, 400, 1400);
         h1_MET[i] = InitTH1F( Form("h1_%s_MET_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_MET_%ifatjet", ch->GetTitle(), i), 
                              //20, 0, 500);
-                             18, 100, 1000);
+                             10, 0, 500);
         h1_METPhi[i] = InitTH1F( Form("h1_%s_METPhi_%ifatjet", ch->GetTitle(), i), 
                                  Form("h1_%s_METPhi_%ifatjet", ch->GetTitle(), i), 
                                  20, -TMath::Pi(), TMath::Pi());
@@ -378,6 +384,23 @@ void MakeHists(TChain *ch, char* Region)
         //
         // h2                    
         //
+
+        // Method 1
+        float M1_MJbin[3] = {0,600,9999};
+        float M1_mTbin[3] = {0,140,9999};
+        h2_M1_MET200to400_nj6to7[i]    =   InitTH2F(Form("h2_M1_MET200to400_nj6to7_%ifatjet", i),
+                                                    Form("h2_M1_MET200to400_nj6to7_%ifatjet", i), 
+                                                    2,M1_MJbin,2,M1_mTbin);
+        h2_M1_MET400toInf_nj6to7[i]    =   InitTH2F(Form("h2_M1_MET400toInf_nj6to7_%ifatjet", i),
+                                                    Form("h2_M1_MET400toInf_nj6to7_%ifatjet", i), 
+                                                    2,M1_MJbin,2,M1_mTbin);
+        h2_M1_MET200to400_nj8toInf[i]    =   InitTH2F(Form("h2_M1_MET200to400_nj8toInf_%ifatjet", i),
+                                                      Form("h2_M1_MET200to400_nj8toInf_%ifatjet", i), 
+                                                      2,M1_MJbin,2,M1_mTbin);
+        h2_M1_MET400toInf_nj8toInf[i]    =   InitTH2F(Form("h2_M1_MET400toInf_nj8toInf_%ifatjet", i),
+                                                      Form("h2_M1_MET400toInf_nj8toInf_%ifatjet", i), 
+                                                      2,M1_MJbin,2,M1_mTbin);
+        
         h2_dPhidpTtop[i] =   InitTH2F(Form("h2_%s_dPhidpTtop_%ifatjet", ch->GetTitle(), i),
                                       Form("h2_%s_dPhidpTtop_%ifatjet", ch->GetTitle(), i), 
                                       10, 0, TMath::Pi(), 10, 0, 500);
@@ -468,14 +491,16 @@ void MakeHists(TChain *ch, char* Region)
         // Progress indicator end ----------------------------------
    
         // Dividing ttbar to semi-leptonic and full-leptonic 
-        int Ngenlep = ntrumus_ + ntruels_ + ntrutaush_ + ntrutausl_;
+        int Ngenlep = -1;
+        if(ChainName.Contains("TT")) Ngenlep = ntrumus_ + ntruels_ + ntrutaush_ + ntrutausl_;
         if(ChainName.Contains("TT_sl") && Ngenlep!=1) continue;  
         if(ChainName.Contains("TT_ll") && Ngenlep!=2) continue;  
 
         // 
         // weights 
         // 
-        EventWeight_ *= 10.; // 10 fb-1
+        if(!ChainName.Contains("DATA")) EventWeight_ *= Lumi/1000.; 
+        if(!ChainName.Contains("DATA")) EventWeight_ *= 0.6;  // ad hoc scale for MC to make agreement better
        
         //
         // Pileup 
@@ -487,10 +512,58 @@ void MakeHists(TChain *ch, char* Region)
         //
         // blah
 
+        // Trigger 
+        /*
+        ****************************************************************************
+        *    Row   * Instance *                                          trig_name *
+        ****************************************************************************
+>>>>    *        0 *        0 *                HLT_PFHT350_PFMET100_NoiseCleaned_v *
+>>>>    *        0 *        1 *                 HLT_Mu15_IsoVVVL_PFHT350_PFMET70_v *
+>>>>    *        0 *        2 *                         HLT_Mu15_IsoVVVL_PFHT600_v *
+        *        0 *        3 *             HLT_Mu15_IsoVVVL_BTagCSV0p72_PFHT400_v *
+        *        0 *        4 *                                 HLT_Mu15_PFHT300_v *
+>>>>    *        0 *        5 *                HLT_Ele15_IsoVVVL_PFHT350_PFMET70_v *
+>>>>    *        0 *        6 *                        HLT_Ele15_IsoVVVL_PFHT600_v *
+        *        0 *        7 *            HLT_Ele15_IsoVVVL_BTagCSV0p72_PFHT400_v *
+        *        0 *        8 *                                HLT_Ele15_PFHT300_v *
+>>>>    *        0 *        9 *                      HLT_DoubleMu8_Mass8_PFHT300_v *
+>>>>    *        0 *       10 *    HLT_DoubleEle8_CaloIdM_TrackIdM_Mass8_PFHT300_v *
+        *        0 *       11 *                                      HLT_PFHT475_v *
+        *        0 *       12 *                                      HLT_PFHT800_v *
+        *        0 *       13 *                    HLT_PFMET120_NoiseCleaned_Mu5_v *
+        *        0 *       14 *                        HLT_PFMET170_NoiseCleaned_v *
+        *        0 *       15 *                         HLT_DoubleIsoMu17_eta2p1_v *
+        *        0 *       16 *                               HLT_Mu17_TrkIsoVVL_v *
+        *        0 *       17 *                               HLT_IsoMu17_eta2p1_v *
+        *        0 *       18 *                                      HLT_IsoMu20_v *
+        *        0 *       19 *                               HLT_IsoMu24_eta2p1_v *
+        *        0 *       20 *                                      HLT_IsoMu27_v *
+        *        0 *       21 *                                         HLT_Mu50_v *
+        *        0 *       22 *                     HLT_Ele27_eta2p1_WPLoose_Gsf_v *
+        *        0 *       23 *                     HLT_Ele32_eta2p1_WPLoose_Gsf_v *
+        *        0 *       24 *                    HLT_Ele105_CaloIdVT_GsfTrkIdT_v *
+        *        0 *       25 *            HLT_DoubleEle33_CaloIdL_GsfTrkIdVL_MW_v *
+        *        0 *       26 *            HLT_DoubleEle24_22_eta2p1_WPLoose_Gsf_v *
+        ****************************************************************************
+        */
+        //if(ChainName.Contains("DATA") && !(trig_->at(9)||trig_->at(10))) continue; // For Z+jets events
+        if(ChainName.Contains("DATA") && !(trig_->at(0))) continue; // For 1-lepton events
+        
+        //json  
+        if(ChainName.Contains("DATA") && !json_golden_) continue;
+        
+        // online cuts for MC 
+        if(OnHT_<350 && OnMET_<100) continue;
+
+
+
         // 
         // single-lepton events selection
         // 
         if(!PassNLep(1))  continue; 
+
+        // 2-leptons selection
+        //if( nels_!=2 || nmes!=2) continue;
 
         float HT_thres=HT_;
         int Nskinny_thres=Nskinnyjet_;
@@ -670,6 +743,15 @@ void MakeHists(TChain *ch, char* Region)
         // yields
 	    if(nels_==1) FillTH1FAll(h1_yields, NFJbin, 0.5, EventWeight_);   
 	    if(nmus_==1) FillTH1FAll(h1_yields, NFJbin, 1.5, EventWeight_);
+
+        // Method 1
+        if(MET_>200 && MET_<400 && Nskinny_thres>=6 && Nskinny_thres<=7) FillTH2FAll(h2_M1_MET200to400_nj6to7,   NFJbin, MJ_thres, mT, EventWeight_);
+        if(MET_>400             && Nskinny_thres>=6 && Nskinny_thres<=7) FillTH2FAll(h2_M1_MET400toInf_nj6to7,   NFJbin, MJ_thres, mT, EventWeight_);
+        if(MET_>200 && MET_<400 && Nskinny_thres>=8                    ) FillTH2FAll(h2_M1_MET200to400_nj8toInf, NFJbin, MJ_thres, mT, EventWeight_);
+        if(MET_>400             && Nskinny_thres>=8                    ) FillTH2FAll(h2_M1_MET400toInf_nj8toInf, NFJbin, MJ_thres, mT, EventWeight_);
+        
+        // Method 2 
+
 
         if(NFJbin>1) FillTH2FAll(h2_mj1vsmj2, NFJbin, mj_->at(mj_thres_sorted_index.at(0)), mj_->at(mj_thres_sorted_index.at(1)), EventWeight_);           
         if(NFJbin>2) FillTH2FAll(h2_mj2vsmj3, NFJbin, mj_->at(mj_thres_sorted_index.at(1)), mj_->at(mj_thres_sorted_index.at(2)), EventWeight_);           
@@ -885,6 +967,10 @@ void MakeHists(TChain *ch, char* Region)
         h1_Nfatjet[i]->SetDirectory(0);                     h1_Nfatjet[i]->Write();
         h1_Nskinnyjet[i]->SetDirectory(0);                  h1_Nskinnyjet[i]->Write();
         h1_Ncsvm[i]->SetDirectory(0);                       h1_Ncsvm[i]->Write();
+        h2_M1_MET200to400_nj6to7[i]->SetDirectory(0);       h2_M1_MET200to400_nj6to7[i]->Write();
+        h2_M1_MET200to400_nj8toInf[i]->SetDirectory(0);     h2_M1_MET200to400_nj8toInf[i]->Write();
+        h2_M1_MET400toInf_nj6to7[i]->SetDirectory(0);       h2_M1_MET400toInf_nj6to7[i]->Write();
+        h2_M1_MET400toInf_nj8toInf[i]->SetDirectory(0);     h2_M1_MET400toInf_nj8toInf[i]->Write();
         h2_mj1vsmj2[i]->SetDirectory(0);                    h2_mj1vsmj2[i]->Write();
         h2_mj2vsmj3[i]->SetDirectory(0);                    h2_mj2vsmj3[i]->Write();
         h2_mj3vsmj4[i]->SetDirectory(0);                    h2_mj3vsmj4[i]->Write();

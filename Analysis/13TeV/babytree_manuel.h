@@ -8,6 +8,7 @@ using namespace std;
 int             event_;
 float           EventWeight_;
 float           EventWeightNeg_;
+bool            json_golden_;
 int             Npu_;
 int             Npv_;
 int             Nfatjet_;
@@ -15,8 +16,11 @@ int             Nskinnyjet_;
 int             NBtagCSVM_;
 float           MJ_;
 float           MET_;
+float           OnMET_;
 float           HT_;
+float           OnHT_;
 float           METPhi_;
+vector<bool>    *trig_;
 vector<float>   *mj_;
 vector<float>   *mj08_;
 vector<float>   *FatjetPt_;
@@ -69,6 +73,7 @@ float        top2Phi_;
 TBranch         *b_event;   //!
 TBranch         *b_EventWeight;   //!
 TBranch         *b_EventWeightNeg;   //!
+TBranch         *b_json_golden;   //!
 TBranch         *b_Npu;   //!
 TBranch         *b_Npv;   //!
 TBranch         *b_Nfatjet;   //!
@@ -76,8 +81,11 @@ TBranch         *b_Nskinnyjet;   //!
 TBranch         *b_NBtagCSVM;   //!
 TBranch         *b_MJ;   //!
 TBranch         *b_MET;   //!
+TBranch         *b_OnMET;   //!
 TBranch         *b_HT;   //!
+TBranch         *b_OnHT;   //!
 TBranch         *b_METPhi;   //!
+TBranch         *b_trig;   //!
 TBranch         *b_mj;   //!
 TBranch         *b_mj08;   //!
 TBranch         *b_FatjetPt;   //!
@@ -116,8 +124,8 @@ TBranch *b_nels;
 TBranch *b_nmus;
 TBranch *b_nvels;
 TBranch *b_nvmus;
-TBranch * b_mt;
-TBranch * b_mc_type;
+TBranch *b_mt;
+TBranch *b_mc_type;
 TBranch *b_ntruleps;
 TBranch *b_ntrumus;
 TBranch *b_ntruels;
@@ -126,6 +134,7 @@ TBranch *b_ntrutaush;
 
 void InitBaby(TChain *ch)
 {
+    trig_      = 0;
     mj_        = 0;
     mj08_      = 0;
     FatjetPt_  = 0;
@@ -157,15 +166,19 @@ void InitBaby(TChain *ch)
 
 
     ch->SetBranchAddress("event",           &event_,         &b_event);
-    ch->SetBranchAddress("weight",     &EventWeight_,   &b_EventWeight);
+    ch->SetBranchAddress("weight",      &EventWeight_,   &b_EventWeight);
+    ch->SetBranchAddress("json_golden",     &json_golden_,   &b_json_golden);
     ch->SetBranchAddress("ntrupv",             &Npu_,           &b_Npu);
     ch->SetBranchAddress("npv",             &Npv_,           &b_Npv);
     ch->SetBranchAddress("nfjets",    &Nfatjet_,       &b_Nfatjet);
     ch->SetBranchAddress("njets",      &Nskinnyjet_,    &b_Nskinnyjet);
     ch->SetBranchAddress("nbm",       &NBtagCSVM_,     &b_NBtagCSVM);
+    ch->SetBranchAddress("trig",      &trig_,            &b_trig);
     ch->SetBranchAddress("mj",         &MJ_,            &b_MJ);
     ch->SetBranchAddress("met",             &MET_,           &b_MET);
+    ch->SetBranchAddress("onmet",           &OnMET_,           &b_OnMET);
     ch->SetBranchAddress("ht",              &HT_,            &b_HT);
+    ch->SetBranchAddress("onht",            &OnHT_,          &b_OnHT);
     ch->SetBranchAddress("met_phi",          &METPhi_,        &b_METPhi);
     ch->SetBranchAddress("fjets_m",         &mj_,            &b_mj);
     ch->SetBranchAddress("fjets_pt",   &FatjetPt_,      &b_FatjetPt);
