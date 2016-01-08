@@ -34,7 +34,7 @@ void DoAnalysis(bool OnlyDraw=false)
     cout << "Loading MakeCards.C    : " << (loadMakeCards==0?"Loaded":"Not loaded")   << endl;
     cout << endl; 
 */
-    float Lumi = 41.6; // pb-1
+    float Lumi = 42; // pb-1
 
     // ----------------------------------------
     //  Define chains  
@@ -60,9 +60,9 @@ void DoAnalysis(bool OnlyDraw=false)
     ch_ttbar_sl->Add(BabyDir+"*TTJets*25ns*.root");
     ch_ttbar_ll->Add(BabyDir+"*TTJets*25ns*.root");
     // WJets 
-    ch_wjets->Add(BabyDir+"*WJetsToLNu*.root");
+    //ch_wjets->Add(BabyDir+"*WJetsToLNu*.root");
     // DY 
-    ch_dy->Add(BabyDir+"*DYJetsToLL*.root");
+    //ch_dy->Add(BabyDir+"*DYJetsToLL*.root");
     // Singla top 
     ch_t->Add(BabyDir+"*T*channel*.root");
     // TTV 
@@ -134,31 +134,32 @@ void DoAnalysis(bool OnlyDraw=false)
         // ---------------------------------------- 
 
         // basic kinematic variables
-        Make1DPlots("muspT",        Region[iregion],	1,	Lumi);
-        Make1DPlots("musPhi",       Region[iregion],	1,	Lumi);
-        Make1DPlots("musEta",       Region[iregion],	1,	Lumi);
-        Make1DPlots("elspT",        Region[iregion],	1,	Lumi);
-        Make1DPlots("elsPhi",       Region[iregion],	1,	Lumi);
-        Make1DPlots("elsEta",       Region[iregion],	1,	Lumi);
-        Make1DPlots("mT",           Region[iregion],	1,	Lumi);
-        Make1DPlots("mj",           Region[iregion],	1,	Lumi);
-        Make1DPlots("MJ",           Region[iregion],	2,	Lumi);
-        Make1DPlots("HT",           Region[iregion],	2,	Lumi);
-        Make1DPlots("Nfatjet",      Region[iregion],	1,	Lumi);
-        Make1DPlots("Nskinnyjet",   Region[iregion],	1,	Lumi);
-        Make1DPlots("Ncsvm",        Region[iregion],	1,	Lumi);
-        Make1DPlots("MET",          Region[iregion],	1,	Lumi);
-        Make1DPlots("mj1",          Region[iregion],	1,	Lumi);
-        Make1DPlots("mj2",          Region[iregion],	1,	Lumi);
-        Make1DPlots("mj3",          Region[iregion],	1,	Lumi);
-        Make1DPlots("mj4",          Region[iregion],	1,	Lumi);
+        Make1DPlots("muspT",        Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("musPhi",       Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("musEta",       Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("elspT",        Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("elsPhi",       Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("elsEta",       Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mT",           Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mj",           Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("MJ",           Region[iregion],	2,	false,	Lumi);
+        Make1DPlots("HT",           Region[iregion],	2,	false,	Lumi);
+        Make1DPlots("Nfatjet",      Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("Nskinnyjet",   Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("Ncsvm",        Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("MET",          Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mj1",          Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mj2",          Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mj3",          Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mj4",          Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("mbb",          Region[iregion],	1,	true,	Lumi);
         
         // Corroborators
-        //Make1DPlots("mj08_1",        Region[iregion],	1,	Lumi);
-        //Make1DPlots("mj08_2",        Region[iregion],	1,	Lumi);
-        //Make1DPlots("mj08_3",        Region[iregion],	1,	Lumi);
-        //Make1DPlots("mj08_4",        Region[iregion],	1,	Lumi);
-        //Make1DPlots("mindPhibb",     Region[iregion],	1,	Lumi);
+        //Make1DPlots("mj08_1",        Region[iregion],	1,	false,	Lumi);
+        //Make1DPlots("mj08_2",        Region[iregion],	1,	false,	Lumi);
+        //Make1DPlots("mj08_3",        Region[iregion],	1,	false,	Lumi);
+        //Make1DPlots("mj08_4",        Region[iregion],	1,	false,	Lumi);
+        //Make1DPlots("mindPhibb",     Region[iregion],	1,	false,	Lumi);
         
         // ----------------------------------------
         //  Make table of yields 

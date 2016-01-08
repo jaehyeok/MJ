@@ -21,6 +21,30 @@
 
 using namespace std;
 
+
+float getDPhi(float phi1, float phi2)
+{
+    float absdphi = abs(phi1-phi2);
+    if(absdphi < TMath::Pi()) return absdphi;
+    else return (2*TMath::Pi() - absdphi);
+    // Ryan's : http://www.aidansean.com/cheatsheets/?p=105
+    //return TMath::Abs(TMath::Abs(TMath::Abs(phi1 - phi2) - TMath::Pi())-TMath::Pi());
+
+}
+float getDEta(float eta1, float eta2)
+{
+    return abs(eta1-eta2);
+}
+float getDR(float dphi, float deta)
+{
+    return TMath::Sqrt(dphi*dphi+deta*deta);
+}
+float getDR(float eta1, float eta2, float phi1, float phi2)
+{
+    return getDR(getDPhi(phi1, phi2), eta1-eta2);
+}
+
+
 //
 //TH1F initialization
 //
@@ -106,6 +130,11 @@ bool goodrun(int run, int lumi)
     return isgoodrun;
 }
 
+bool goodevent()
+{ 
+    return (pass_hbhe_ && pass_cschalo_ && pass_eebadsc_ && pass_goodv_);
+}
+
 void RelVal() 
 {
     gInterpreter->ExecuteMacro("~/macros/JaeStyle.C");  
@@ -125,16 +154,19 @@ void RelVal()
     // 
     TChain *ch_74   = new TChain("tree", "74X");
     TChain *ch_75   = new TChain("tree", "75X");
-    ch_74->Add("babies/small_quick_cfA_746p1_nleps1_trig0ON.root");                            
-    ch_75->Add("babies/small_quick_cfA_751_nleps1_trig0ON.root");                            
+    //ch_74->Add("babies/small_quick_cfA_746p1_nleps1_trig0ON.root");                            
+    //ch_75->Add("babies/small_quick_cfA_751_nleps1_trig0ON.root");                            
     //ch_74->Add("babies/small_quick_cfA_746p1_trig0ON.root");                            
     //ch_75->Add("babies/small_quick_cfA_751_trig0ON.root");                            
+    ch_74->Add("babies/small_quick_cfA_746p1_v83_trig0ON_htg400_met_minig150.root");                            
+    ch_75->Add("babies/small_quick_cfA_751_v83_trig0ON_htg400_met_minig150.root");                            
     
-    // Variables and histograms 
-    const char*   var[22];     
-    int     nbins[22];   
-    float   begin[22];   
-    float   end[22];     
+    // Variables and histograms  
+    const int Nvar=26;
+    const char*   var[Nvar];     
+    int     nbins[Nvar];   
+    float   begin[Nvar];   
+    float   end[Nvar];     
 
     var[0]="MET";                               nbins[0]=20;    begin[0]=0;         end[0]=500;
     var[1]="MET #phi"/*"METPhi"*/;              nbins[1]=20;    begin[1]=-3.14;     end[1]=3.14;
@@ -158,14 +190,18 @@ void RelVal()
     var[19]="#phi(fatjet1)"/*"FatjetPhi1"*/;    nbins[19]=20;   begin[19]=-3.14;    end[19]=3.14;
     var[20]="m(J1)"/*"mj1"*/;                   nbins[20]=20;   begin[20]=0;        end[20]=400;
     var[21]="m(jet1)"/*"JetM1"*/;               nbins[21]=20;   begin[21]=0;        end[21]=100;
+    var[22]="miniiso(electron)"/*"RA4ElsMinIso"*/;  nbins[22]=20;   begin[22]=0;        end[22]=1;
+    var[23]="miniiso(muon)"/*"RA4MusMinIso"*/;      nbins[23]=20;   begin[23]=0;        end[23]=1;
+    var[24]="CSV"/*"JetCSV"*/;                      nbins[24]=20;   begin[24]=0;        end[24]=1;
+    var[25]="m(J2,...)"/*"mJ"*/;                    nbins[25]=20;   begin[25]=0;        end[25]=200;
 
     //TH1F* h1_met_mini_74 = InitTH1F("h1_met_mini_74","h1_met_mini_74", 20, 0, 200);
     //TH1F* h1_met_mini_75 = InitTH1F("h1_met_mini_75","h1_met_mini_75", 50, 0, 500);
 
-    TH1F *h1[22][2];
-    TH2F *h2[22];
-    TH1F *h1diff[22];
-    for(int ivar=0; ivar<22; ivar++) 
+    TH1F *h1[Nvar][2];
+    TH2F *h2[Nvar];
+    TH1F *h1diff[Nvar];
+    for(int ivar=0; ivar<Nvar; ivar++) 
     { 
             h1[ivar][0] = InitTH1F(Form("h1_%s_74",var[ivar]),Form("h1_%s_74",var[ivar]), nbins[ivar], begin[ivar], end[ivar]);
             h1[ivar][1] = InitTH1F(Form("h1_%s_75",var[ivar]),Form("h1_%s_75",var[ivar]), nbins[ivar], begin[ivar], end[ivar]);
@@ -194,30 +230,34 @@ void RelVal()
 
         ch_74->GetEntry(i74);  
         
-        if( !goodrun(run_,lumi_) ) continue; 
-            
-            FillTH1F(h1[0][0], MET_);
-            FillTH1F(h1[1][0], METPhi_);
-            FillTH1F(h1[2][0], HT_);
-            FillTH1F(h1[3][0], MJ_);
-            FillTH1F(h1[4][0], mt_);
-            FillTH1F(h1[5][0], Nskinnyjet_);
-            FillTH1F(h1[6][0], NBtagCSVM_);
-            FillTH1F(h1[7][0], FatjetPt_->size());
-            FillTH1F(h1[8][0], JetPt_->at(0));
-            FillTH1F(h1[9][0], FatjetPt_->at(0));
-            if(RA4ElsPt_->size()>0) FillTH1F(h1[10][0], RA4ElsPt_->at(0));
-            if(RA4ElsPt_->size()>0) FillTH1F(h1[11][0], RA4ElsEta_->at(0));
-            if(RA4ElsPt_->size()>0) FillTH1F(h1[12][0], RA4ElsPhi_->at(0));
-            if(RA4MusPt_->size()>0) FillTH1F(h1[13][0], RA4MusPt_->at(0));
-            if(RA4MusPt_->size()>0) FillTH1F(h1[14][0], RA4MusEta_->at(0));
-            if(RA4MusPt_->size()>0) FillTH1F(h1[15][0], RA4MusPhi_->at(0));
-            FillTH1F(h1[16][0], JetEta_->at(0));
-            FillTH1F(h1[17][0], JetPhi_->at(0));
-            FillTH1F(h1[18][0], FatjetEta_->at(0));
-            FillTH1F(h1[19][0], FatjetPhi_->at(0));
-            FillTH1F(h1[20][0], mj_->at(0));
-            FillTH1F(h1[21][0], JetM_->at(0));
+        if( !goodrun(run_,lumi_) || HT_<400 || MET_<150 || !goodevent() || NLeps_!=1) continue; 
+
+        FillTH1F(h1[0][0], MET_);
+        FillTH1F(h1[1][0], METPhi_);
+        FillTH1F(h1[2][0], HT_);
+        FillTH1F(h1[3][0], MJ_);
+        FillTH1F(h1[4][0], mt_);
+        FillTH1F(h1[5][0], Nskinnyjet_);
+        FillTH1F(h1[6][0], NBtagCSVM_);
+        FillTH1F(h1[7][0], FatjetPt_->size());
+        FillTH1F(h1[8][0], JetPt_->at(0));
+        FillTH1F(h1[9][0], FatjetPt_->at(0));
+        if(RA4ElsPt_->size()>0) FillTH1F(h1[10][0], RA4ElsPt_->at(0));
+        if(RA4ElsPt_->size()>0) FillTH1F(h1[11][0], RA4ElsEta_->at(0));
+        if(RA4ElsPt_->size()>0) FillTH1F(h1[12][0], RA4ElsPhi_->at(0));
+        if(RA4MusPt_->size()>0) FillTH1F(h1[13][0], RA4MusPt_->at(0));
+        if(RA4MusPt_->size()>0) FillTH1F(h1[14][0], RA4MusEta_->at(0));
+        if(RA4MusPt_->size()>0) FillTH1F(h1[15][0], RA4MusPhi_->at(0));
+        FillTH1F(h1[16][0], JetEta_->at(0));
+        FillTH1F(h1[17][0], JetPhi_->at(0));
+        FillTH1F(h1[18][0], FatjetEta_->at(0));
+        FillTH1F(h1[19][0], FatjetPhi_->at(0));
+        FillTH1F(h1[20][0], mj_->at(0)); 
+        FillTH1F(h1[21][0], JetM_->at(0));
+        if(RA4ElsPt_->size()>0) FillTH1F(h1[22][0], RA4ElsMinIso_->at(0));
+        if(RA4MusPt_->size()>0) FillTH1F(h1[23][0], RA4MusMinIso_->at(0));
+        FillTH1F(h1[24][0], JetCSV_->at(0));
+        for(int i=1; i<mj_->size(); i++) FillTH1F(h1[25][0], mj_->at(i)); 
     }
    
 
@@ -230,7 +270,7 @@ void RelVal()
 
         ch_75->GetEntry(i75);  
 
-        if( !goodrun(run_,lumi_) ) continue; 
+        if( !goodrun(run_,lumi_) || HT_<400 || MET_<150 || !goodevent() || NLeps_!=1 ) continue; 
         //
         FillTH1F(h1[0][1], MET_);
         FillTH1F(h1[1][1], METPhi_);
@@ -254,6 +294,10 @@ void RelVal()
         FillTH1F(h1[19][1], FatjetPhi_->at(0));
         FillTH1F(h1[20][1], mj_->at(0));
         FillTH1F(h1[21][1], JetM_->at(0));
+        if(RA4ElsPt_->size()>0) FillTH1F(h1[22][1], RA4ElsMinIso_->at(0));
+        if(RA4MusPt_->size()>0) FillTH1F(h1[23][1], RA4MusMinIso_->at(0));
+        FillTH1F(h1[24][1], JetCSV_->at(0));
+        for(int i=1; i<mj_->size(); i++) FillTH1F(h1[25][1], mj_->at(i)); 
     }
 
 
@@ -269,7 +313,7 @@ void RelVal()
         // 74X
         //
         ch_74->GetEntry(i74);  
-        if( !goodrun(run_,lumi_) ) continue; 
+        if( !goodrun(run_,lumi_) || HT_<400 || MET_<150 || !goodevent() || NLeps_!=1) continue; 
 
         // Temp  
         int event_74x = event_;
@@ -283,26 +327,29 @@ void RelVal()
         int NFJ_74x = FatjetPt_->size();
         float JetPt1_74x = JetPt_->at(0);
         float FatjetPt1_74x = FatjetPt_->at(0);
-        float RA4ElsPt_74x, RA4ElsEta_74x, RA4ElsPhi_74x;  
+        float RA4ElsPt_74x(-999), RA4ElsEta_74x(-999), RA4ElsPhi_74x(-999), RA4ElsMinIso_74x(-999);  
         if(RA4ElsPt_->size()>0) 
         {
             RA4ElsPt_74x = RA4ElsPt_->at(0);
             RA4ElsEta_74x = RA4ElsEta_->at(0);
             RA4ElsPhi_74x = RA4ElsPhi_->at(0);
+            RA4ElsMinIso_74x = RA4ElsMinIso_->at(0);
         } 
-        float RA4MusPt_74x, RA4MusEta_74x, RA4MusPhi_74x;    
+        float RA4MusPt_74x(-999), RA4MusEta_74x(-999), RA4MusPhi_74x(-999), RA4MusMinIso_74x(-999);    
         if(RA4MusPt_->size()>0) 
         {
             RA4MusPt_74x = RA4MusPt_->at(0);
             RA4MusEta_74x = RA4MusEta_->at(0);
             RA4MusPhi_74x = RA4MusPhi_->at(0);
+            RA4MusMinIso_74x = RA4MusMinIso_->at(0);
         } 
-        float JetEta1_74x = JetEta_->at(0);
-        float JetPhi1_74x = JetPhi_->at(0);
-        float FatjetEta1_74x = FatjetEta_->at(0);
-        float FatjetPhi1_74x = FatjetPhi_->at(0);
-        float FatjetM1_74x = mj_->at(0);
-        float JetM1_74x = JetM_->at(0);
+        float JetEta1_74x   = JetEta_->at(0);
+        float JetPhi1_74x   = JetPhi_->at(0);
+        float FatjetEta1_74x= FatjetEta_->at(0);
+        float FatjetPhi1_74x= FatjetPhi_->at(0);
+        float FatjetM1_74x  = mj_->at(0);
+        float JetM1_74x     = JetM_->at(0);
+        float JetCSV1_74x   = JetCSV_->at(0);
 
         //
         // 75X
@@ -312,8 +359,29 @@ void RelVal()
 
             ch_75->GetEntry(i75);  
 
-            if( !goodrun(run_,lumi_) ) continue; 
+            if( !goodrun(run_,lumi_) || HT_<400 || MET_<150 || !goodevent() || NLeps_!=1) continue; 
             if(event_74x != event_)  continue; // select the same event
+
+            //if((JetPt1_74x-JetPt_->at(0))<-50)  cout << event_ << endl;
+            //if((JetM1_74x-JetM_->at(0))<-10)    cout << event_ << endl; 
+            //if((FatjetPt1_74x-FatjetPt_->at(0))<-100 || (FatjetPt1_74x-FatjetPt_->at(0))>100) cout << event_ << endl;
+            //if((FatjetEta1_74x-FatjetEta_->at(0))<-0.3 || (FatjetEta1_74x-FatjetEta_->at(0))>0.3) cout << event_ << endl;
+            //if((FatjetPhi1_74x-FatjetPhi_->at(0))>1) cout << event_ << endl;
+            //if((FatjetM1_74x-mj_->at(0))<-20 || (FatjetM1_74x-mj_->at(0))>20) cout << event_ << endl; 
+            if((MJ_74x-MJ_)<-30 || (MJ_74x-MJ_)>30) cout << event_ << endl; 
+            /*
+            //DumpEvent
+            cout << "74 vs 75 " << endl;
+            cout << "pT  : " << JetPt1_74x << " " << JetPt_->at(0) << endl;
+            cout << "Eta : " << JetEta1_74x << " " << JetEta_->at(0) << endl;
+            cout << "Phi : " << JetPhi1_74x << " " << JetPhi_->at(0) << endl;
+            cout << "M   : " << JetM1_74x << " " << JetM_->at(0) << endl;
+            cout << "F pT  : " << FatjetPt1_74x << " " << FatjetPt_->at(0) << endl;
+            cout << "F Eta : " << FatjetEta1_74x << " " << FatjetEta_->at(0) << endl;
+            cout << "F Phi : " << FatjetPhi1_74x << " " << FatjetPhi_->at(0) << endl;
+            cout << "F M   : " << FatjetM1_74x << " " << mj_->at(0) << endl;
+            */
+
 
             //        
             FillTH2F(h2[0], MET_74x,       MET_); 
@@ -324,8 +392,8 @@ void RelVal()
             FillTH2F(h2[5], Nskinnyjet_74x, Nskinnyjet_); 
             FillTH2F(h2[6], NBtagCSVM_74x, NBtagCSVM_); 
             FillTH2F(h2[7], NFJ_74x,       FatjetPt_->size()); 
-            FillTH2F(h2[8], JetPt1_74x,   JetPt_->at(0)); 
-            FillTH2F(h2[9], FatjetPt1_74x,        FatjetPt_->at(0)); 
+            if(getDR(JetEta1_74x,JetEta_->at(0),JetPhi1_74x,JetPhi_->at(0))<0.4) FillTH2F(h2[8], JetPt1_74x,   JetPt_->at(0)); 
+            if(getDR(FatjetEta1_74x,FatjetEta_->at(0),FatjetPhi1_74x,FatjetPhi_->at(0))<1.0) FillTH2F(h2[9], FatjetPt1_74x,        FatjetPt_->at(0)); 
             if(RA4ElsPt_->size()>0) FillTH2F(h2[10], RA4ElsPt_74x,        RA4ElsPt_->at(0)); 
             if(RA4ElsPt_->size()>0) FillTH2F(h2[11], RA4ElsEta_74x,        RA4ElsEta_->at(0)); 
             if(RA4ElsPt_->size()>0) FillTH2F(h2[12], RA4ElsPhi_74x,        RA4ElsPhi_->at(0)); 
@@ -336,8 +404,11 @@ void RelVal()
             FillTH2F(h2[17], JetPhi1_74x,   JetPhi_->at(0)); 
             FillTH2F(h2[18], FatjetEta1_74x,   FatjetEta_->at(0)); 
             FillTH2F(h2[19], FatjetPhi1_74x,   FatjetPhi_->at(0)); 
-            FillTH2F(h2[20], FatjetM1_74x,   mj_->at(0)); 
-            FillTH2F(h2[21], JetM1_74x,   JetM_->at(0)); 
+            if(getDR(FatjetEta1_74x,FatjetEta_->at(0),FatjetPhi1_74x,FatjetPhi_->at(0))<1.0) FillTH2F(h2[20], FatjetM1_74x,   mj_->at(0)); 
+            if(getDR(JetEta1_74x,JetEta_->at(0),JetPhi1_74x,JetPhi_->at(0))<0.4) FillTH2F(h2[21], JetM1_74x,   JetM_->at(0)); 
+            if(RA4ElsPt_->size()>0) FillTH2F(h2[22], RA4ElsMinIso_74x,        RA4ElsMinIso_->at(0)); 
+            if(RA4MusPt_->size()>0) FillTH2F(h2[23], RA4MusMinIso_74x,        RA4MusMinIso_->at(0)); 
+            FillTH2F(h2[24], JetCSV1_74x,   JetCSV_->at(0)); 
 
             //
             FillTH1F(h1diff[0], MET_74x-MET_); 
@@ -348,8 +419,8 @@ void RelVal()
             FillTH1F(h1diff[5], Nskinnyjet_74x-Nskinnyjet_); 
             FillTH1F(h1diff[6], NBtagCSVM_74x-NBtagCSVM_); 
             FillTH1F(h1diff[7], NFJ_74x-(int)FatjetPt_->size());  
-            FillTH1F(h1diff[8], JetPt1_74x-JetPt_->at(0)); 
-            FillTH1F(h1diff[9], FatjetPt1_74x-FatjetPt_->at(0));  
+            if(getDR(JetEta1_74x,JetEta_->at(0),JetPhi1_74x,JetPhi_->at(0))<0.4) FillTH1F(h1diff[8], JetPt1_74x-JetPt_->at(0)); 
+            if(getDR(FatjetEta1_74x,FatjetEta_->at(0),FatjetPhi1_74x,FatjetPhi_->at(0))<1.0) FillTH1F(h1diff[9], FatjetPt1_74x-FatjetPt_->at(0));  
             if(RA4ElsPt_->size()>0) FillTH1F(h1diff[10], RA4ElsPt_74x-RA4ElsPt_->at(0)); 
             if(RA4ElsPt_->size()>0) FillTH1F(h1diff[11], RA4ElsEta_74x-RA4ElsEta_->at(0)); 
             if(RA4ElsPt_->size()>0) FillTH1F(h1diff[12], RA4ElsPhi_74x-RA4ElsPhi_->at(0)); 
@@ -360,23 +431,18 @@ void RelVal()
             FillTH1F(h1diff[17], JetPhi1_74x-JetPhi_->at(0)); 
             FillTH1F(h1diff[18], FatjetEta1_74x-FatjetEta_->at(0)); 
             FillTH1F(h1diff[19], FatjetPhi1_74x-FatjetPhi_->at(0)); 
-            FillTH1F(h1diff[20], FatjetM1_74x-mj_->at(0)); 
-            FillTH1F(h1diff[21], JetM1_74x-JetM_->at(0)); 
-
-            //
-
-            if(METPhi_74x-METPhi_<-1 || METPhi_74x-METPhi_>1) 
-            {
-                cout << METPhi_74x << " " << METPhi_ << endl; 
-                cout << MET_74x << " " << MET_ << endl; 
-            }
+            if(getDR(FatjetEta1_74x,FatjetEta_->at(0),FatjetPhi1_74x,FatjetPhi_->at(0))<1.0) FillTH1F(h1diff[20], FatjetM1_74x-mj_->at(0)); 
+            if(getDR(JetEta1_74x,JetEta_->at(0),JetPhi1_74x,JetPhi_->at(0))<0.4) FillTH1F(h1diff[21], JetM1_74x-JetM_->at(0)); 
+            if(RA4ElsPt_->size()>0) FillTH1F(h1diff[22], RA4ElsMinIso_74x-RA4ElsMinIso_->at(0)); 
+            if(RA4MusPt_->size()>0) FillTH1F(h1diff[23], RA4MusMinIso_74x-RA4MusMinIso_->at(0)); 
+            FillTH1F(h1diff[24], JetCSV1_74x-JetCSV_->at(0)); 
         }
     } 
     
     //
     // Draw 
     //
-    for(int ivar=0; ivar<22; ivar++) 
+    for(int ivar=0; ivar<Nvar; ivar++) 
     { 
         TLegend *l1 = new TLegend(0.4, 0.7, 0.87, 0.86);
         l1->SetBorderSize(0);
@@ -430,11 +496,11 @@ void RelVal()
         h1_ratio->Draw("EP");
         
         c->cd(2);
-        h2[ivar]->Draw("COLZ");
+        if(h2[ivar]->Integral()>0) h2[ivar]->Draw("COLZ");
         
         c->cd(3); 
         c->cd(3)->SetLogy(1); 
-        h1diff[ivar]->Draw("HIST"); 
+        if(h2[ivar]->Integral()>0) h1diff[ivar]->Draw("HIST"); 
 
         TString strvar = var[ivar];
         strvar.ReplaceAll("_","");  strvar.ReplaceAll(" ","");
@@ -449,3 +515,4 @@ void RelVal()
         delete h1_ratio;
     }
 }
+

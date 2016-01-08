@@ -20,7 +20,7 @@
 #include "TColor.h"
 
 using namespace std;
-bool DoLog          = 0;
+//bool DoLog          = 0;
 bool doData         = 1;
 bool SignalScale    = 1;
 bool DrawOnlyAllFJ  = 1;
@@ -77,7 +77,7 @@ void h1cosmetic(TH1F* &h1, char* title, int linecolor=kBlack, int linewidth=1, i
 //
 // Stacks
 //
-void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, float Lumi=40) 
+void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=false, float Lumi=40) 
 { 
     gInterpreter->ExecuteMacro("~/macros/JaeStyle.C");
 
@@ -149,6 +149,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, float Lumi=40
     if(HistName=="Nskinnyjet")          	var=(char*)"N_{skinny}";
     if(HistName=="Ncsvm")          	        var=(char*)"N_{CSVM}";
     if(HistName=="WpT")                 	var=(char*)"p_{T}(W) [GeV]";
+    if(HistName=="mbb")                 	var=(char*)"Maximum m_{bb} [GeV]";
 
     TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_TTV[7], *h1_MC[7]; 
     TH1F *h1_One[7], *h1_Ratio[7]; 
@@ -241,11 +242,15 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, float Lumi=40
         st[i]->Add(h1_TT_ll[i]);
         st[i]->Add(h1_TT_sl[i]);
         float HistMax = h1_MC[i]->GetMaximum()>h1_f1500_100[i]->GetMaximum()?h1_MC[i]->GetMaximum():h1_f1500_100[i]->GetMaximum();
-        if(h1_DATA[i]->GetMaximum()>HistMax) HistMax=h1_DATA[i]->GetMaximum();
+        if(h1_DATA[i]->GetMaximum()>HistMax) 
+        {  
+            int MaxBin = h1_DATA[i]->GetMaximumBin();
+            HistMax=h1_DATA[i]->GetBinContent(MaxBin) + h1_DATA[i]->GetBinError(MaxBin); 
+        }
         //float HistMax = 4;
         st[i]->SetMaximum(HistMax*(DoLogOne?200:1.7));
         //st[i]->SetMinimum(h1_MC[i]->GetMinimum()*(DoLogOne?1:0));
-        st[i]->SetMinimum((DoLogOne?0.05:0));
+        st[i]->SetMinimum((DoLogOne?0.005:0));
         st[i]->Draw("HIST"); 
 
         ///* needs to be in JaeStyle : FIXME  
@@ -296,13 +301,14 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, float Lumi=40
         // CMS Labels 
         float textSize = 0.05;
 
-        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#sqrt[]{s}=13 TeV, L = %.1f pb^{-1}", Lumi));
+        //TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#sqrt[]{s}=13 TeV, L = %.1f pb^{-1}", Lumi));
+        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#font[42]{%i pb^{-1} (13 TeV)}", (int)Lumi));
         TexEnergyLumi->SetNDC();
         TexEnergyLumi->SetTextSize(textSize);
         TexEnergyLumi->SetTextAlign (31);
         TexEnergyLumi->SetLineWidth(2);
 
-        TLatex *TexCMS = new TLatex(0.2,0.92,"CMS Preliminary");
+        TLatex *TexCMS = new TLatex(0.2,0.92,"CMS #font[52]{Preliminary}");
         TexCMS->SetNDC();
         TexCMS->SetTextSize(textSize);
         TexCMS->SetLineWidth(2);

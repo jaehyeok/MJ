@@ -65,7 +65,7 @@ float GetKappa(TH2F *h2)
 //
 //
 //
-TH2F* KappaOneProcess(TChain *ch, float HTcut=400, float METcut=200, int njetscut=4)  
+TH2F* KappaOneProcess(TChain *ch, float HTcut=400, float METlowcut=200, float METhighcut=300, int njetscut=4)  
 { 
     TH2F *h2 = new TH2F("h2", "h2", 2, 0, 800, 2, 0, 280);
 
@@ -87,7 +87,7 @@ TH2F* KappaOneProcess(TChain *ch, float HTcut=400, float METcut=200, int njetscu
         
         ch->GetEntry(i);        
      
-        if(HT_<HTcut || MET_<METcut || njets_<njetscut) continue;
+        if(HT_<HTcut || MET_<METlowcut || MET_>METhighcut|| njets_<njetscut) continue;
 
         h2->Fill(Min(MJ_,799.99),Min(mT_,279.99));
 
@@ -96,7 +96,7 @@ TH2F* KappaOneProcess(TChain *ch, float HTcut=400, float METcut=200, int njetscu
     return h2;
 }
 
-void Kappa(float HTcut=400, float METcut=200, int njetscut=4)  
+void Kappa(float HTcut=400, float METlowcut=200, float METhighcut=300, int njetscut=4)  
 { 
 
     gStyle->SetPaintTextFormat("6.3f");
@@ -118,8 +118,8 @@ void Kappa(float HTcut=400, float METcut=200, int njetscut=4)
     TH2F *h2_tt_ll; 
     TH2F *h2_tt; 
 
-    h2_tt_sl = KappaOneProcess(ch_tt_sl, HTcut, METcut, njetscut);
-    h2_tt_ll = KappaOneProcess(ch_tt_ll, HTcut, METcut, njetscut);
+    h2_tt_sl = KappaOneProcess(ch_tt_sl, HTcut, METlowcut, METhighcut, njetscut);
+    h2_tt_ll = KappaOneProcess(ch_tt_ll, HTcut, METlowcut, METhighcut, njetscut);
     
     h2_tt_sl->Sumw2();
     h2_tt_ll->Sumw2();
@@ -137,7 +137,7 @@ void Kappa(float HTcut=400, float METcut=200, int njetscut=4)
     cout << "R43 = " << h2_tt->GetBinContent(2,2) / h2_tt->GetBinContent(1,2) << endl;  
     cout << "Kappa = " << kappa << endl;
 
-    TLatex *tex_cuts = new TLatex(0.2,0.8,Form("HT>%i MET>%i njets#geq%i",(int)HTcut,(int)METcut,(int)njetscut));
+    TLatex *tex_cuts = new TLatex(0.2,0.8,Form("HT>%i %i<MET<%i njets#geq%i",(int)HTcut,(int)METlowcut,(int)METhighcut,(int)njetscut));
     tex_cuts->SetNDC();
     tex_cuts->SetTextSize(0.05);
     tex_cuts->SetLineWidth(2);
@@ -180,5 +180,5 @@ void Kappa(float HTcut=400, float METcut=200, int njetscut=4)
     tex_R21->Draw("same");
     tex_R43->Draw("same");
     tex_kappa->Draw("same");
-    c2d->Print(Form("fig/2DMJvsmT_HT%i_MET%i_njets%i.pdf",(int)HTcut,(int)METcut,(int)njetscut));
+    c2d->Print(Form("fig/2DMJvsmT_HT%i_MET%ito%i_njets%i.pdf",(int)HTcut,(int)METlowcut,(int)METhighcut,(int)njetscut));
 }

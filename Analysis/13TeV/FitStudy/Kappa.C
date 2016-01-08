@@ -55,8 +55,6 @@ double gsl_ran_gamma(const double a, const double b, TRandom3 &rand){
 void KappaOneConfig( float N1, float N2, float N3, float N4, float scale, bool doPoisson)  
 { 
 
-
-
     cout << N1 << " " << N2 << " " << N3 << " "  << N4 << " "  << scale 
          << endl;
     
@@ -171,12 +169,12 @@ void KappaOneConfig( float N1, float N2, float N3, float N4, float scale, bool d
     c->Print(Form("fig/Kappa_Npseudo%i_N1%i_N2%i_N3%i_N4%i_%s.pdf", Npseudo, (int)N1, (int)N2, (int)N3, (int)N4, (doPoisson?"Possion":"Gamma")) );
 
 
-
 }
 
 //void Kappa(float N1=100, float N2=10, float N3=40, float N4=4, float scale=1)
 void Kappa(float N1=100, float N2=30, float N3=10, float N4=3, float scale=1, bool doPoisson=false)
 { 
+/*
     KappaOneConfig(N1,N2,N3,N4,0.25,    doPoisson);  
     KappaOneConfig(N1,N2,N3,N4,0.5,     doPoisson);  
     KappaOneConfig(N1,N2,N3,N4,0.75,    doPoisson);  
@@ -184,4 +182,6 @@ void Kappa(float N1=100, float N2=30, float N3=10, float N4=3, float scale=1, bo
     KappaOneConfig(N1,N2,N3,N4,2,       doPoisson);  
     KappaOneConfig(N1,N2,N3,N4,5,       doPoisson);  
     KappaOneConfig(N1,N2,N3,N4,10,      doPoisson);  
+*/
+    KappaOneConfig(10,10,10,10,10,      doPoisson);  
 }

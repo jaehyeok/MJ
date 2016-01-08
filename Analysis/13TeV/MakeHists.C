@@ -10,6 +10,7 @@
 #include "TDatime.h"
 #include "TLegend.h"
 #include "TMath.h"
+#include "TLorentzVector.h"
 
 #include "babytree_manuel.h"
 #include "PassSelection.h"
@@ -153,7 +154,7 @@ void MakeHists(TChain *ch, char* Region, float Lumi)
          *h1_FatjetPhi1[7], *h1_FatjetPhi2[7], *h1_FatjetPhi3[7], *h1_FatjetPhi4[7],
          *h1_FatjetEta1[7], *h1_FatjetEta2[7], *h1_FatjetEta3[7], *h1_FatjetEta4[7],
          *h1_dRFJ[7], *h1_dPhiFJ[7], *h1_dEtaFJ[7], *h1_mindPhibb[7],
-         *h1_HT[7], *h1_MET[7], *h1_METPhi[7], *h1_METx[7], *h1_METy[7], *h1_DPhi[7], *h1_Nfatjet[7], *h1_WpT[7];
+         *h1_HT[7], *h1_MET[7], *h1_METPhi[7], *h1_METx[7], *h1_METy[7], *h1_DPhi[7], *h1_Nfatjet[7], *h1_WpT[7], *h1_mbb[7];
     TH2F *h2_mj1vsmj2[7], *h2_mj2vsmj3[7], *h2_mj3vsmj4[7];
     TH2F *h2_mj1vspt1[7], *h2_mj2vspt2[7], *h2_mj3vspt3[7], *h2_mj4vspt4[7];
     TH2F *h2_HTMET[7], *h2_MJmT[7];
@@ -381,6 +382,9 @@ void MakeHists(TChain *ch, char* Region, float Lumi)
         h1_mindPhibb[i] = InitTH1F( Form("h1_%s_mindPhibb_%ifatjet", ch->GetTitle(), i), 
                                 Form("h1_%s_mindPhibb_%ifatjet", ch->GetTitle(), i), 
                                 10, 0, TMath::Pi());
+        h1_mbb[i] = InitTH1F( Form("h1_%s_mbb_%ifatjet", ch->GetTitle(), i), 
+                              Form("h1_%s_mbb_%ifatjet", ch->GetTitle(), i), 
+                              30, 0, 1500);
         //
         // h2                    
         //
@@ -866,18 +870,27 @@ void MakeHists(TChain *ch, char* Region, float Lumi)
 
         // min dPhi bb 
         float   mindPhibb=999.;
+        float   mbbmax=-999.;
         for(unsigned int ijet=0; ijet<JetPt_->size(); ijet++)
         {
             if( JetCSV_->at(ijet)<0.814 ) continue;
-            for(unsigned int jjet=0; jjet<JetPt_->size(); jjet++) 
+            for(unsigned int jjet=0; jjet<ijet; jjet++) 
             { 
                 if(ijet==jjet) continue;
                 if( JetCSV_->at(jjet)<0.814 ) continue;
                 float dPhitemp = getDPhi(JetPhi_->at(ijet), JetPhi_->at(jjet));
                 if( dPhitemp<mindPhibb ) mindPhibb = dPhitemp;
+               
+                TLorentzVector bjet1; bjet1.SetPtEtaPhiM(JetPt_->at(ijet),JetEta_->at(ijet),JetPhi_->at(ijet),JetM_->at(ijet)); 
+                TLorentzVector bjet2; bjet2.SetPtEtaPhiM(JetPt_->at(jjet),JetEta_->at(jjet),JetPhi_->at(jjet),JetM_->at(jjet)); 
+                float mbbtemp = (bjet1+bjet2).M(); 
+                if(mbbtemp>mbbmax) mbbmax=mbbtemp;
             }
         }
+
         FillTH1FAll(h1_mindPhibb,         NFJbin, mindPhibb,  EventWeight_);
+        FillTH1FAll(h1_mbb,         NFJbin, mbbmax,  EventWeight_);
+       
 
     } // for(int i = 0; i<nentries; i++)
    
@@ -945,6 +958,7 @@ void MakeHists(TChain *ch, char* Region, float Lumi)
         h1_dPhiFJ[i]->SetDirectory(0);                      h1_dPhiFJ[i]->Write();
         h1_dEtaFJ[i]->SetDirectory(0);                      h1_dEtaFJ[i]->Write();
         h1_mindPhibb[i]->SetDirectory(0);                   h1_mindPhibb[i]->Write();
+        h1_mbb[i]->SetDirectory(0);                         h1_mbb[i]->Write();
         h2_HTMET[i]->SetDirectory(0);                       h2_HTMET[i]->Write();
         h2_MJmT[i]->SetDirectory(0);                        h2_MJmT[i]->Write();
         h2_HTmT[i]->SetDirectory(0);                        h2_HTmT[i]->Write();

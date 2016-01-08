@@ -24,11 +24,11 @@ bool PassSelection(TString Region,
     
     if(Region=="TEST" 
         && HT   > 400 
-        && MET  > 150 
+        && MET  > 200 
         && Nb   > 0 
         && Njet > 4 
-        //&& mT   < 140 
-        //&& MJ   < 600 
+        //&& mT   > 140 
+        //&& MJ   > 400 
     )  passed = true;
    
     if(Region=="Baseline" 
