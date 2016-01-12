@@ -172,6 +172,7 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
     TH1F *h1_MJ[7], *h1_mT[7], *h1_Nskinnyjet[7], *h1_Ncsvm[7], *h1_MJ_ISR[7],
          *h1_muspT[7], *h1_muspTminusMET[7], *h1_musEta[7], *h1_musPhi[7], 
          *h1_elspT[7], *h1_elspTminusMET[7], *h1_elsEta[7], *h1_elsPhi[7], 
+         *h1_lepspT[7], *h1_lepsEta[7], *h1_lepsPhi[7], 
          *h1_mj[7], *h1_FatjetPt[7], *h1_FatjetEta[7], 
          *h1_FatjetPt1[7],  *h1_FatjetPt2[7],  *h1_FatjetPt3[7],  *h1_FatjetPt4[7],
          *h1_mj1[7],  *h1_mj2[7],  *h1_mj3[7],  *h1_mj4[7], 
@@ -269,6 +270,15 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
                                 //100, -2.1, 2.1);
         h1_elsPhi[i] = InitTH1F( Form("h1_%s_elsPhi_%ifatjet", ch->GetTitle(), i), 
                                 Form("h1_%s_elsPhi_%ifatjet", ch->GetTitle(), i), 
+                                20, -TMath::Pi(), TMath::Pi());
+        h1_lepspT[i] = InitTH1F( Form("h1_%s_lepspT_%ifatjet", ch->GetTitle(), i), 
+                             Form("h1_%s_lepspT_%ifatjet", ch->GetTitle(), i), 
+                             20, 0, 200);
+        h1_lepsEta[i] = InitTH1F( Form("h1_%s_lepsEta_%ifatjet", ch->GetTitle(), i), 
+                                Form("h1_%s_lepsEta_%ifatjet", ch->GetTitle(), i), 
+                                20, -2.5, 2.5);
+        h1_lepsPhi[i] = InitTH1F( Form("h1_%s_lepsPhi_%ifatjet", ch->GetTitle(), i), 
+                                Form("h1_%s_lepsPhi_%ifatjet", ch->GetTitle(), i), 
                                 20, -TMath::Pi(), TMath::Pi());
         h1_HT[i] = InitTH1F( Form("h1_%s_HT_%ifatjet", ch->GetTitle(), i), 
                              Form("h1_%s_HT_%ifatjet", ch->GetTitle(), i), 
@@ -716,13 +726,6 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
             continue;
         }
         
-        //
-        // Apply selection   
-        //
-        // baseline selection
-        if( !PassBaselineSelection(HT_thres, met_, Nbcsvm_thres, Nskinny_thres) ) continue; 
-        if( !PassSelection(Selection, HT_thres, met_, Nbcsvm_thres, Nskinny_thres, mT, MJ_thres)) continue;
-        
 /*      
         // gen top info
         float top1Phi=-999;  
@@ -760,7 +763,6 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
         // Fill histogams 
         //
 
-
         // yields
 	    if(nels_==1) 
         {
@@ -780,7 +782,19 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
                 if(PassMethod2Region(region[iregion], MJ_thres, mT, met_, Nbcsvm_thres, Nskinny_thres)) FillTH2FAll(h2_yields_bins, NFJbin, 2.5, iregion+0.5, weight_);   
             }
         }
-       
+        
+        //
+        // Apply selection   
+        //
+        // baseline selection
+        if( !PassBaselineSelection(HT_thres, met_, Nbcsvm_thres, Nskinny_thres) ) continue; 
+        if( !PassSelection(Selection, HT_thres, met_, Nbcsvm_thres, Nskinny_thres, mT, MJ_thres)) continue;
+	    
+        // leptons          
+        FillTH1FAll(h1_lepspT,  NFJbin, leps_pt_->at(0), weight_);                 
+        FillTH1FAll(h1_lepsEta,  NFJbin, leps_eta_->at(0), weight_);                 
+        FillTH1FAll(h1_lepsPhi,  NFJbin, leps_phi_->at(0), weight_);                 
+        
 
         // Method 1
         if(met_>200 && met_<400 && Nskinny_thres>=6 && Nskinny_thres<=7) FillTH2FAll(h2_M1_MET200to400_nj6to7,   NFJbin, MJ_thres, mT, weight_);
@@ -789,8 +803,6 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
         if(met_>400             && Nskinny_thres>=8                    ) FillTH2FAll(h2_M1_MET400toInf_nj8toInf, NFJbin, MJ_thres, mT, weight_);
         
         // Method 2 
-
-
         if(NFJbin>1) FillTH2FAll(h2_mj1vsmj2, NFJbin, fjets_m_->at(mj_thres_sorted_index.at(0)), fjets_m_->at(mj_thres_sorted_index.at(1)), weight_);           
         if(NFJbin>2) FillTH2FAll(h2_mj2vsmj3, NFJbin, fjets_m_->at(mj_thres_sorted_index.at(1)), fjets_m_->at(mj_thres_sorted_index.at(2)), weight_);           
         if(NFJbin>3) FillTH2FAll(h2_mj3vsmj4, NFJbin, fjets_m_->at(mj_thres_sorted_index.at(2)), fjets_m_->at(mj_thres_sorted_index.at(3)), weight_);           
@@ -1013,6 +1025,9 @@ void MakeHists(TChain *ch, char* Selection, float Lumi)
         h1_elspTminusMET[i]->SetDirectory(0);               h1_elspTminusMET[i]->Write();
         h1_elsEta[i]->SetDirectory(0);                      h1_elsEta[i]->Write();
         h1_elsPhi[i]->SetDirectory(0);                      h1_elsPhi[i]->Write();
+        h1_lepspT[i]->SetDirectory(0);                      h1_lepspT[i]->Write();
+        h1_lepsEta[i]->SetDirectory(0);                     h1_lepsEta[i]->Write();
+        h1_lepsPhi[i]->SetDirectory(0);                     h1_lepsPhi[i]->Write();
         h1_Nfatjet[i]->SetDirectory(0);                     h1_Nfatjet[i]->Write();
         h1_Nskinnyjet[i]->SetDirectory(0);                  h1_Nskinnyjet[i]->Write();
         h1_Ncsvm[i]->SetDirectory(0);                       h1_Ncsvm[i]->Write();

@@ -24,6 +24,7 @@ using namespace std;
 bool doData         = 1;
 bool SignalScale    = 1;
 bool DrawOnlyAllFJ  = 1;
+bool NormToData     = 1;
 
 //
 // "OLD(Jack's)" UCSB RA4 Color scheme
@@ -77,11 +78,11 @@ void h1cosmetic(TH1F* &h1, char* title, int linecolor=kBlack, int linewidth=1, i
 //
 // Stacks
 //
-void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=false, float Lumi=40) 
+void Make1DPlots(TString HistName, char* Selection, int NMergeBins=1, bool DoLog=false, float Lumi=40) 
 { 
     gInterpreter->ExecuteMacro("~/macros/JaeStyle.C");
 
-    TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Region));
+    TFile* HistFile = TFile::Open(Form("HistFiles/Hist_%s.root", Selection));
    
     char *var; 
     if(HistName=="dRlep")                 	var=(char*)"dR(lepton,FJ)";
@@ -141,17 +142,20 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
     if(HistName=="muspTminusMET")          	var=(char*)"(MET-p_{T}(muon))/p_{T}(muon)";                  
     if(HistName=="musEta")              	var=(char*)"#eta(muon)";                         
     if(HistName=="musPhi")              	var=(char*)"#phi(muon)";                         
-    if(HistName=="elspT")               	var=(char*)"p_{T}(muon) [GeV]";                  
-    if(HistName=="elspTminusMET")          	var=(char*)"(MET-p_{T}(muon))/p_{T}(muon)";                  
-    if(HistName=="elsEta")              	var=(char*)"#eta(muon)";                         
-    if(HistName=="elsPhi")              	var=(char*)"#phi(muon)";                         
+    if(HistName=="elspT")               	var=(char*)"p_{T}(electron) [GeV]";                  
+    if(HistName=="elspTminusMET")          	var=(char*)"(MET-p_{T}(electron))/p_{T}(muon)";                  
+    if(HistName=="elsEta")              	var=(char*)"#eta(electron)";                         
+    if(HistName=="elsPhi")              	var=(char*)"#phi(electron)";                         
+    if(HistName=="lepspT")               	var=(char*)"p_{T}(lepton) [GeV]";                  
+    if(HistName=="lepsEta")              	var=(char*)"#eta(lepton)";                         
+    if(HistName=="lepsPhi")              	var=(char*)"#phi(lepton)";                         
     if(HistName=="Nfatjet")             	var=(char*)"N_{fatjet}";
     if(HistName=="Nskinnyjet")          	var=(char*)"N_{skinny}";
     if(HistName=="Ncsvm")          	        var=(char*)"N_{CSVM}";
     if(HistName=="WpT")                 	var=(char*)"p_{T}(W) [GeV]";
     if(HistName=="mbb")                 	var=(char*)"Maximum m_{bb} [GeV]";
 
-    TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_TTV[7], *h1_MC[7]; 
+    TH1F *h1_DATA[7], *h1_T[7], *h1_TT_sl[7], *h1_TT_ll[7], *h1_WJets[7], *h1_DY[7], *h1_TTV[7], *h1_QCD[7],*h1_Others[7], *h1_MC[7]; 
     TH1F *h1_One[7], *h1_Ratio[7]; 
     TH1F *h1_f1500_100[7], *h1_f1200_800[7];
     THStack *st[7];
@@ -171,6 +175,8 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         h1_WJets[i]     = (TH1F*)HistFile->Get(Form("h1_WJets_%s_%ifatjet", HistName.Data(), i));
         h1_DY[i]        = (TH1F*)HistFile->Get(Form("h1_DY_%s_%ifatjet", HistName.Data(), i)); 
         h1_TTV[i]       = (TH1F*)HistFile->Get(Form("h1_TTV_%s_%ifatjet", HistName.Data(), i)); 
+        h1_QCD[i]       = (TH1F*)HistFile->Get(Form("h1_QCD_%s_%ifatjet", HistName.Data(), i)); 
+        h1_Others[i]    = (TH1F*)HistFile->Get(Form("h1_Others_%s_%ifatjet", HistName.Data(), i)); 
         h1_f1500_100[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1500_100_%s_%ifatjet", HistName.Data(), i)); 
         h1_f1200_800[i] = (TH1F*)HistFile->Get(Form("h1_T1tttt_f1200_800_%s_%ifatjet", HistName.Data(), i)); 
 
@@ -187,6 +193,8 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         h1_WJets[i]->Rebin(NMergeBins);
         h1_DY[i]->Rebin(NMergeBins);
         h1_TTV[i]->Rebin(NMergeBins);
+        h1_QCD[i]->Rebin(NMergeBins);
+        h1_Others[i]->Rebin(NMergeBins);
         h1_f1500_100[i]->Rebin(NMergeBins);
         h1_f1200_800[i]->Rebin(NMergeBins);
         
@@ -196,7 +204,26 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         h1_MC[i]->Add(h1_T[i]);
         h1_MC[i]->Add(h1_DY[i]);
         h1_MC[i]->Add(h1_TTV[i]);
-        
+        h1_MC[i]->Add(h1_QCD[i]);
+        h1_MC[i]->Add(h1_Others[i]);
+       
+        float DataOverMC = h1_DATA[i]->Integral()/h1_MC[i]->Integral(); 
+        if(NormToData) 
+        { 
+            h1_TT_sl[i]->Scale(DataOverMC);
+            h1_TT_ll[i]->Scale(DataOverMC);
+            h1_WJets[i]->Scale(DataOverMC);
+            h1_T[i]->Scale(DataOverMC);
+            h1_DY[i]->Scale(DataOverMC);
+            h1_TTV[i]->Scale(DataOverMC);
+            h1_QCD[i]->Scale(DataOverMC);
+            h1_Others[i]->Scale(DataOverMC);
+            h1_MC[i]->Scale(DataOverMC);
+        }
+        // add DY and QCD to Others 
+        h1_Others[i]->Add(h1_DY[i]);
+        h1_Others[i]->Add(h1_QCD[i]);
+
         h1_Ratio[i] = (TH1F*)h1_DATA[i]->Clone(Form("h1_Ratio_%s_%ifatjet", HistName.Data(), i));
         h1_Ratio[i]->Divide(h1_MC[i]);
 
@@ -205,7 +232,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         h1cosmetic(h1_TT_ll[i],         Form("TT(ll) %ifatjet", i),             kBlack, 2, c_tt_2l,     var);
         h1cosmetic(h1_T[i],             Form("t+tW %ifatjet", i),               kBlack, 2, c_singlet,   var);
         h1cosmetic(h1_WJets[i],         Form("WJets %ifatjet", i),              kBlack, 2, c_wjets,     var);
-        h1cosmetic(h1_DY[i],            Form("DYJets %ifatjet", i),             kBlack, 2, c_zjets,     var);
+        h1cosmetic(h1_Others[i],        Form("Others %ifatjet", i),             kBlack, 2, c_zjets,     var);
         h1cosmetic(h1_TTV[i],           Form("TTV %ifatjet", i),                kBlack, 2, c_other,     var);
         h1cosmetic(h1_f1500_100[i],     Form("T1tttt(1500,100) %ifatjet", i),   kRed,   2, 0,           var);
         h1cosmetic(h1_f1200_800[i],     Form("T1tttt(1200,800) %ifatjet", i),   kBlue,  2, 0,           var);
@@ -236,7 +263,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         if(i==5) StackTitle = "5+ fatjets";
         st[i] = new THStack( Form("Stack %ifatjet", i), StackTitle);
         st[i]->Add(h1_TTV[i]);
-        st[i]->Add(h1_DY[i]);
+        st[i]->Add(h1_Others[i]);
         st[i]->Add(h1_WJets[i]);
         st[i]->Add(h1_T[i]);
         st[i]->Add(h1_TT_ll[i]);
@@ -265,7 +292,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         //*/
         h1_DATA[i]->SetLineColor(kBlack);
         h1_DATA[i]->SetMarkerColor(kBlack);
-        h1_DATA[i]->SetMarkerSize(1);
+        h1_DATA[i]->SetMarkerSize(0.6);
         h1_DATA[i]->SetMarkerStyle(20);
         h1_DATA[i]->SetStats(0);
         if(doData) h1_DATA[i]->Draw("E SAME");
@@ -287,7 +314,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         l1->AddEntry(h1_TT_ll[i],        " t#bar{t}(2#font[12]{l})",    "f");
         l1->AddEntry(h1_T[i],           " t+tW",  "f");
         l1->AddEntry(h1_WJets[i],       " WJets", "f");
-        l1->AddEntry(h1_DY[i],          " Drell-Yan",    "f");
+        l1->AddEntry(h1_Others[i],      " DY/QCD/others",    "f");
         l1->AddEntry(h1_TTV[i],         " t#bar{t}V",    "f");
         l1->AddEntry(h1_f1500_100[i],   " T1tttt[1500,100]", "l");
         l1->AddEntry(h1_f1200_800[i],   " T1tttt[1200,800]", "l");
@@ -302,7 +329,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         float textSize = 0.05;
 
         //TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#sqrt[]{s}=13 TeV, L = %.1f pb^{-1}", Lumi));
-        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#font[42]{%i pb^{-1} (13 TeV)}", (int)Lumi));
+        TLatex *TexEnergyLumi = new TLatex(0.9,0.92,Form("#font[42]{%.1f fb^{-1} (13 TeV)}", Lumi/1000));
         TexEnergyLumi->SetNDC();
         TexEnergyLumi->SetTextSize(textSize);
         TexEnergyLumi->SetTextAlign (31);
@@ -312,6 +339,12 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         TexCMS->SetNDC();
         TexCMS->SetTextSize(textSize);
         TexCMS->SetLineWidth(2);
+        
+        TLatex *SF = new TLatex(0.88,0.84,Form("#font[42]{%s, Data/MC=%.1f%%}", Selection, DataOverMC*100));
+        SF->SetNDC();
+        SF->SetTextSize(textSize*0.8);
+        SF->SetTextAlign (31);
+        SF->SetLineWidth(2);
        
         // FIXME : need to add lepton flavor
         TString LabelExt = Form("N_{fatjet} = %i", i);
@@ -325,6 +358,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         TexEnergyLumi->Draw("SAME");
         TexCMS->Draw("SAME");
         if(i!=6) TexExt->Draw("SAME"); 
+        SF->Draw("SAME");
 
         if(DrawOnlyAllFJ) c_AllFJ->cd();
         else 
@@ -352,7 +386,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
         //h1_Ratio[i]->SetMinimum(0);
         //h1_Ratio[i]->SetMaximum(2);
         h1_Ratio[i]->SetMarkerStyle(20);
-        h1_Ratio[i]->SetMarkerSize(0.8);
+        h1_Ratio[i]->SetMarkerSize(0.6);
         //h1_Ratio[i]->SetLabelSize(0.1,"XY");
         //h1_Ratio[i]->SetTitleSize(0.1,"XY");
         //h1_Ratio[i]->SetTitleOffset(1.5);
@@ -363,11 +397,11 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
     if(HistName=="mj") HistName="JetMass";
     if(DrawOnlyAllFJ)
     {
-        c_AllFJ->Print( Form("Figures/%s/CompareDataMC_AllFJ_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
+        c_AllFJ->Print( Form("Figures/%s/CompareDataMC_AllFJ_%s_%s%s.pdf", Selection, HistName.Data(), Selection, DoLog?"_log":"") ); 
     }
     else 
     { 
-        c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Region, HistName.Data(), Region, DoLog?"_log":"") ); 
+        c->Print( Form("Figures/%s/CompareDataMC_%s_%s%s.pdf", Selection, HistName.Data(), Selection, DoLog?"_log":"") ); 
     } 
     // 
     HistFile->Close();

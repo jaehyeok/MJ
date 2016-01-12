@@ -75,6 +75,8 @@ void DoAnalysis(bool OnlyDraw=false)
     ch_f1500_100->Add(BabyDirMC+"*1500*100*");
     ch_f1200_800->Add(BabyDirMC+"*1200*800*");
     
+    if(!OnlyDraw) 
+    {
     // ----------------------------------------
     //  Get number of entries 
     // ----------------------------------------
@@ -88,6 +90,7 @@ void DoAnalysis(bool OnlyDraw=false)
     cout << "others             : " << ch_others->GetEntries()      << endl;
     cout << "T1tttt(1500,100)   : " << ch_f1500_100->GetEntries()   << endl;
     cout << "T1tttt(1200,8000)  : " << ch_f1200_800->GetEntries()   << endl;
+    }
 
     //
     // Loop over SR and CR : make sure that these regions exist in "PassSelection.h"
@@ -138,12 +141,9 @@ void DoAnalysis(bool OnlyDraw=false)
         // ---------------------------------------- 
 
         // basic kinematic variables
-        Make1DPlots("muspT",        Region[iregion],	1,	false,	Lumi);
-        Make1DPlots("musPhi",       Region[iregion],	1,	false,	Lumi);
-        Make1DPlots("musEta",       Region[iregion],	1,	false,	Lumi);
-        Make1DPlots("elspT",        Region[iregion],	1,	false,	Lumi);
-        Make1DPlots("elsPhi",       Region[iregion],	1,	false,	Lumi);
-        Make1DPlots("elsEta",       Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("lepspT",       Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("lepsPhi",      Region[iregion],	1,	false,	Lumi);
+        Make1DPlots("lepsEta",      Region[iregion],	1,	false,	Lumi);
         Make1DPlots("mT",           Region[iregion],	1,	false,	Lumi);
         Make1DPlots("mj",           Region[iregion],	1,	false,	Lumi);
         Make1DPlots("MJ",           Region[iregion],	2,	false,	Lumi);
