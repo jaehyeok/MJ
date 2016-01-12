@@ -19,22 +19,8 @@ void DoAnalysis(bool OnlyDraw=false)
 {
     // Style
     gROOT->ProcessLine(".L /Users/jaehyeok/macros/rootlogon.C");
-/*    
-    // Load macros 
-    int loadMakeHists   = gROOT->LoadMacro("MakeHists.C+");
-    int loadMake1DPlots = gROOT->LoadMacro("Make1DPlots.C+");
-    int loadMake2DPlots =  gROOT->LoadMacro("Make2DPlots.C+");
-    int loadMakeTables  =  gROOT->LoadMacro("MakeTables.C+");
-    int loadMakeCards   =  gROOT->LoadMacro("MakeCards.C+");
-
-    cout << "Loading MakeHists.C    : " << (loadMakeHists==0?"Loaded":"Not loaded")   << endl;
-    cout << "Loading Make1DPlots.C  : " << (loadMake1DPlots==0?"Loaded":"Not loaded") << endl;
-    cout << "Loading Make2DPlots.C  : " << (loadMake2DPlots==0?"Loaded":"Not loaded") << endl;
-    cout << "Loading MakeTables.C   : " << (loadMakeTables==0?"Loaded":"Not loaded")  << endl;
-    cout << "Loading MakeCards.C    : " << (loadMakeCards==0?"Loaded":"Not loaded")   << endl;
-    cout << endl; 
-*/
-    float Lumi = 42; // pb-1
+    
+    float Lumi = 2100; // pb-1
 
     // ----------------------------------------
     //  Define chains  
@@ -46,44 +32,60 @@ void DoAnalysis(bool OnlyDraw=false)
     TChain *ch_dy           = new TChain("tree", "DY");
     TChain *ch_t            = new TChain("tree", "T");
     TChain *ch_ttv          = new TChain("tree", "TTV");
+    TChain *ch_qcd          = new TChain("tree", "QCD");
+    TChain *ch_others       = new TChain("tree", "Others");
+    
     TChain *ch_f1500_100    = new TChain("tree", "T1tttt_f1500_100");
     TChain *ch_f1200_800    = new TChain("tree", "T1tttt_f1200_800");
   
 
-    TString BabyDir = "/Users/jaehyeok/scratch/2015_07_26/skim_1lht400/";
+    TString BabyDirData = "/Users/jaehyeok/Research/cms/UCSB/MJ/Analysis/susy_cfa_babies/2015_11_20/data/singlelep/combined/skim_abcd/";
+    TString BabyDirMC = "/Users/jaehyeok/Research/cms/UCSB/MJ/Analysis/susy_cfa_babies/2015_11_28/mc/skim_abcd/";
     
     // Data
-    //ch_data->Add(BabyDir+"*JetHT*.root");                            
-    ch_data->Add(BabyDir+"*HTMHT*.root");                            
+    ch_data->Add(BabyDirData+"*Single*.root");                            
     
     // TT 
-    ch_ttbar_sl->Add(BabyDir+"*TTJets*25ns*.root");
-    ch_ttbar_ll->Add(BabyDir+"*TTJets*25ns*.root");
+    ch_ttbar_sl->Add(BabyDirMC+"*TTJets*Lept*");
+    ch_ttbar_sl->Add(BabyDirMC+"*TTJets_HT*");
+    ch_ttbar_ll->Add(BabyDirMC+"*TTJets*Lept*");
+    ch_ttbar_ll->Add(BabyDirMC+"*TTJets_HT*");
     // WJets 
-    //ch_wjets->Add(BabyDir+"*WJetsToLNu*.root");
-    // DY 
-    //ch_dy->Add(BabyDir+"*DYJetsToLL*.root");
+    ch_wjets->Add(BabyDirMC+"*_WJetsToLNu*");
     // Singla top 
-    ch_t->Add(BabyDir+"*T*channel*.root");
+    ch_t->Add(BabyDirMC+"*_ST_*");
     // TTV 
-    ch_ttv->Add(BabyDir+"*TTW*.root");
-    ch_ttv->Add(BabyDir+"*TTZ*.root");
-    ch_ttv->Add(BabyDir+"*WH_HToBB*.root");
+    ch_ttv->Add(BabyDirMC+"*_TTWJets*");
+    ch_ttv->Add(BabyDirMC+"*_TTZTo*");
+    ch_ttv->Add(BabyDirMC+"*_TTG*");
+    // QCD   
+    ch_qcd->Add(BabyDirMC+"*_QCD_HT*");
+    //ch_qcd->Add(BabyDirMC+"*_TTJets_TuneCUET*");
+    // DY 
+    ch_dy->Add(BabyDirMC+"*DYJetsToLL*");
+    // Others 
+    ch_others->Add(BabyDirMC+"*_ZJet*");
+    ch_others->Add(BabyDirMC+"*_WWTo*");
+    ch_others->Add(BabyDirMC+"*_WZTo*");
+    ch_others->Add(BabyDirMC+"*ggZH_HToBB*");
+    ch_others->Add(BabyDirMC+"*ttHJetTobb*");
+    ch_others->Add(BabyDirMC+"*_TTTT*");
 
     // Signal
-    ch_f1500_100->Add(BabyDir+"*_*mGl-1500_mLSP-100*.root");
-    ch_f1200_800->Add(BabyDir+"*_*mGl-1200_mLSP-800*.root");
+    ch_f1500_100->Add(BabyDirMC+"*1500*100*");
+    ch_f1200_800->Add(BabyDirMC+"*1200*800*");
     
     // ----------------------------------------
     //  Get number of entries 
     // ----------------------------------------
     cout << "data               : " << ch_data->GetEntries()        << endl;
-    cout << "ttbarl             : " << ch_ttbar_sl->GetEntries()    << endl;
-    cout << "ttbarll            : " << ch_ttbar_ll->GetEntries()    << endl;
+    cout << "ttbar(1l)          : " << ch_ttbar_sl->GetEntries()    << endl;
+    cout << "ttbar(2l)          : " << ch_ttbar_ll->GetEntries()    << endl;
     cout << "wjets              : " << ch_wjets->GetEntries()       << endl;
     cout << "dy                 : " << ch_dy->GetEntries()          << endl;
-    cout << "Single top         : " << ch_t->GetEntries()           << endl;
-    cout << "TTV                : " << ch_ttv->GetEntries()         << endl;
+    cout << "single top         : " << ch_t->GetEntries()           << endl;
+    cout << "ttb                : " << ch_ttv->GetEntries()         << endl;
+    cout << "others             : " << ch_others->GetEntries()      << endl;
     cout << "T1tttt(1500,100)   : " << ch_f1500_100->GetEntries()   << endl;
     cout << "T1tttt(1200,8000)  : " << ch_f1200_800->GetEntries()   << endl;
 
@@ -113,6 +115,8 @@ void DoAnalysis(bool OnlyDraw=false)
             MakeHists(ch_dy,	    Region[iregion],	Lumi); 
             MakeHists(ch_t,         Region[iregion],	Lumi); 
             MakeHists(ch_ttv,       Region[iregion],	Lumi); 
+            MakeHists(ch_qcd,       Region[iregion],	Lumi); 
+            MakeHists(ch_others,    Region[iregion],	Lumi); 
             MakeHists(ch_f1500_100, Region[iregion],	Lumi);  
             MakeHists(ch_f1200_800, Region[iregion],	Lumi); 
             
@@ -167,6 +171,8 @@ void DoAnalysis(bool OnlyDraw=false)
         MakeTables(0,   Region[iregion], false,	Lumi);
         //MakeTables(11,  Region[iregion], false,	Lumi);
         //MakeTables(13,  Region[iregion], false,	Lumi);
+        
+        MakeTablesAllRegions(0,   Region[iregion], false,	Lumi);
         
         // ----------------------------------------
         //  Make cards for combine/LandS 

@@ -4,272 +4,283 @@
 
 using namespace std;
 
-// bool status = true;
-int             event_;
+// event info  
+Long64_t        event_;
 int             run_;
 int             lumi_;
-float           EventWeight_;
-float           EventWeightNeg_;
-bool            json_golden_; 
+// weights, filters, trigger 
+bool            stitch_; 
+float           weight_;
+bool            pass_; // need to add more pass_xx 
 bool            pass_hbhe_;
 bool            pass_cschalo_;
 bool            pass_eebadsc_;
-bool            pass_goodv_;
-int             Npu_;
-int             Npv_;
-int             Nfatjet_;
-int             Nskinnyjet_;
-int             NBtagCSVM_;
-int             NLeps_;
-float           MJ_;
-float           MET_;
-float           OnMET_;
-float           HT_;
-float           OnHT_;
-float           METPhi_;
+bool            pass_goodv_; 
 vector<bool>    *trig_;
-vector<float>   *mj_;
-vector<float>   *mj08_;
-vector<float>   *FatjetPt_;
-vector<float>   *FatjetEta_;
-vector<float>   *FatjetPhi_;
-vector<float>   *RA4MusPt_;
-vector<float>   *RA4MusPhi_;
-vector<float>   *RA4MusEta_;
-vector<float>   *RA4MusQ_;
-vector<float>   *RA4MusMinIso_;
-vector<bool>    *IsRA4Mus_;
-vector<float>   *RA4ElsPt_;
-vector<float>   *RA4ElsPhi_;
-vector<float>   *RA4ElsEta_;
-vector<float>   *RA4ElsQ_;
-vector<float>   *RA4ElsMinIso_;
-vector<bool>    *IsRA4Els_;
-vector<float>   *JetM_;
-vector<float>   *JetPt_;
-vector<float>   *JetEta_;
-vector<float>   *JetPhi_;
-vector<float>   *JetCSV_;
-vector<bool>    *JetIsLep_;
-vector<float>   *RA4MusVetoPt_;
-vector<float>   *RA4ElsVetoPt_;
-vector<int>     *GenId_;
-vector<float>   *GenStatus_;
-vector<int>     *GenMId_;
-vector<int>     *GenGMId_;
-vector<float>   *GenPt_;
-vector<float>   *GenEta_;
-vector<float>   *GenPhi_;
-
-int nels_;
-int nmus_;
-int nvels_;
-int nvmus_;
-float  mt_;
-unsigned int  mc_type_;
+// PU
+int             ntrupv_;
+float           ntrupv_mean_;
+int             npv_;
+// event variables 
+float           ht_;
+float           met_;
+float           met_phi_;
+float           mt_;
+// fat jets 
+float           mj_;
+int             nfjets_;
+vector<float>   *fjets_m_;
+vector<float>   *fjets_pt_;
+vector<float>   *fjets_phi_;
+vector<float>   *fjets_eta_;
+float           mj08_;
+int             nfjets08_;
+vector<float>   *fjets08_m_;
+vector<float>   *fjets08_pt_;
+vector<float>   *fjets08_phi_; 
+vector<float>   *fjets08_eta_;
+// leptons
+int             nleps_; 
+int             nvleps_; 
+vector<float>   *leps_pt_;
+vector<float>   *leps_phi_;
+vector<float>   *leps_eta_;
+vector<float>   *leps_id_;
+int             nmus_;
+int             nvmus_;
+vector<float>   *mus_pt_;
+vector<float>   *mus_phi_;
+vector<float>   *mus_eta_;
+vector<float>   *mus_charge_;
+vector<float>   *mus_miniso_;
+vector<bool>    *mus_sigid_;
+int             nels_;
+int             nvels_;
+vector<float>   *els_pt_;
+vector<float>   *els_phi_;
+vector<float>   *els_eta_;
+vector<float>   *els_charge_;
+vector<float>   *els_miniso_;
+vector<bool>    *els_sigid_;
+// jets
+int             njets_;
+int             nbm_;
+vector<float>   *jets_m_;
+vector<float>   *jets_pt_;
+vector<float>   *jets_phi_;
+vector<float>   *jets_eta_;
+vector<float>   *jets_csv_;
+vector<bool>    *jets_islep_;
+// mc truth 
 int ntruleps_;
 int ntruels_;
 int ntrumus_;
 int ntrutaush_;
 int ntrutausl_;
+vector<int>     *mc_id_;
+vector<int>     *mc_mom_;
+vector<float>   *mc_pt_;
+vector<float>   *mc_phi_;
+vector<float>   *mc_eta_;
+vector<float>   *mc_mass_;
 
-//vector<float>   *GenE_;
+//////////////////////////////////////////////////////
 
-bool        TrigMuon_;
-bool        TrigSingleMuon_;
-float        top1pT_;
-float        top1Phi_;
-float        top2pT_;
-float        top2Phi_;
-
-TBranch         *b_event;   //!
-TBranch         *b_run;   //!
-TBranch         *b_lumi;   //!
-TBranch         *b_EventWeight;   //!
-TBranch         *b_EventWeightNeg;   //!
-TBranch         *b_json_golden;   //!
+// event info  
+TBranch         *b_event;  
+TBranch         *b_run;  
+TBranch         *b_lumi;    
+// weights, filters, trigger 
+TBranch         *b_stitch;
+TBranch         *b_weight;  
+TBranch         *b_pass;
 TBranch         *b_pass_hbhe;
 TBranch         *b_pass_cschalo;
 TBranch         *b_pass_eebadsc;
 TBranch         *b_pass_goodv;
-TBranch         *b_Npu;   //!
-TBranch         *b_Npv;   //!
-TBranch         *b_Nfatjet;   //!
-TBranch         *b_Nskinnyjet;   //!
-TBranch         *b_NBtagCSVM;   //!
-TBranch         *b_NLeps;   //!
-TBranch         *b_MJ;   //!
-TBranch         *b_MET;   //!
-TBranch         *b_OnMET;   //!
-TBranch         *b_HT;   //!
-TBranch         *b_OnHT;   //!
-TBranch         *b_METPhi;   //!
 TBranch         *b_trig;   //!
-TBranch         *b_mj;   //!
-TBranch         *b_mj08;   //!
-TBranch         *b_FatjetPt;   //!
-TBranch         *b_FatjetEta;   //!
-TBranch         *b_FatjetPhi;   //!
+// PU
+TBranch         *b_ntrupv;  
+TBranch         *b_ntrupv_mean;  
+TBranch         *b_npv;   
+// event variables 
+TBranch         *b_ht;   
+TBranch         *b_met;   
+TBranch         *b_met_phi;   
+TBranch         *b_mt;  
+// fat jets
+TBranch         *b_mj;  
+TBranch         *b_nfjets;   
+TBranch         *b_fjets_m;   //!
+TBranch         *b_fjets_pt;   //!
+TBranch         *b_fjets_phi;   //!
+TBranch         *b_fjets_eta;   //!
+TBranch         *b_mj08;  
+TBranch         *b_nfjets08;   
+TBranch         *b_fjets08_m;   //!
+TBranch         *b_fjets08_pt;   //!
+TBranch         *b_fjets08_phi;   //!
+TBranch         *b_fjets08_eta;   //!
+// leptons 
+TBranch         *b_nleps;   //!
+TBranch         *b_nvleps;   //!
+TBranch         *b_leps_pt;   //!
+TBranch         *b_leps_phi;   //!
+TBranch         *b_leps_eta;   //!
+TBranch         *b_leps_id;   //!
+TBranch         *b_nmus;
+TBranch         *b_nvmus;
 TBranch         *b_mus_pt;   //!
 TBranch         *b_mus_phi;   //!
 TBranch         *b_mus_eta;   //!
 TBranch         *b_mus_charge;   //!
 TBranch         *b_mus_miniso;   //!
 TBranch         *b_mus_sigid;   //!
+TBranch         *b_nels;
+TBranch         *b_nvels;
 TBranch         *b_els_pt;   //!
 TBranch         *b_els_phi;   //!
 TBranch         *b_els_eta;   //!
 TBranch         *b_els_charge;   //!
 TBranch         *b_els_miniso;   //!
 TBranch         *b_els_sigid;   //!
-TBranch         *b_JetM;   //!
-TBranch         *b_JetPt;   //!
-TBranch         *b_JetEta;   //!
-TBranch         *b_JetPhi;   //!
-TBranch         *b_JetCSV;   //!
-TBranch         *b_JetIsLep;   //!
-TBranch         *b_RA4MusVetoPt;   //!
-TBranch         *b_RA4ElsVetoPt;   //!
-TBranch         *b_GenId;   //!
-TBranch         *b_GenStatus;   //!
-TBranch         *b_GenPt;   //!
-TBranch         *b_GenPhi;   //!
-TBranch         *b_GenEta;   //!
-//TBranch         *b_GenE;   //!
-TBranch         *b_GenMId;   //!
-TBranch         *b_GenGMId;   //!
-TBranch     *b_TrigMuon; 
-TBranch     *b_TrigSingleMuon; 
-TBranch     *b_top1pT; 
-TBranch     *b_top1Phi; 
-TBranch     *b_top2pT; 
-TBranch     *b_top2Phi;
-TBranch *b_nels;
-TBranch *b_nmus;
-TBranch *b_nvels;
-TBranch *b_nvmus;
-TBranch *b_mt;
-TBranch *b_mc_type;
-TBranch *b_ntruleps;
-TBranch *b_ntrumus;
-TBranch *b_ntruels;
-TBranch *b_ntrutausl;
-TBranch *b_ntrutaush;
+// jets
+TBranch         *b_njets;   
+TBranch         *b_nbm;   
+TBranch         *b_jets_m;   //!
+TBranch         *b_jets_pt;   //!
+TBranch         *b_jets_phi;   //!
+TBranch         *b_jets_eta;   //!
+TBranch         *b_jets_csv;   //!
+TBranch         *b_jets_islep;   //!
+// mc truth
+TBranch         *b_ntruleps;
+TBranch         *b_ntrumus;
+TBranch         *b_ntruels;
+TBranch         *b_ntrutausl;
+TBranch         *b_ntrutaush;
+TBranch         *b_mc_id;   //!
+TBranch         *b_mc_mom;   //!
+TBranch         *b_mc_pt;   //!
+TBranch         *b_mc_phi;   //!
+TBranch         *b_mc_eta;   //!
+TBranch         *b_mc_mass;   //!
 
 void InitBaby(TChain *ch)
 {
-    trig_      = 0;
-    mj_        = 0;
-    mj08_      = 0;
-    FatjetPt_  = 0;
-    FatjetEta_ = 0;
-    FatjetPhi_ = 0;
-    RA4MusPt_  = 0;
-    RA4MusPhi_ = 0;
-    RA4MusEta_ = 0;
-    RA4MusQ_  = 0;
-    RA4ElsPt_  = 0;
-    RA4ElsPhi_  = 0;
-    RA4ElsEta_  = 0;
-    RA4ElsQ_  = 0;
-    JetM_  = 0;
-    JetPt_  = 0;
-    JetEta_ = 0;
-    JetPhi_ = 0;
-    JetCSV_ = 0;
-    JetIsLep_ = 0;
-    RA4MusVetoPt_  = 0;
-    RA4ElsVetoPt_  = 0;
-    GenId_  = 0;
-    GenPt_  = 0;
-    GenPhi_  = 0;
-    GenEta_  = 0;
-    //GenE_  = 0;
-    GenStatus_  = 0;
-    GenMId_  = 0;
-    GenGMId_  = 0;
+    trig_        = 0;
+    mj_          = 0;
+    fjets_m_     = 0;
+    fjets_pt_    = 0;
+    fjets_phi_   = 0;
+    fjets_eta_   = 0;
+    fjets08_m_   = 0;
+    fjets08_pt_  = 0;
+    fjets08_phi_ = 0;
+    fjets08_eta_ = 0;
+    leps_pt_     = 0;
+    leps_phi_    = 0;
+    leps_eta_    = 0;
+    leps_id_     = 0;
+    mus_pt_      = 0;
+    mus_phi_     = 0;
+    mus_eta_     = 0;
+    mus_charge_  = 0;
+    els_pt_      = 0;
+    els_phi_     = 0;
+    els_eta_     = 0;
+    els_charge_  = 0;
+    jets_m_      = 0;
+    jets_pt_     = 0;
+    jets_phi_    = 0;
+    jets_eta_    = 0;
+    jets_csv_    = 0;
+    jets_islep_  = 0;
+    mc_id_       = 0;
+    mc_mom_      = 0;
+    mc_pt_       = 0;
+    mc_phi_      = 0;
+    mc_eta_      = 0;
+    mc_mass_     = 0;
 
-
-    ch->SetBranchAddress("event",           &event_,         &b_event);
-    ch->SetBranchAddress("run",             &run_,         &b_run);
-    ch->SetBranchAddress("lumiblock",       &lumi_,         &b_lumi);
-    ch->SetBranchAddress("weight",          &EventWeight_,   &b_EventWeight);
-    ch->SetBranchAddress("json_golden",     &json_golden_,   &b_json_golden);
-    ch->SetBranchAddress("pass_hbhe",       &pass_hbhe_,   &b_pass_hbhe);
-    ch->SetBranchAddress("pass_cschalo",    &pass_cschalo_,   &b_pass_cschalo);
-    ch->SetBranchAddress("pass_eebadsc",    &pass_eebadsc_,   &b_pass_eebadsc);
+    // event info  
+    ch->SetBranchAddress("event",           &event_,        &b_event);
+    ch->SetBranchAddress("run",             &run_,          &b_run);
+    ch->SetBranchAddress("lumiblock",       &lumi_,         &b_lumi); 
+    // weights, filters, trigger 
+    ch->SetBranchAddress("weight",          &weight_,       &b_weight);
+    ch->SetBranchAddress("stitch",          &stitch_,       &b_stitch);
+    ch->SetBranchAddress("pass",            &pass_,         &b_pass);
+    ch->SetBranchAddress("pass_hbhe",       &pass_hbhe_,    &b_pass_hbhe);
+    ch->SetBranchAddress("pass_cschalo",    &pass_cschalo_, &b_pass_cschalo);
+    ch->SetBranchAddress("pass_eebadsc",    &pass_eebadsc_, &b_pass_eebadsc);
     ch->SetBranchAddress("pass_goodv",      &pass_goodv_,   &b_pass_goodv);
-    ch->SetBranchAddress("ntrupv",          &Npu_,           &b_Npu);
-    ch->SetBranchAddress("npv",             &Npv_,           &b_Npv);
-    ch->SetBranchAddress("nfjets",          &Nfatjet_,       &b_Nfatjet);
-    ch->SetBranchAddress("nleps",           &NLeps_,         &b_NLeps);
-    ch->SetBranchAddress("njets",           &Nskinnyjet_,    &b_Nskinnyjet);
-    ch->SetBranchAddress("nbm",             &NBtagCSVM_,     &b_NBtagCSVM);
-    ch->SetBranchAddress("trig",            &trig_,            &b_trig);
-    ch->SetBranchAddress("mj",              &MJ_,            &b_MJ);
-    //ch->SetBranchAddress("met",           &MET_,           &b_MET);
-    ch->SetBranchAddress("met_mini",        &MET_,           &b_MET);
-    ch->SetBranchAddress("onmet",           &OnMET_,           &b_OnMET);
-    ch->SetBranchAddress("ht",              &HT_,            &b_HT);
-    ch->SetBranchAddress("onht",            &OnHT_,          &b_OnHT);
-    //ch->SetBranchAddress("met_phi",       &METPhi_,        &b_METPhi);
-    ch->SetBranchAddress("met_mini_phi",    &METPhi_,        &b_METPhi);
-    ch->SetBranchAddress("fjets_m",         &mj_,            &b_mj);
-    ch->SetBranchAddress("fjets_pt",        &FatjetPt_,      &b_FatjetPt);
-    ch->SetBranchAddress("fjets_eta",       &FatjetEta_,     &b_FatjetEta);
-    ch->SetBranchAddress("fjets_phi",       &FatjetPhi_,     &b_FatjetPhi);
-    ch->SetBranchAddress("fjets08_m",       &mj08_,            &b_mj08);
-//    ch->SetBranchAddress("fjets08_pt",   &FatjetPt_,      &b_FatjetPt);
-//    ch->SetBranchAddress("fjets08_eta",  &FatjetEta_,     &b_FatjetEta);
-//    ch->SetBranchAddress("fjets08_phi",  &FatjetPhi_,     &b_FatjetPhi);
-
-    ch->SetBranchAddress("nels",            &nels_,      &b_nels);
-    ch->SetBranchAddress("nmus",            &nmus_,      &b_nmus);
-    ch->SetBranchAddress("nvels",           &nvels_,      &b_nvels);
-    ch->SetBranchAddress("nvmus",           &nvmus_,      &b_nvmus);
-    ch->SetBranchAddress("mt",              &mt_,      &b_mt);
-//    ch->SetBranchAddress("mc_type",       &mc_type_,      &b_mc_type);
-    ch->SetBranchAddress("ntruleps",        &ntruleps_,      &b_ntruleps);
+    ch->SetBranchAddress("trig",            &trig_,         &b_trig);
+    // PU 
+    ch->SetBranchAddress("ntrupv",          &ntrupv_,       &b_ntrupv);
+    ch->SetBranchAddress("ntrupv_mean",     &ntrupv_mean_,  &b_ntrupv_mean);
+    ch->SetBranchAddress("npv",             &npv_,          &b_npv);
+    // event variables 
+    ch->SetBranchAddress("ht",              &ht_,           &b_ht);
+    ch->SetBranchAddress("met",             &met_,          &b_met);
+    ch->SetBranchAddress("met_phi",         &met_phi_,      &b_met_phi); 
+    ch->SetBranchAddress("mt",              &mt_,           &b_mt);
+    // fat jets
+    ch->SetBranchAddress("mj",              &mj_,           &b_mj);
+    ch->SetBranchAddress("nfjets",          &nfjets_,       &b_nfjets);
+    ch->SetBranchAddress("fjets_m",         &fjets_m_,      &b_fjets_m);
+    ch->SetBranchAddress("fjets_pt",        &fjets_pt_,     &b_fjets_pt);
+    ch->SetBranchAddress("fjets_phi",       &fjets_phi_,    &b_fjets_phi);
+    ch->SetBranchAddress("fjets_eta",       &fjets_eta_,    &b_fjets_eta);
+    ch->SetBranchAddress("mj08",            &mj08_,         &b_mj08);
+    ch->SetBranchAddress("nfjets08",        &nfjets08_,     &b_nfjets08);
+    ch->SetBranchAddress("fjets08_m",       &fjets08_m_,    &b_fjets08_m);
+    ch->SetBranchAddress("fjets08_pt",      &fjets08_pt_,   &b_fjets08_pt);
+    ch->SetBranchAddress("fjets08_phi",     &fjets08_phi_,  &b_fjets08_phi);
+    ch->SetBranchAddress("fjets08_eta",     &fjets08_eta_,  &b_fjets08_eta);
+    // leptons 
+    ch->SetBranchAddress("nleps",           &nleps_,        &b_nleps);
+    ch->SetBranchAddress("nvleps",          &nvleps_,       &b_nvleps);
+    ch->SetBranchAddress("leps_pt",         &leps_pt_,      &b_leps_pt);
+    ch->SetBranchAddress("leps_phi",        &leps_phi_,     &b_leps_phi);
+    ch->SetBranchAddress("leps_eta",        &leps_eta_,     &b_leps_eta);
+    ch->SetBranchAddress("leps_id",         &leps_id_,      &b_leps_id);
+    ch->SetBranchAddress("nmus",            &nmus_,         &b_nmus);
+    ch->SetBranchAddress("nvmus",           &nvmus_,        &b_nvmus);
+    ch->SetBranchAddress("mus_pt",          &mus_pt_,       &b_mus_pt);
+    ch->SetBranchAddress("mus_phi",         &mus_phi_,      &b_mus_phi);
+    ch->SetBranchAddress("mus_eta",         &mus_eta_,      &b_mus_eta);
+    ch->SetBranchAddress("mus_charge",      &mus_charge_,   &b_mus_charge);
+    ch->SetBranchAddress("mus_miniso",      &mus_miniso_,   &b_mus_miniso);
+    ch->SetBranchAddress("mus_sigid",       &mus_sigid_,    &b_mus_sigid);
+    ch->SetBranchAddress("nels",            &nels_,         &b_nels);
+    ch->SetBranchAddress("nvels",           &nvels_,        &b_nvels);
+    ch->SetBranchAddress("els_pt",          &els_pt_,       &b_els_pt);
+    ch->SetBranchAddress("els_phi",         &els_phi_,      &b_els_phi);
+    ch->SetBranchAddress("els_eta",         &els_eta_,      &b_els_eta);
+    ch->SetBranchAddress("els_charge",      &els_charge_,   &b_els_charge);
+    ch->SetBranchAddress("els_miniso",      &els_miniso_,   &b_els_miniso);
+    ch->SetBranchAddress("els_sigid",       &els_sigid_,    &b_els_sigid);
+    // jets
+    ch->SetBranchAddress("njets",           &njets_,        &b_njets);
+    ch->SetBranchAddress("nbm",             &nbm_,          &b_nbm);
+    ch->SetBranchAddress("jets_m",          &jets_m_,       &b_jets_m);
+    ch->SetBranchAddress("jets_pt",         &jets_pt_,      &b_jets_pt);
+    ch->SetBranchAddress("jets_phi",        &jets_phi_,     &b_jets_phi);
+    ch->SetBranchAddress("jets_eta",        &jets_eta_,     &b_jets_eta);
+    ch->SetBranchAddress("jets_csv",        &jets_csv_,     &b_jets_csv);
+    ch->SetBranchAddress("jets_islep",      &jets_islep_,   &b_jets_islep);
+    // mc truth 
+    ch->SetBranchAddress("ntruleps",        &ntruleps_,     &b_ntruleps);
     ch->SetBranchAddress("ntrumus",         &ntrumus_,      &b_ntrumus);
     ch->SetBranchAddress("ntruels",         &ntruels_,      &b_ntruels);
-    ch->SetBranchAddress("ntrutausl",       &ntrutausl_,      &b_ntrutausl);
-    ch->SetBranchAddress("ntrutaush",       &ntrutaush_,      &b_ntrutaush);
-
-    ch->SetBranchAddress("mus_pt",          &RA4MusPt_,         &b_mus_pt);
-    ch->SetBranchAddress("mus_phi",         &RA4MusPhi_,        &b_mus_phi);
-    ch->SetBranchAddress("mus_eta",         &RA4MusEta_,        &b_mus_eta);
-    ch->SetBranchAddress("mus_charge",      &RA4MusQ_,          &b_mus_charge);
-    ch->SetBranchAddress("mus_miniso",      &RA4MusMinIso_,     &b_mus_miniso);
-    ch->SetBranchAddress("mus_sigid",       &IsRA4Mus_,         &b_mus_sigid);
-    ch->SetBranchAddress("els_pt",          &RA4ElsPt_,         &b_els_pt);
-    ch->SetBranchAddress("els_phi",         &RA4ElsPhi_,        &b_els_phi);
-    ch->SetBranchAddress("els_eta",         &RA4ElsEta_,        &b_els_eta);
-    ch->SetBranchAddress("els_charge",      &RA4ElsQ_,          &b_els_charge);
-    ch->SetBranchAddress("els_miniso",      &RA4ElsMinIso_,     &b_els_miniso);
-    ch->SetBranchAddress("els_sigid",       &IsRA4Els_,         &b_els_sigid);
-
-    ch->SetBranchAddress("jets_m",          &JetM_,          &b_JetM);
-    ch->SetBranchAddress("jets_pt",         &JetPt_,         &b_JetPt);
-    ch->SetBranchAddress("jets_phi",        &JetPhi_,        &b_JetPhi);
-    ch->SetBranchAddress("jets_eta",        &JetEta_,        &b_JetEta);
-    ch->SetBranchAddress("jets_csv",        &JetCSV_,        &b_JetCSV);
-    ch->SetBranchAddress("jets_islep",      &JetIsLep_,        &b_JetIsLep);
-    /* ch->SetBranchAddress("RA4MusVetoPt_mi",    &RA4MusVetoPt_, &b_RA4MusVetoPt);
-       ch->SetBranchAddress("RA4ElsVetoPt_mi",    &RA4ElsVetoPt_, &b_RA4ElsVetoPt);*/
-
-    //ch->SetBranchAddress("mc_id",         &GenId_,         &b_GenId);
-    //ch->SetBranchAddress("mc_pt",         &GenPt_,         &b_GenPt);
-    //ch->SetBranchAddress("mc_phi",        &GenPhi_,         &b_GenPhi);
-    //ch->SetBranchAddress("mc_eta",        &GenEta_,         &b_GenEta);
-    // ch->SetBranchAddress("GenE",         &GenE_,         &b_GenE);
-    //ch->SetBranchAddress("mc_mom",        &GenMId_,        &b_GenMId);
-    //if(status)ch->SetBranchAddress("mc_status",          &GenStatus_,        &b_GenStatus);
-
-    //ch->SetBranchAddress("mc_gmom",         &GenGMId_,       &b_GenGMId);
-    /* ch->SetBranchAddress("top1pT",        &top1pT_, &b_top1pT);
-       ch->SetBranchAddress("top1Phi",       &top1Phi_, &b_top1Phi);
-       ch->SetBranchAddress("top2pT",        &top2pT_, &b_top2pT);
-       ch->SetBranchAddress("top2Phi",       &top2Phi_, &b_top2Phi);*/
-    //ch->SetBranchAddress("TrigMuon",      &TrigMuon_, &b_TrigMuon);
-    //ch->SetBranchAddress("TrigSingleMuon", &TrigSingleMuon_, &b_TrigSingleMuon);
+    ch->SetBranchAddress("ntrutausl",       &ntrutausl_,    &b_ntrutausl);
+    ch->SetBranchAddress("ntrutaush",       &ntrutaush_,    &b_ntrutaush);
+    ch->SetBranchAddress("mc_id",           &mc_id_,        &b_mc_id);
+    ch->SetBranchAddress("mc_mom",          &mc_mom_,       &b_mc_mom);
+    ch->SetBranchAddress("mc_pt",           &mc_pt_,        &b_mc_pt);
+    ch->SetBranchAddress("mc_phi",          &mc_phi_,       &b_mc_phi);
+    ch->SetBranchAddress("mc_eta",          &mc_eta_,       &b_mc_eta);
+    ch->SetBranchAddress("mc_mass",         &mc_mass_,      &b_mc_mass);
+   
 }

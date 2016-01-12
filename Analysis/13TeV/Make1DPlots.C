@@ -159,7 +159,7 @@ void Make1DPlots(TString HistName, char* Region, int NMergeBins=1, bool DoLog=fa
     //c->Divide(5,1);
     TCanvas *c = new TCanvas("c","c",1200,800);  
     c->Divide(3,2);
-    TCanvas *c_AllFJ = new TCanvas("c_AllFJ","c_AllFJ",400,400);
+    TCanvas *c_AllFJ = new TCanvas("c_AllFJ","c_AllFJ",300,300);
     for(int i=2; i<7; i++) 
     {
         if(i!=6 && DrawOnlyAllFJ)  continue;
